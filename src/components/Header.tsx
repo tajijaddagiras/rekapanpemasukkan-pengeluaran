@@ -36,6 +36,7 @@ export const Header = () => {
             '/membership/annual': 'Annual Dashboard',
             '/membership/investment': 'Investment Dashboard',
             '/membership/cards': 'My Cards Dashboard',
+            '/membership/transactions/input': 'Daily Transaction Input',
             '/membership/under-development': 'Halaman Sedang Dikembangkan'
           }[pathname] || 'Dashboard'}
         </h1>

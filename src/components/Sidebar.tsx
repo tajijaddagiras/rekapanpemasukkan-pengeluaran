@@ -52,7 +52,7 @@ const menuGroups = [
   {
     label: 'Transaksi',
     items: [
-      { icon: PlusCircle, label: 'Input Transaksi', href: '/membership/under-development' },
+      { icon: PlusCircle, label: 'Input Transaksi', href: '/membership/transactions/input' },
       { icon: ArrowUpDown, label: 'Top Up & Transfer', href: '/membership/under-development' },
       { icon: Repeat, label: 'Recurring', href: '/membership/under-development' },
     ]
