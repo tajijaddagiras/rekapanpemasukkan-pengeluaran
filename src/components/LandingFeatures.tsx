@@ -99,16 +99,16 @@ export const LandingFeatures = () => (
         ].map((feat, i) => (
           <motion.div 
             key={i} 
-            className="p-10 rounded-[48px] bg-white border border-slate-100 flex flex-col gap-10 hover:border-indigo-600/30 transition-all group cursor-default shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1 duration-500"
+            className="p-8 rounded-[40px] bg-white border border-slate-100 flex flex-col gap-6 hover:border-indigo-600/30 transition-all group cursor-default shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1 duration-500"
             variants={fadeInUp}
           >
-            <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 transition-all duration-500 group-hover:bg-indigo-600 group-hover:text-white">
-              <feat.icon size={28} />
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 transition-all duration-500 group-hover:bg-indigo-600 group-hover:text-white shrink-0">
+                <feat.icon size={24} />
+              </div>
+              <h3 className="text-lg font-black text-slate-900 leading-tight tracking-tight">{feat.title}</h3>
             </div>
-            <div className="space-y-3">
-              <h3 className="text-xl font-black text-slate-900 leading-tight tracking-tight">{feat.title}</h3>
-              <p className="text-sm text-slate-500 font-medium leading-relaxed">{feat.desc}</p>
-            </div>
+            <p className="text-sm text-slate-500 font-medium leading-relaxed">{feat.desc}</p>
           </motion.div>
         ))}
       </motion.div>
