@@ -71,7 +71,7 @@ const menuGroups = [
       { icon: User, label: 'Profil', href: '/membership/under-development' },
       { icon: Settings, label: 'Rekening', href: '/membership/under-development' },
       { icon: UserCircle, label: 'Nama Akun', href: '/membership/under-development' },
-      { icon: CreditCard, label: 'Kartu Saya', href: '/membership/under-development' },
+      { icon: CreditCard, label: 'Kartu Saya', href: '/membership/cards' },
     ]
   },
   {
