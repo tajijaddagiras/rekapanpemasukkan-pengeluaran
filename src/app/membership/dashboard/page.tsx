@@ -35,16 +35,18 @@ export default function MonthlyDashboard() {
   const router = useRouter();
 
   useEffect(() => {
+    let unsubProfile: (() => void) | null = null;
+    let unsubTrans: (() => void) | null = null;
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (usr) => {
       if (usr) {
         setUser(usr);
         
         // Subscribe to profile
-        const unsubProfile = subscribeUserProfile(usr.uid, (prof) => {
+        unsubProfile = subscribeUserProfile(usr.uid, (prof) => {
           if (prof) {
             setProfile(prof);
           } else {
-            // Profile missing recovery (common if first register attempt failed)
             const newProfile: Partial<UserProfile> = {
               uid: usr.uid,
               name: usr.displayName || 'User',
@@ -64,21 +66,26 @@ export default function MonthlyDashboard() {
         });
 
         // Subscribe to transactions
-        const unsubTrans = subscribeTransactions(usr.uid, (trans) => {
+        unsubTrans = subscribeTransactions(usr.uid, (trans) => {
           setTransactions(trans);
           setLoading(false);
         });
-
-        return () => {
-          unsubProfile();
-          unsubTrans();
-        };
       } else {
+        // CLEANUP LISTENERS ON LOGOUT
+        if (unsubProfile) unsubProfile();
+        if (unsubTrans) unsubTrans();
+        unsubProfile = null;
+        unsubTrans = null;
+        
         router.push('/auth/login');
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      if (unsubProfile) unsubProfile();
+      if (unsubTrans) unsubTrans();
+    };
   }, [router]);
 
   const filteredTransactions = transactions.filter(t => t.type === activeTab);

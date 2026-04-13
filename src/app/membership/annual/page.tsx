@@ -24,11 +24,13 @@ export default function AnnualDashboard() {
   const router = useRouter();
 
   useEffect(() => {
+    let unsubscribeTransactions: (() => void) | null = null;
+
     const unsubscribeAuth = onAuthStateChanged(auth, (usr) => {
       if (usr) {
         // Subscribe to real transactions
         const { subscribeTransactions } = require('@/lib/services/transactionService');
-        const unsubscribeTransactions = subscribeTransactions(usr.uid, (transactions: any[]) => {
+        unsubscribeTransactions = subscribeTransactions(usr.uid, (transactions: any[]) => {
           // Process Yearly Data
           const yearMap: Record<string, { income: number, expense: number }> = {};
           const categoryMap: Record<string, { budget: number, actual: number }> = {};
@@ -65,14 +67,19 @@ export default function AnnualDashboard() {
           setTableData(processedTable);
           setLoading(false);
         });
-
-        return () => unsubscribeTransactions();
       } else {
+        // CLEANUP LISTENERS ON LOGOUT
+        if (unsubscribeTransactions) unsubscribeTransactions();
+        unsubscribeTransactions = null;
+        
         router.push('/auth/login');
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeTransactions) unsubscribeTransactions();
+    };
   }, [router, selectedYear]);
 
   if (loading) {
