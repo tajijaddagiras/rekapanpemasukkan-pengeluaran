@@ -38,6 +38,12 @@ export const Header = () => {
             '/membership/cards': 'My Cards Dashboard',
             '/membership/transactions/input': 'Daily Transaction Input',
             '/membership/transactions/daily': 'Daily Transaction Log',
+            '/membership/investasi/saham': 'Stock Investment Portfolio',
+            '/membership/investasi/deposito': 'Time Deposits Portfolio',
+            '/membership/investasi/lainnya': 'Other Investments',
+            '/membership/tabungan': 'Savings Goals & Balance',
+            '/membership/transactions/topup': 'Top Up & Transfer History',
+            '/membership/transactions/debt': 'Debt & Receivables tracking',
             '/membership/under-development': 'Halaman Sedang Dikembangkan'
           }[pathname] || 'Dashboard'}
         </h1>

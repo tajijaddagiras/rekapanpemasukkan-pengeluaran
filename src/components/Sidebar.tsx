@@ -43,9 +43,9 @@ const menuGroups = [
     label: 'Investasi',
     items: [
       { icon: TrendingUp, label: 'Dashboard Investasi', href: '/membership/investment' },
-      { icon: Briefcase, label: 'Investasi Saham', href: '/membership/under-development' },
-      { icon: Banknote, label: 'Deposito', href: '/membership/under-development' },
-      { icon: PieChart, label: 'Investasi Lainnya', href: '/membership/under-development' },
+      { icon: Briefcase, label: 'Investasi Saham', href: '/membership/investasi/saham' },
+      { icon: Banknote, label: 'Deposito', href: '/membership/investasi/deposito' },
+      { icon: PieChart, label: 'Investasi Lainnya', href: '/membership/investasi/lainnya' },
       { icon: Globe, label: 'Data Pasar', href: '/membership/under-development' },
     ]
   },
@@ -54,16 +54,16 @@ const menuGroups = [
     items: [
       { icon: PlusCircle, label: 'Input Transaksi', href: '/membership/transactions/input' },
       { icon: ArrowUpDown, label: 'Transaksi Harian', href: '/membership/transactions/daily' },
-      { icon: ArrowUpDown, label: 'Top Up & Transfer', href: '/membership/under-development' },
+      { icon: ArrowUpDown, label: 'Top Up & Transfer', href: '/membership/transactions/topup' },
       { icon: Repeat, label: 'Recurring', href: '/membership/under-development' },
     ]
   },
   {
     label: 'Perencanaan',
     items: [
-      { icon: Wallet, label: 'Tabungan', href: '/membership/under-development' },
+      { icon: Wallet, label: 'Tabungan', href: '/membership/tabungan' },
       { icon: Target, label: 'Budget & Target', href: '/membership/under-development' },
-      { icon: Banknote, label: 'Hutang & Piutang', href: '/membership/under-development' },
+      { icon: Banknote, label: 'Hutang & Piutang', href: '/membership/transactions/debt' },
     ]
   },
   {
