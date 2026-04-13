@@ -44,7 +44,14 @@ export const Header = () => {
             '/membership/tabungan': 'Savings Goals & Balance',
             '/membership/transactions/topup': 'Top Up & Transfer History',
             '/membership/transactions/debt': 'Debt & Receivables tracking',
-            '/membership/under-development': 'Halaman Sedang Dikembangkan'
+            '/membership/rekening': 'Manage Accounts & Initial Balance',
+            '/membership/nama-akun': 'Account Ledger Strategy',
+            '/membership/budget': 'Fiscal Strategy & Budgeting',
+            '/membership/recurring': 'Recurring Transactions Automation',
+            '/membership/contact': 'Pro Activation & Payment Confirmation',
+            '/membership/profile': 'User Identity & Preferences',
+            '/membership/ai-leosiqra': 'Ethereal Portfolio Intelligence',
+            '/membership/market-data': 'Global Market Intelligence Dashboard'
           }[pathname] || 'Dashboard'}
         </h1>
       </div>

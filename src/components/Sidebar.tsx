@@ -46,7 +46,7 @@ const menuGroups = [
       { icon: Briefcase, label: 'Investasi Saham', href: '/membership/investasi/saham' },
       { icon: Banknote, label: 'Deposito', href: '/membership/investasi/deposito' },
       { icon: PieChart, label: 'Investasi Lainnya', href: '/membership/investasi/lainnya' },
-      { icon: Globe, label: 'Data Pasar', href: '/membership/under-development' },
+      { icon: Globe, label: 'Data Pasar', href: '/membership/market-data' },
     ]
   },
   {
@@ -55,31 +55,31 @@ const menuGroups = [
       { icon: PlusCircle, label: 'Input Transaksi', href: '/membership/transactions/input' },
       { icon: ArrowUpDown, label: 'Transaksi Harian', href: '/membership/transactions/daily' },
       { icon: ArrowUpDown, label: 'Top Up & Transfer', href: '/membership/transactions/topup' },
-      { icon: Repeat, label: 'Recurring', href: '/membership/under-development' },
+      { icon: Repeat, label: 'Recurring', href: '/membership/recurring' },
     ]
   },
   {
     label: 'Perencanaan',
     items: [
       { icon: Wallet, label: 'Tabungan', href: '/membership/tabungan' },
-      { icon: Target, label: 'Budget & Target', href: '/membership/under-development' },
+      { icon: Target, label: 'Budget & Target', href: '/membership/budget' },
       { icon: Banknote, label: 'Hutang & Piutang', href: '/membership/transactions/debt' },
     ]
   },
   {
     label: 'Akun & Profil',
     items: [
-      { icon: User, label: 'Profil', href: '/membership/under-development' },
-      { icon: Settings, label: 'Rekening', href: '/membership/under-development' },
-      { icon: UserCircle, label: 'Nama Akun', href: '/membership/under-development' },
+      { icon: User, label: 'Profil', href: '/membership/profile' },
+      { icon: Settings, label: 'Rekening', href: '/membership/rekening' },
+      { icon: UserCircle, label: 'Nama Akun', href: '/membership/nama-akun' },
       { icon: CreditCard, label: 'Kartu Saya', href: '/membership/cards' },
     ]
   },
   {
     label: 'Lainnya',
     items: [
-      { icon: Bot, label: 'AI Leosiqra', href: '/membership/under-development' },
-      { icon: Headphones, label: 'Hubungi Kami', href: '/membership/under-development' },
+      { icon: Bot, label: 'AI Leosiqra', href: '/membership/ai-leosiqra' },
+      { icon: Headphones, label: 'Hubungi Kami', href: '/membership/contact' },
     ]
   }
 ];
@@ -91,10 +91,7 @@ export const Sidebar = () => {
   const [selectedItem, setSelectedItem] = useState<string>('');
 
   const isItemActive = (item: { label: string; href: string }) => {
-    if (item.href !== '/membership/under-development') {
-      return pathname === item.href;
-    }
-    return selectedItem === item.label;
+    return pathname === item.href;
   };
 
   const toggleGroup = (label: string) => {
