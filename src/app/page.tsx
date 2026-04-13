@@ -1,9 +1,25 @@
+"use client";
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, BarChart3, CheckCircle2 } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { LandingFeatures } from '@/components/LandingFeatures';
 import { LandingFooter } from '@/components/LandingFooter';
+import { motion } from 'framer-motion';
+
+const fadeInUp: any = {
+  initial: { opacity: 0, y: 30 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true },
+  transition: { duration: 0.8, ease: "easeOut" }
+};
+
+const staggerContainer = {
+  initial: {},
+  whileInView: { transition: { staggerChildren: 0.15 } },
+  viewport: { once: true }
+};
 
 export default function LandingPage() {
   return (
@@ -14,7 +30,12 @@ export default function LandingPage() {
       <section className="pt-40 pb-20 px-6 overflow-hidden">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
           {/* Left Content */}
-          <div className="flex-1 text-left animate-in fade-in slide-in-from-left-8 duration-1000">
+          <motion.div 
+            className="flex-1 text-left"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+          >
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] mb-8">
               Layanan Keuangan Terintegrasi
             </div>
@@ -41,10 +62,15 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* Right Content - Dashboard Mockup */}
-          <div className="flex-1 w-full relative animate-in fade-in slide-in-from-right-8 duration-1000 delay-300">
+          <motion.div 
+            className="flex-1 w-full relative"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
             <div className="relative rounded-[48px] bg-slate-100 p-3 shadow-2xl shadow-slate-200 border border-white">
               <div className="bg-white rounded-[40px] overflow-hidden shadow-inner border border-slate-100 p-8 space-y-8">
                 <div className="flex items-center justify-between">
@@ -96,74 +122,106 @@ export default function LandingPage() {
             {/* Floating Accents */}
             <div className="absolute -top-12 -right-12 w-40 h-40 bg-indigo-600/5 blur-[80px] rounded-full" />
             <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-orange-600/5 blur-[80px] rounded-full" />
-          </div>
+          </motion.div>
         </div>
       </section>
 
       <LandingFeatures />
 
       {/* Steps Section */}
-      <section id="cara-kerja" className="py-32 px-6 scroll-mt-20">
+      <section id="cara-kerja" className="py-32 px-6 scroll-mt-20 overflow-hidden">
         <div className="max-w-7xl mx-auto space-y-20">
-          <div className="text-center space-y-6">
+          <motion.div 
+            className="text-center space-y-6"
+            {...fadeInUp}
+          >
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-50 text-orange-600 text-[10px] font-black uppercase tracking-widest">
               Cara Mulai
             </div>
             <h2 className="text-4xl md:text-5xl font-serif font-black text-slate-900 mx-auto max-w-2xl leading-tight">
               Mulai dalam tiga langkah yang terasa natural.
             </h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          </motion.div>
+          <motion.div 
+            className="grid md:grid-cols-3 gap-8"
+            variants={staggerContainer}
+            initial="initial"
+            whileInView="whileInView"
+            viewport={{ once: true }}
+          >
             {[
               { step: '01', title: 'Set akun gratis', desc: 'Daftar dalam 1 menit tanpa perlu kartu kredit atau biaya apapun.' },
               { step: '02', title: 'Transaksi seperlunya', desc: 'Input data pengeluaran harian atau mingguan Anda secara cepat.' },
               { step: '03', title: 'Pantau rekap', desc: 'Biarkan sistem menyimpulkan kondisi finansial tahunan Anda.' },
             ].map((s, i) => (
-              <div key={i} className="p-10 rounded-[48px] bg-white border border-slate-100 space-y-6 shadow-sm">
+              <motion.div 
+                key={i} 
+                className="p-10 rounded-[48px] bg-white border border-slate-100 space-y-6 shadow-sm hover:shadow-xl transition-shadow duration-500"
+                variants={fadeInUp}
+              >
                 <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-lg">
                   {s.step}
                 </div>
                 <h4 className="text-xl font-black text-slate-900">{s.title}</h4>
                 <p className="text-slate-500 font-medium leading-relaxed">{s.desc}</p>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="py-32 px-6 bg-slate-50/50">
+      <section className="py-32 px-6 bg-slate-50/50 overflow-hidden">
         <div className="max-w-7xl mx-auto space-y-20">
-          <div className="text-center space-y-6">
+          <motion.div 
+            className="text-center space-y-6"
+            {...fadeInUp}
+          >
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest">
               Testimoni
             </div>
             <h2 className="text-4xl md:text-5xl font-serif font-black text-slate-900 mx-auto max-w-3xl leading-tight">
               Rasa profesional yang membuat pengguna percaya untuk mulai.
             </h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
+          </motion.div>
+          <motion.div 
+            className="grid md:grid-cols-3 gap-6"
+            variants={staggerContainer}
+            initial="initial"
+            whileInView="whileInView"
+            viewport={{ once: true }}
+          >
             {[
               { name: 'Bambang Sudjatmiko', role: 'Business Owner', quote: 'Dulu saya rekap di Excel dan sangat berantakan. Sekarang semua di dashboard.' },
               { name: 'Siti Aminah', role: 'Freelancer', quote: 'Tampilan bersih dan fitur SPT benar-benar membantu saat lapor pajak tahunan.' },
               { name: 'Andi Pratama', role: 'Karyawan Swasta', quote: 'Saya bisa pantau tabungan pensiun saya tumbuh perlahan namun pasti.' },
             ].map((t, i) => (
-              <div key={i} className="p-10 rounded-[40px] bg-white border border-slate-100 flex flex-col justify-between shadow-sm">
+              <motion.div 
+                key={i} 
+                className="p-10 rounded-[40px] bg-white border border-slate-100 flex flex-col justify-between shadow-sm hover:border-indigo-100 transition-colors duration-500"
+                variants={fadeInUp}
+              >
                 <p className="text-lg font-medium text-slate-600 mb-8 italic">"{t.quote}"</p>
                 <div>
                   <h4 className="font-black text-slate-900">{t.name}</h4>
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{t.role}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Pricing CTA Section */}
-      <section id="harga" className="py-32 px-6 scroll-mt-20">
+      <section id="harga" className="py-32 px-6 scroll-mt-20 overflow-hidden">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 items-center">
-          <div className="flex-1 space-y-8">
+          <motion.div 
+            className="flex-1 space-y-8"
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+          >
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-50 text-orange-600 text-[10px] font-black uppercase tracking-widest">
               Harga
             </div>
@@ -173,8 +231,14 @@ export default function LandingPage() {
             <p className="text-slate-500 font-medium leading-relaxed max-w-md">
               Akses fitur dasar secara gratis selamanya. Butuh analisis mendalam dan fitur SPT otomatis? Bergabunglah dengan Pro Plan kami.
             </p>
-          </div>
-          <div className="flex-1 w-full p-12 rounded-[56px] bg-white border border-slate-100 shadow-2xl shadow-slate-200 space-y-10">
+          </motion.div>
+          <motion.div 
+            className="flex-1 w-full p-12 rounded-[56px] bg-white border border-slate-100 shadow-2xl shadow-slate-200 space-y-10"
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+          >
             <div className="flex items-center justify-between pb-8 border-b border-slate-100">
               <div>
                 <p className="text-sm font-black text-indigo-600 uppercase tracking-widest mb-1">Trial Version</p>
@@ -193,32 +257,45 @@ export default function LandingPage() {
             <Link href="/auth/register" className="block w-full py-5 rounded-2xl bg-navy text-white text-center font-black hover:bg-slate-800 transition-all shadow-xl shadow-navy/20">
               Mulai Sekarang
             </Link>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Trust Section */}
       <section id="keamanan" className="py-32 px-6 bg-navy text-white overflow-hidden relative scroll-mt-20">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-20 items-center">
-          <div className="flex-1 space-y-8 relative z-10">
+          <motion.div 
+            className="flex-1 space-y-8 relative z-10"
+            {...fadeInUp}
+          >
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[10px] font-black uppercase tracking-widest">
               Visi Kami
             </div>
             <h2 className="text-4xl md:text-6xl font-serif font-black leading-tight">
               Transparan sejak awal, <br /> supaya trust terasa <br /> dewasa.
             </h2>
-          </div>
-          <div className="flex-1 grid gap-6 relative z-10">
+          </motion.div>
+          <motion.div 
+            className="flex-1 grid gap-6 relative z-10"
+            variants={staggerContainer}
+            initial="initial"
+            whileInView="whileInView"
+            viewport={{ once: true }}
+          >
             {[
               { title: 'Data Keamanan', desc: 'Kami menggunakan enkripsi standar bank untuk memastikan data personal Anda tidak tersentuh pihak ketiga.' },
               { title: 'Infrastruktur Modern', desc: 'Berjalan di Google Cloud untuk memastikan reliabilitas dan kecepatan akses kapanpun.' },
             ].map((item, i) => (
-              <div key={i} className="p-10 rounded-[48px] bg-white/5 border border-white/10 backdrop-blur-sm group hover:bg-white/10 transition-all">
+              <motion.div 
+                key={i} 
+                className="p-10 rounded-[48px] bg-white/5 border border-white/10 backdrop-blur-sm group hover:bg-white/10 transition-all"
+                variants={fadeInUp}
+              >
                 <h4 className="text-xl font-black mb-3">{item.title}</h4>
                 <p className="text-indigo-200/70 font-medium leading-relaxed">{item.desc}</p>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
         {/* Subtle background graphics */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 blur-[120px] rounded-full" />
@@ -226,8 +303,14 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA Full */}
-      <section className="py-32 px-6 relative overflow-hidden">
-        <div className="max-w-4xl mx-auto rounded-[80px] bg-gradient-to-b from-white to-slate-50 border border-slate-100 p-16 md:p-24 text-center space-y-8 relative z-10 shadow-2xl shadow-slate-200/50">
+      <section className="py-40 px-6 relative overflow-hidden">
+        <motion.div 
+          className="max-w-4xl mx-auto rounded-[80px] bg-gradient-to-b from-white to-slate-50 border border-slate-100 p-16 md:p-24 text-center space-y-8 relative z-10 shadow-2xl shadow-slate-200/50"
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1, ease: "easeOut" }}
+        >
           <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-[#FCF8F1] text-[#B8926A] text-[10px] font-black uppercase tracking-[0.2em] border border-[#F5E6CF]/50 mx-auto">
             START TODAY
           </div>
@@ -245,7 +328,7 @@ export default function LandingPage() {
               Masuk
             </Link>
           </div>
-        </div>
+        </motion.div>
         
         {/* Decorative background blobs */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] pointer-events-none opacity-50">
