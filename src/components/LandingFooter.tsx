@@ -8,12 +8,12 @@ export const LandingFooter = () => (
           <div className="flex items-center gap-2">
             <Image 
               src="/images/Logo-new.png" 
-              alt="Leosigra Logo" 
-              width={24} 
-              height={24} 
+              alt="Leosiqra Logo" 
+              width={32} 
+              height={32} 
               className="object-contain"
             />
-            <h3 className="font-serif font-black text-xl tracking-tight text-slate-900">Leosigra</h3>
+            <h3 className="font-serif font-black text-xl tracking-tight text-slate-900">Leosiqra</h3>
           </div>
           <p className="text-slate-500 font-medium leading-relaxed text-xs max-w-[240px]">
             Platform finansial pribadi untuk melihat arus kas, target, dan investasi dengan lebih rapi dan tenang.

@@ -2,10 +2,10 @@ import { BarChart3, Zap, ShieldCheck, CheckCircle2, Layout, Database, PieChart, 
 import { cn } from '@/lib/utils';
 
 export const LandingFeatures = () => (
-  <section id="fitur" className="py-24 px-6 space-y-32">
+  <section className="py-24 px-6 space-y-32">
     <div className="max-w-7xl mx-auto">
       {/* Visual Intro Section */}
-      <div className="flex flex-col lg:flex-row items-center gap-16 mb-40">
+      <div id="produk" className="flex flex-col lg:flex-row items-center gap-16 mb-40 scroll-mt-32">
         <div className="flex-1 space-y-8">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-50 border border-orange-100 text-orange-600 text-[10px] font-black uppercase tracking-widest">
             Module Preview
@@ -37,7 +37,7 @@ export const LandingFeatures = () => (
       </div>
 
       {/* Main Grid Section */}
-      <div className="text-center space-y-6 mb-20">
+      <div id="fitur" className="text-center space-y-6 mb-20 scroll-mt-32">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
           Fitur Utama
         </div>
@@ -68,7 +68,7 @@ export const LandingFeatures = () => (
     </div>
 
     {/* SPT Section */}
-    <div className="max-w-7xl mx-auto py-20 px-10 rounded-[64px] bg-white border border-slate-100 flex flex-col lg:flex-row gap-20 items-center">
+    <div id="pajak" className="max-w-7xl mx-auto py-20 px-10 rounded-[64px] bg-white border border-slate-100 flex flex-col lg:flex-row gap-20 items-center scroll-mt-32">
       <div className="flex-1 space-y-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-50 text-orange-600 text-[10px] font-black uppercase tracking-widest">
           Laporan Pajak

@@ -7,7 +7,7 @@ import { LandingFooter } from '@/components/LandingFooter';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-indigo-500/10">
+    <div id="beranda" className="min-h-screen bg-background text-foreground selection:bg-indigo-500/10 scroll-mt-20">
       <Navbar />
 
       {/* Hero Section */}
@@ -81,11 +81,11 @@ export default function LandingPage() {
                     <div className="flex items-center gap-2 mb-8">
                       <Image 
                         src="/images/Logo-new.png" 
-                        alt="Leosigra Logo" 
-                        width={28} 
-                        height={28} 
+                        alt="Leosiqra Logo" 
+                        width={40} 
+                        height={40} 
                       />
-                      <span className="font-bold text-slate-800 tracking-tight">Leosigra</span>
+                      <span className="font-bold text-slate-800 tracking-tight">Leosiqra</span>
                     </div>
                     <p className="text-[10px] text-slate-400 font-medium">Anda berhasil menabung 12% lebih banyak.</p>
                   </div>
@@ -103,7 +103,7 @@ export default function LandingPage() {
       <LandingFeatures />
 
       {/* Steps Section */}
-      <section className="py-32 px-6">
+      <section id="cara-kerja" className="py-32 px-6 scroll-mt-20">
         <div className="max-w-7xl mx-auto space-y-20">
           <div className="text-center space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-50 text-orange-600 text-[10px] font-black uppercase tracking-widest">
@@ -161,7 +161,7 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing CTA Section */}
-      <section className="py-32 px-6">
+      <section id="harga" className="py-32 px-6 scroll-mt-20">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 items-center">
           <div className="flex-1 space-y-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-50 text-orange-600 text-[10px] font-black uppercase tracking-widest">
@@ -198,7 +198,7 @@ export default function LandingPage() {
       </section>
 
       {/* Trust Section */}
-      <section className="py-32 px-6 bg-navy text-white overflow-hidden relative">
+      <section id="keamanan" className="py-32 px-6 bg-navy text-white overflow-hidden relative scroll-mt-20">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-20 items-center">
           <div className="flex-1 space-y-8 relative z-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[10px] font-black uppercase tracking-widest">
