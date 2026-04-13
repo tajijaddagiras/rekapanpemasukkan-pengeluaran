@@ -31,7 +31,12 @@ export const Header = () => {
           {pathname === '/membership/dashboard' ? 'Overview' : 'Reporting'}
         </h2>
         <h1 className="text-xl font-black text-slate-900">
-          {pathname === '/membership/dashboard' ? 'Monthly Dashboard' : 'Annual Dashboard'}
+          {{
+            '/membership/dashboard': 'Monthly Dashboard',
+            '/membership/annual': 'Annual Dashboard',
+            '/membership/investment': 'Investment Dashboard',
+            '/membership/under-development': 'Halaman Sedang Dikembangkan'
+          }[pathname] || 'Dashboard'}
         </h1>
       </div>
 

@@ -42,7 +42,7 @@ const menuGroups = [
   {
     label: 'Investasi',
     items: [
-      { icon: TrendingUp, label: 'Dashboard Investasi', href: '/membership/under-development' },
+      { icon: TrendingUp, label: 'Dashboard Investasi', href: '/membership/investment' },
       { icon: Briefcase, label: 'Investasi Saham', href: '/membership/under-development' },
       { icon: Banknote, label: 'Deposito', href: '/membership/under-development' },
       { icon: PieChart, label: 'Investasi Lainnya', href: '/membership/under-development' },
