@@ -1,218 +1,362 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Wallet, 
-  CreditCard, 
-  Banknote, 
-  BarChart3, 
-  PiggyBank,
-  Briefcase,
-  Plus
-} from 'lucide-react';
-import { cn, formatCurrency } from '@/lib/utils';
-import { MetricCard } from '@/components/MetricCard';
-import { InsightCard } from '@/components/InsightCard';
-import { Button } from '@/components/Button';
-import { auth } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { subscribeUserProfile, UserProfile, updateUserProfile } from '@/lib/services/userService';
-import { subscribeTransactions, Transaction } from '@/lib/services/transactionService';
-import { AddTransactionModal } from '@/components/AddTransactionModal';
+import { useState } from 'react';
 
-type TabType = 'pemasukkan' | 'pengeluaran' | 'investasi' | 'tabungan';
+import { 
+  Plus, 
+  Download, 
+  TrendingUp,
+  CreditCard,
+  Landmark,
+  Circle,
+  Lightbulb,
+  ShoppingBag,
+  Utensils,
+  Car,
+  Search,
+  ChevronDown
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function MonthlyDashboard() {
-  const [activeTab, setActiveTab] = useState<TabType>('pemasukkan');
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const router = useRouter();
+  const [filterType, setFilterType] = useState('Semua Kategori');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
+  const tableData = [
+    { kategori: 'Pengeluaran', name: 'Kebutuhan Rumah Tangga', budget: 'Rp5.000.000', actual: 'Rp4.820.000', diff: '+Rp180.000', ok: true },
+    { kategori: 'Pengeluaran', name: 'Hiburan & Lifestyle', budget: 'Rp3.000.000', actual: 'Rp3.750.000', diff: '-Rp750.000', ok: false },
+    { kategori: 'Investasi', name: 'Pendidikan & Kursus', budget: 'Rp2.000.000', actual: 'Rp2.000.000', diff: 'Rp0', neut: true },
+    { kategori: 'Pengeluaran', name: 'Cicilan Kendaraan', budget: 'Rp4.500.000', actual: 'Rp4.500.000', diff: 'Rp0', neut: true },
+    { kategori: 'Pemasukan', name: 'Gaji Utama', budget: 'Rp20.000.000', actual: 'Rp20.000.000', diff: 'Rp0', neut: true },
+    { kategori: 'Tabungan', name: 'Dana Darurat', budget: 'Rp2.000.000', actual: 'Rp2.000.000', diff: 'Rp0', neut: true },
+    { kategori: 'Pengeluaran', name: 'Lain-lain', budget: 'Rp1.500.000', actual: 'Rp1.200.000', diff: '+Rp300.000', ok: true },
+  ];
 
-  useEffect(() => {
-    let unsubProfile: (() => void) | null = null;
-    let unsubTrans: (() => void) | null = null;
+  const filteredData = filterType === 'Semua Kategori' 
+    ? tableData.filter(d => ['Kebutuhan Rumah Tangga', 'Hiburan & Lifestyle', 'Pendidikan & Kursus', 'Cicilan Kendaraan', 'Lain-lain'].includes(d.name)) 
+    : tableData.filter(d => d.kategori === filterType);
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (usr) => {
-      if (usr) {
-        setUser(usr);
-        
-        // Subscribe to profile
-        unsubProfile = subscribeUserProfile(usr.uid, (prof) => {
-          if (prof) {
-            setProfile(prof);
-          } else {
-            const newProfile: Partial<UserProfile> = {
-              uid: usr.uid,
-              name: usr.displayName || 'User',
-              email: usr.email || '',
-              role: 'user',
-              createdAt: new Date().toISOString(),
-              totalWealth: 0,
-              totalIncome: 0,
-              totalExpenses: 0,
-              totalSavings: 0,
-              totalInvestment: 0,
-              creditCardBills: 0,
-              otherDebts: 0,
-            };
-            updateUserProfile(usr.uid, newProfile);
-          }
-        });
+  const parseRp = (val: string) => parseInt(val.replace(/\D/g, ''), 10) || 0;
+  
+  const parseDiff = (val: string) => {
+    const isNegative = val.includes('-');
+    const num = parseRp(val);
+    return isNegative ? -num : num;
+  };
 
-        // Subscribe to transactions
-        unsubTrans = subscribeTransactions(usr.uid, (trans) => {
-          setTransactions(trans);
-          setLoading(false);
-        });
-      } else {
-        // CLEANUP LISTENERS ON LOGOUT
-        if (unsubProfile) unsubProfile();
-        if (unsubTrans) unsubTrans();
-        unsubProfile = null;
-        unsubTrans = null;
-        
-        router.push('/auth/login');
-      }
-    });
+  const totalBudget = filteredData.reduce((acc, row) => acc + parseRp(row.budget), 0);
+  const totalActual = filteredData.reduce((acc, row) => acc + parseRp(row.actual), 0);
+  const totalDiff = filteredData.reduce((acc, row) => acc + parseDiff(row.diff), 0);
 
-    return () => {
-      unsubscribeAuth();
-      if (unsubProfile) unsubProfile();
-      if (unsubTrans) unsubTrans();
-    };
-  }, [router]);
+  const formatRp = (num: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(num);
+  };
 
-  const filteredTransactions = transactions.filter(t => t.type === activeTab);
-
-  if (loading) {
-    return (
-      <div className="h-[60vh] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  const footerLabel = filterType === 'Semua Kategori' ? 'Total Keseluruhan' : `Total ${filterType}`;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Ringkasan Bulan Ini</h2>
-        <Button onClick={() => setIsModalOpen(true)} className="rounded-full h-12 px-8 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700">
-          <Plus size={20} className="mr-2" /> Tambah Data
-        </Button>
+    <div className="space-y-8 animate-in fade-in duration-700 max-w-[1400px]">
+      
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-[28px] font-black text-slate-900 tracking-tight leading-tight">Dashboard Bulanan</h2>
+          <p className="text-sm font-medium text-slate-500 mt-1">Laporan finansial komprehensif untuk periode berjalan.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button className="flex items-center gap-2 bg-black text-white hover:bg-slate-800 px-5 py-2.5 rounded-lg text-xs font-bold transition-all shadow-md shadow-slate-200">
+            <Plus size={14} /> Tambah Cepat
+          </button>
+          <button className="flex items-center gap-2 bg-slate-100 text-slate-800 hover:bg-slate-200 px-5 py-2.5 rounded-lg text-xs font-bold transition-all">
+            <Download size={14} /> Export PDF
+          </button>
+        </div>
       </div>
 
-      <AddTransactionModal 
-        userId={user?.uid} 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-      />
+      {/* Top Cards (3 Cols) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Card 1: Total Kekayaan */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm relative overflow-hidden">
+          <div className="absolute -right-6 -top-6 w-32 h-32 bg-slate-50 rounded-full blur-3xl opacity-50" />
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Total Kekayaan</p>
+          <h3 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Rp1.450.000.000</h3>
+          <div className="flex items-center gap-1.5 text-blue-500 text-xs font-bold">
+            <TrendingUp size={14} />
+            <span>+4.2% bulan ini</span>
+          </div>
+        </div>
 
-      {/* Summary Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard title="Total Kekayaan" value={formatCurrency(profile?.totalWealth || 0)} icon={Wallet} />
-        <MetricCard title="Tagihan Kartu Kredit" value={formatCurrency(profile?.creditCardBills || 0)} type="negative" icon={CreditCard} />
-        <MetricCard title="Hutang Lainnya" value={formatCurrency(profile?.otherDebts || 0)} type="negative" icon={Banknote} />
-        <MetricCard title="Pemasukkan Bulanan" value={formatCurrency(profile?.totalIncome || 0)} type="positive" icon={TrendingUp} />
-        <MetricCard title="Pengeluaran Bulanan" value={formatCurrency(profile?.totalExpenses || 0)} type="negative" icon={TrendingDown} />
-        <MetricCard title="Tabungan Bulanan" value={formatCurrency(profile?.totalSavings || 0)} type="positive" icon={PiggyBank} />
-        <MetricCard title="Investasi Bulanan" value={formatCurrency(profile?.totalInvestment || 0)} type="positive" icon={Briefcase} />
+        {/* Card 2: Tagihan Kartu Kredit */}
+        <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 shadow-sm">
+          <div className="flex justify-between items-start mb-3">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tagihan Kartu Kredit</p>
+            <div className="p-1 px-[5px] bg-rose-50 text-rose-600 rounded">
+              <CreditCard size={14} />
+            </div>
+          </div>
+          <h3 className="text-2xl font-black text-slate-900 mb-5">Rp12.450.000</h3>
+          <div className="flex items-end gap-3 w-full">
+            <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+              <div className="h-full bg-rose-500 w-[75%]" />
+            </div>
+            <span className="text-[9px] font-bold text-slate-400 shrink-0">75% dari Limit</span>
+          </div>
+        </div>
+
+        {/* Card 3: Hutang Lainnya */}
+        <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 shadow-sm">
+          <div className="flex justify-between items-start mb-3">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Hutang Lainnya</p>
+            <div className="text-slate-600">
+              <Landmark size={18} />
+            </div>
+          </div>
+          <h3 className="text-2xl font-black text-slate-900 mb-4">Rp45.000.000</h3>
+          <div className="inline-block px-3 py-1 bg-white border border-slate-200 rounded text-[10px] font-bold text-slate-500">
+            Jatuh Tempo: 15 Nov
+          </div>
+        </div>
       </div>
 
-      {/* Insight Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <InsightCard 
-          title="Kategori Terbesar" 
-          value="Gaji Utama" 
-          subtitle="Mei 2026 • 85% Kontribusi" 
-          icon={TrendingUp} 
-          colorClass="bg-emerald-50 text-emerald-600"
-        />
-        <InsightCard 
-          title="Pos Paling Dominan" 
-          value="Sewa Properti" 
-          subtitle="55% dari total pengeluaran" 
-          icon={TrendingDown} 
-          colorClass="bg-rose-50 text-rose-600"
-        />
-        <InsightCard 
-          title="Tabungan Utama" 
-          value="Mandiri Digital" 
-          subtitle="Saldo aktif terdeteksi" 
-          icon={Wallet} 
-          colorClass="bg-blue-50 text-blue-600"
-        />
-        <InsightCard 
-          title="Aset Terbesar" 
-          value="Logam Mulia" 
-          subtitle="Value storage terbaik" 
-          icon={BarChart3} 
-          colorClass="bg-amber-50 text-amber-600"
-        />
+      {/* Middle Grid (Pulse + Cashflows) */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        {/* Pulse Pasar (1/4 width) */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm lg:col-span-1">
+          <div className="flex items-center justify-between mb-6">
+            <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Pulse Pasar</p>
+            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+          </div>
+          <div className="space-y-5">
+            {[
+              { label: 'BTC/USD', sub: 'Bitcoin', val: '$29,450.21', pct: '+1.2%', up: true, img: 'bg-amber-100 text-amber-600' },
+              { label: 'ETH/USD', sub: 'Ethereum', val: '$1,842.10', pct: '-0.4%', up: false, img: 'bg-slate-100 text-slate-600' },
+              { label: 'USD/IDR', sub: 'Rupiah', val: 'Rp15.742', pct: '0.00%', neut: true, img: 'bg-emerald-100 text-emerald-600' },
+              { label: 'XAU/USD', sub: 'Gold', val: '$1,984.50', pct: '+0.8%', up: true, img: 'bg-amber-50 text-amber-500' },
+            ].map((m, i) => (
+              <div key={i} className="flex items-center justify-between group cursor-default">
+                <div className="flex items-center gap-3">
+                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", m.img)}>
+                    <Circle size={14} className="fill-current" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-900 leading-none mb-1">{m.label}</p>
+                    <p className="text-[10px] font-medium text-slate-400">{m.sub}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-black text-slate-900 leading-none mb-1">{m.val}</p>
+                  <p className={cn(
+                    "text-[10px] font-bold",
+                    m.neut ? "text-slate-300" : m.up ? "text-blue-500" : "text-rose-500"
+                  )}>{m.pct}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 2x2 Flow Grid (3/4 width) */}
+        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Pemasukan */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm relative shadow-sky-500/5">
+             <div className="flex justify-between items-center mb-4">
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pemasukan</p>
+               <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-sky-50 text-sky-500">Sesuai Target</span>
+             </div>
+             <h3 className="text-2xl font-black text-slate-900 mb-6">Rp24.500.000</h3>
+             <div className="flex justify-between items-end gap-3">
+               <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                 <div className="h-full bg-slate-900 w-[98%]" />
+               </div>
+               <span className="text-[9px] font-medium text-slate-400 leading-none">Target: Rp25jt</span>
+             </div>
+          </div>
+          {/* Pengeluaran */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+             <div className="flex justify-between items-center mb-4">
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pengeluaran</p>
+               <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-rose-50 text-rose-500">Waspada</span>
+             </div>
+             <h3 className="text-2xl font-black text-slate-900 mb-6">Rp18.200.000</h3>
+             <div className="flex justify-between items-end gap-3">
+               <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                 <div className="h-full bg-rose-600 w-full" />
+               </div>
+               <span className="text-[9px] font-medium text-slate-400 leading-none">Limit: Rp15jt</span>
+             </div>
+          </div>
+          {/* Tabungan */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm relative shadow-blue-500/5">
+             <div className="flex justify-between items-center mb-4">
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tabungan</p>
+               <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-500">-12% vs Lm</span>
+             </div>
+             <h3 className="text-2xl font-black text-slate-900 mb-6">Rp4.500.000</h3>
+             <div className="flex justify-between items-end gap-3">
+               <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                 <div className="h-full bg-blue-500 w-[90%]" />
+               </div>
+               <span className="text-[9px] font-medium text-slate-400 leading-none">Target: Rp5jt</span>
+             </div>
+          </div>
+          {/* Investasi */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm relative shadow-slate-500/5">
+             <div className="flex justify-between items-center mb-4">
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Investasi</p>
+               <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-sky-50 text-sky-500 uppercase">Aktif</span>
+             </div>
+             <h3 className="text-2xl font-black text-slate-900 mb-6">Rp1.800.000</h3>
+             <div className="flex justify-between items-end gap-3">
+               <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                 <div className="h-full bg-slate-800 w-[100%]" />
+               </div>
+               <span className="text-[9px] font-medium text-slate-400 leading-none">Auto-debet</span>
+             </div>
+          </div>
+        </div>
       </div>
 
-      {/* Tables Section */}
-      <div className="bg-white border border-slate-100 rounded-[32px] overflow-hidden shadow-sm">
-        <div className="flex border-b border-slate-50 bg-slate-50/50">
-          {(['pemasukkan', 'pengeluaran', 'investasi', 'tabungan'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                "px-8 py-5 text-xs font-black uppercase tracking-[0.2em] transition-all relative",
-                activeTab === tab ? "text-indigo-600" : "text-slate-400 hover:text-slate-600"
+      {/* Insight Row */}
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <Lightbulb size={14} className="fill-slate-900 text-slate-900" />
+          <h4 className="text-[10px] font-black tracking-widest uppercase text-slate-800">Insight: Transaksi Tertinggi</h4>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Item 1 */}
+          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-black text-white flex items-center justify-center shrink-0">
+              <ShoppingBag size={18} />
+            </div>
+            <div>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Shopping</p>
+              <p className="text-[11px] font-bold text-slate-900 leading-tight">IKEA Furniture</p>
+              <p className="text-[10px] font-black text-rose-500 mt-1">Rp6.200.000</p>
+            </div>
+          </div>
+          {/* Item 2 */}
+          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-sky-500 text-white flex items-center justify-center shrink-0">
+              <Utensils size={18} />
+            </div>
+            <div>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Dining</p>
+              <p className="text-[11px] font-bold text-slate-900 leading-tight">Oma Elly Trattoria</p>
+              <p className="text-[10px] font-black text-slate-600 mt-1">Rp1.250.000</p>
+            </div>
+          </div>
+          {/* Item 3 */}
+          <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-500 flex items-center justify-center shrink-0">
+              <Car size={18} />
+            </div>
+            <div>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Transport</p>
+              <p className="text-[11px] font-bold text-slate-900 leading-tight">Pertamina Shell</p>
+              <p className="text-[10px] font-black text-slate-600 mt-1">Rp850.000</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Detail Table */}
+      <div className="bg-white rounded-[20px] shadow-sm overflow-hidden mb-10">
+        <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-50">
+          <div className="flex items-center gap-3">
+            <h3 className="text-[15px] font-bold text-slate-900">Detail Anggaran & Realisasi</h3>
+            <span className="text-[10px] font-medium text-slate-400 tracking-wide mt-0.5">(Dalam IDR)</span>
+          </div>
+          <div className="flex items-center gap-2 relative">
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input type="text" placeholder="Cari item..." className="pl-9 pr-4 py-2 bg-slate-50 border-none rounded-lg text-xs w-48 text-slate-600 font-medium focus:ring-0 outline-none" />
+            </div>
+            <div className="relative">
+              <button 
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="h-8 px-3 flex items-center justify-between gap-2 bg-slate-50 text-slate-600 rounded-lg text-xs font-bold min-w-[120px]"
+              >
+                {filterType}
+                <ChevronDown size={14} className="text-slate-400" />
+              </button>
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-40 bg-white border border-slate-100 rounded-xl shadow-lg shadow-indigo-500/10 z-10 py-2">
+                  {['Semua Kategori', 'Pemasukan', 'Pengeluaran', 'Investasi', 'Tabungan'].map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => { setFilterType(cat); setIsDropdownOpen(false); }}
+                      className="w-full text-left px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
               )}
-            >
-              {tab}
-              {activeTab === tab && (
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-indigo-600 rounded-t-full" />
-              )}
-            </button>
-          ))}
+            </div>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left text-xs whitespace-nowrap">
             <thead>
-              <tr className="bg-slate-50/50">
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Item</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Budget</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Actual</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Selisih</th>
+              <tr>
+                <th className="px-6 py-4 font-bold text-[9px] uppercase tracking-[0.15em] text-slate-400 bg-white">Kategori / Item</th>
+                <th className="px-6 py-4 font-bold text-[9px] uppercase tracking-[0.15em] text-slate-400 bg-white text-right">Budget</th>
+                <th className="px-6 py-4 font-bold text-[9px] uppercase tracking-[0.15em] text-slate-400 bg-white text-right">Aktual</th>
+                <th className="px-6 py-4 font-bold text-[9px] uppercase tracking-[0.15em] text-slate-400 bg-white text-right w-24">Selisih</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredTransactions.length > 0 ? filteredTransactions.map((row, i) => {
-                const selisih = row.actual - row.budget;
-                const isOverBudget = activeTab === 'pengeluaran' ? selisih > 0 : selisih < 0;
-                
-                return (
-                  <tr key={i} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-8 py-5 font-bold text-slate-900">{row.item}</td>
-                    <td className="px-8 py-5 text-right text-slate-500 font-mono text-sm">{formatCurrency(row.budget)}</td>
-                    <td className="px-8 py-5 text-right text-slate-900 font-black font-mono">{formatCurrency(row.actual)}</td>
-                    <td className={cn(
-                      "px-8 py-5 text-right font-black font-mono",
-                      selisih === 0 ? "text-slate-300" :
-                      isOverBudget ? "text-rose-500" : "text-emerald-500"
-                    )}>
-                      {selisih > 0 ? '+' : ''}{formatCurrency(selisih)}
+            <tbody className="divide-y divide-slate-50">
+              {filteredData.length > 0 ? (
+                filteredData.map((row, i) => (
+                  <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                        <span className="font-bold text-slate-700">{row.name}</span>
+                      </div>
                     </td>
+                    <td className="px-6 py-5 text-right font-black text-slate-400">{row.budget}</td>
+                    <td className="px-6 py-5 text-right font-black text-slate-600">{row.actual}</td>
+                    <td className={cn(
+                      "px-6 py-5 text-right font-black",
+                      row.neut ? "text-slate-300" : row.ok ? "text-blue-500" : "text-rose-500"
+                    )}>{row.diff}</td>
                   </tr>
-                );
-              }) : (
+                ))
+              ) : (
                 <tr>
-                  <td colSpan={4} className="px-8 py-20 text-center text-slate-400 font-medium italic text-sm">
+                  <td colSpan={4} className="px-6 py-10 text-center text-slate-400 font-medium italic text-sm">
                     Belum ada data untuk kategori ini.
                   </td>
                 </tr>
               )}
             </tbody>
+            <tfoot className="bg-black text-white">
+              <tr>
+                <td className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest pl-11 rounded-bl-[20px]">
+                  {footerLabel}
+                </td>
+                <td className="px-6 py-4 font-black text-xs text-right text-slate-400">
+                  {formatRp(totalBudget)}
+                </td>
+                <td className="px-6 py-4 font-black text-xs text-right">
+                  {formatRp(totalActual)}
+                </td>
+                <td className={cn(
+                  "px-6 py-4 font-black text-xs text-right rounded-br-[20px]",
+                  totalDiff < 0 ? "text-rose-400" : totalDiff > 0 ? "text-emerald-400" : "text-slate-400"
+                )}>
+                  {totalDiff > 0 ? '+' : ''}{formatRp(totalDiff)}
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
