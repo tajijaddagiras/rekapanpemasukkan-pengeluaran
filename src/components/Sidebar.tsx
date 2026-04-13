@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { 
-  BarChart3, 
-  Calendar, 
-  LayoutDashboard, 
+import {
+  BarChart3,
+  Calendar,
+  LayoutDashboard,
   LogOut,
   ChevronRight,
   TrendingUp,
@@ -87,11 +87,19 @@ export const Sidebar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const [openGroups, setOpenGroups] = useState<string[]>(['Utama']);
+  const [selectedItem, setSelectedItem] = useState<string>('');
+
+  const isItemActive = (item: { label: string; href: string }) => {
+    if (item.href !== '/membership/under-development') {
+      return pathname === item.href;
+    }
+    return selectedItem === item.label;
+  };
 
   const toggleGroup = (label: string) => {
-    setOpenGroups(prev => 
-      prev.includes(label) 
-        ? prev.filter(g => g !== label) 
+    setOpenGroups(prev =>
+      prev.includes(label)
+        ? prev.filter(g => g !== label)
         : [...prev, label]
     );
   };
@@ -130,29 +138,29 @@ export const Sidebar = () => {
                 {group.label}
                 {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
               </button>
-              
+
               {isOpen && (
                 <div className="space-y-1 mt-1 transition-all duration-300">
                   {group.items.map((item) => {
-                    const isActive = pathname === item.href;
                     return (
                       <Link
                         key={item.label + item.href}
                         href={item.href}
+                        onClick={() => setSelectedItem(item.label)}
                         className={cn(
                           "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group relative",
-                          isActive 
-                            ? "text-indigo-600 bg-white shadow-sm font-bold border border-slate-100" 
-                            : "text-slate-500 hover:text-indigo-600 hover:bg-white/60"
+                          isItemActive(item)
+                            ? "text-indigo-600 font-bold"
+                            : "text-slate-500 hover:text-indigo-600 hover:bg-slate-100/50"
                         )}
                       >
                         <item.icon size={18} className={cn(
                           "transition-colors",
-                          isActive ? "text-indigo-600" : "group-hover:text-indigo-600"
+                          isItemActive(item) ? "text-indigo-600" : "group-hover:text-indigo-600"
                         )} />
-                        <span className="text-xs">{item.label}</span>
-                        {isActive && (
-                          <div className="absolute left-0 w-1 h-4 bg-indigo-600 rounded-full" />
+                        <span className="text-[13px]">{item.label}</span>
+                        {isItemActive(item) && (
+                          <div className="absolute left-0 w-1 h-4 bg-indigo-600 rounded-r-full" />
                         )}
                       </Link>
                     );
@@ -177,7 +185,7 @@ export const Sidebar = () => {
           </div>
         </div>
 
-        <button 
+        <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-3 w-full text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all font-bold text-sm"
         >
