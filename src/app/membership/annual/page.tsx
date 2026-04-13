@@ -1,217 +1,365 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { 
-  ChevronDown, 
-  Calendar, 
-  ArrowRight,
-  Filter
+  TrendingUp, 
+  WalletCards, 
+  Landmark, 
+  Activity
 } from 'lucide-react';
-import { cn, formatCurrency } from '@/lib/utils';
-import { YearCard } from '@/components/YearCard';
-import { CategorySelect } from '@/components/CategorySelect';
-import { auth } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { cn } from '@/lib/utils';
 
 export default function AnnualDashboard() {
-  const [cat1, setCat1] = useState('gaji');
-  const [cat2, setCat2] = useState('rent');
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
-  const [loading, setLoading] = useState(true);
-  const [realYears, setRealYears] = useState<{ year: string, income: number, expense: number }[]>([]);
-  const [tableData, setTableData] = useState<{ item: string, budget: number, actual: number }[]>([]);
-  const router = useRouter();
+  const [selectedYear, setSelectedYear] = useState('2026');
 
-  useEffect(() => {
-    let unsubscribeTransactions: (() => void) | null = null;
+  // Circular Progress Helper Component
+  const CircularProgress = ({ value, colorClass, strokeClass }: {value: number, colorClass: string, strokeClass: string}) => {
+    const radius = 18;
+    const stroke = 3;
+    const normalizedRadius = radius - stroke * 2;
+    const circumference = normalizedRadius * 2 * Math.PI;
+    const strokeDashoffset = circumference - (value / 100) * circumference;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (usr) => {
-      if (usr) {
-        // Subscribe to real transactions
-        const { subscribeTransactions } = require('@/lib/services/transactionService');
-        unsubscribeTransactions = subscribeTransactions(usr.uid, (transactions: any[]) => {
-          // Process Yearly Data
-          const yearMap: Record<string, { income: number, expense: number }> = {};
-          const categoryMap: Record<string, { budget: number, actual: number }> = {};
-          
-          transactions.forEach(t => {
-            const y = new Date(t.date).getFullYear().toString();
-            if (!yearMap[y]) yearMap[y] = { income: 0, expense: 0 };
-            
-            if (t.type === 'pemasukkan') yearMap[y].income += t.actual;
-            else yearMap[y].expense += t.actual;
-
-            // Process categories for selected year
-            if (y === selectedYear) {
-              const catLabel = t.category || t.item;
-              if (!categoryMap[catLabel]) categoryMap[catLabel] = { budget: 0, actual: 0 };
-              categoryMap[catLabel].actual += t.actual;
-              categoryMap[catLabel].budget += (t.budget || 0);
-            }
-          });
-
-          const processedYears = Object.entries(yearMap).map(([year, values]) => ({
-            year,
-            income: values.income,
-            expense: values.expense
-          })).sort((a, b) => b.year.localeCompare(a.year));
-
-          const processedTable = Object.entries(categoryMap).map(([item, values]) => ({
-            item,
-            budget: values.budget,
-            actual: values.actual
-          }));
-
-          setRealYears(processedYears);
-          setTableData(processedTable);
-          setLoading(false);
-        });
-      } else {
-        // CLEANUP LISTENERS ON LOGOUT
-        if (unsubscribeTransactions) unsubscribeTransactions();
-        unsubscribeTransactions = null;
-        
-        router.push('/auth/login');
-      }
-    });
-
-    return () => {
-      unsubscribeAuth();
-      if (unsubscribeTransactions) unsubscribeTransactions();
-    };
-  }, [router, selectedYear]);
-
-  if (loading) {
     return (
-      <div className="h-[60vh] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+      <div className="relative w-12 h-12 flex items-center justify-center">
+        <svg height={radius * 2} width={radius * 2} className="-rotate-90">
+          <circle 
+            stroke="#f1f5f9" 
+            strokeWidth={stroke} 
+            fill="transparent" 
+            r={normalizedRadius} 
+            cx={radius} 
+            cy={radius} 
+          />
+          <circle 
+            className={strokeClass}
+            strokeDasharray={circumference + ' ' + circumference} 
+            style={{ strokeDashoffset }} 
+            strokeWidth={stroke} 
+            fill="transparent" 
+            r={normalizedRadius} 
+            cx={radius} 
+            cy={radius} 
+            strokeLinecap="round"
+          />
+        </svg>
+        <span className={cn("absolute text-[10px] font-bold", colorClass)}>{value}%</span>
       </div>
     );
-  }
-
+  };
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Category Filters */}
-      <div className="p-8 rounded-[40px] bg-white border border-slate-100 shadow-sm">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100">
-            <Filter size={24} />
-          </div>
-          <div>
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Perbandingan Tahunan</h2>
-            <p className="text-xs text-slate-400 font-medium tracking-wide">Analisis data budget antar kategori</p>
-          </div>
+    <div className="space-y-8 animate-in fade-in duration-700 max-w-[1400px]">
+      
+      {/* 1. Header (Top Bar) */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-[28px] font-black text-slate-900 tracking-tight leading-tight">Annual Dashboard</h2>
+          <p className="text-sm font-medium text-slate-500 mt-1">Reviewing your financial performance for the current fiscal year.</p>
         </div>
         
-        <div className="flex flex-col md:flex-row gap-8 items-center">
-          <div className="flex-1 w-full flex flex-col gap-2">
-            <CategorySelect label="Kategori 1" value={cat1} type="income" onChange={setCat1} showBadge={false} />
-            <div className="px-1 group">
-              <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-[9px] font-black text-emerald-600 uppercase tracking-widest border border-emerald-100/50 group-hover:bg-emerald-100 transition-colors">Income</span>
-            </div>
-          </div>
-
-          <div className="hidden md:flex items-center justify-center pt-2">
-            <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 border border-slate-100">
-              <ArrowRight size={20} />
-            </div>
-          </div>
-
-          <div className="flex-1 w-full flex flex-col gap-2">
-            <CategorySelect label="Kategori 2" value={cat2} type="expense" onChange={setCat2} showBadge={false} />
-            <div className="px-1 group">
-              <span className="px-2 py-0.5 rounded-full bg-rose-50 text-[9px] font-black text-rose-600 uppercase tracking-widest border border-rose-100/50 group-hover:bg-rose-100 transition-colors">Expense</span>
-            </div>
-          </div>
-          
-          <div className="md:pt-6">
-            <button className="w-full md:w-auto px-10 py-4 mb-5 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95 group">
-              <span className="flex items-center gap-2">
-                Terapkan Filter
-                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-              </span>
+        {/* Year Selectors Pill */}
+        <div className="flex items-center bg-white border border-slate-100 rounded-xl p-1.5 shadow-sm">
+          {['2024', '2025', '2026'].map((year) => (
+            <button
+              key={year}
+              onClick={() => setSelectedYear(year)}
+              className={cn(
+                "px-6 py-2 text-xs font-bold rounded-lg transition-all",
+                selectedYear === year 
+                  ? "bg-slate-900 text-white shadow" 
+                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+              )}
+            >
+              {year}
             </button>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Year Selection */}
+      {/* 2. Top Summary Cards (4 Cols) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {realYears.length > 0 ? (
-          realYears.map((y) => (
-            <YearCard 
-              key={y.year} 
-              year={y.year} 
-              income={formatCurrency(y.income).replace('Rp ', '')} 
-              expense={formatCurrency(y.expense).replace('Rp ', '')} 
-              isActive={selectedYear === y.year}
-              onClick={() => setSelectedYear(y.year)}
-            />
-          ))
-        ) : (
-          <div className="col-span-full p-12 text-center bg-white border border-slate-100 rounded-[40px] shadow-sm">
-            <p className="text-slate-400 font-bold">Belum ada data transaksi tahunan.</p>
+        
+        {/* Card 1: Pemasukan */}
+        <div className="bg-white rounded-[20px] p-6 border border-slate-100 shadow-sm flex flex-col justify-between h-[180px]">
+          <div className="flex justify-between items-start">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-2">Pemasukan</p>
+            <CircularProgress value={75} colorClass="text-slate-700" strokeClass="stroke-sky-500" />
           </div>
-        )}
-      </div>
-
-      {/* Annual Summary Table */}
-      <div className="space-y-8">
-        <div className="flex items-center justify-between px-2">
-          <h3 className="text-2xl font-black text-slate-900 flex items-center gap-4 tracking-tight">
-            <div className="w-1.5 h-8 bg-indigo-600 rounded-full" />
-            Rekap Data {selectedYear}
-          </h3>
-          <div className="text-xs text-slate-400 font-black uppercase tracking-widest bg-slate-100 px-4 py-2 rounded-full">
-            Annual Summary
+          <div>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-lg font-bold text-slate-900">Rp</span>
+              <h3 className="text-3xl font-black text-slate-900 tracking-tight">450.000.000</h3>
+            </div>
+            <div className="flex justify-between items-center mt-5">
+              <div>
+                <p className="text-[9px] text-slate-400 font-medium">Target/Budget</p>
+                <p className="text-[10px] font-bold text-slate-600">Rp500.000.000</p>
+              </div>
+              <span className="px-3 py-1 bg-sky-50 text-sky-500 text-[10px] font-bold rounded-full">On Track</span>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-100 rounded-[32px] overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Item / Kategori</th>
-                  <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Annual Budget</th>
-                  <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Annual Actual</th>
-                  <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Selisih</th>
+        {/* Card 2: Pengeluaran */}
+        <div className="bg-white rounded-[20px] p-6 border border-slate-100 shadow-sm flex flex-col justify-between h-[180px]">
+          <div className="flex justify-between items-start">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-2">Pengeluaran</p>
+            <CircularProgress value={50} colorClass="text-slate-700" strokeClass="stroke-rose-500" />
+          </div>
+          <div>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-lg font-bold text-slate-900">Rp</span>
+              <h3 className="text-3xl font-black text-slate-900 tracking-tight">210.000.000</h3>
+            </div>
+            <div className="flex justify-between items-center mt-5">
+              <div>
+                <p className="text-[9px] text-slate-400 font-medium">Target/Budget</p>
+                <p className="text-[10px] font-bold text-slate-600">Rp420.000.000</p>
+              </div>
+              <span className="px-3 py-1 bg-rose-50 text-rose-500 text-[10px] font-bold rounded-full">Caution</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Tabungan */}
+        <div className="bg-white rounded-[20px] p-6 border border-slate-100 shadow-sm flex flex-col justify-between h-[180px]">
+          <div className="flex justify-between items-start">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-2">Tabungan</p>
+            <CircularProgress value={90} colorClass="text-slate-700" strokeClass="stroke-slate-600" />
+          </div>
+          <div>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-lg font-bold text-slate-900">Rp</span>
+              <h3 className="text-3xl font-black text-slate-900 tracking-tight">120.000.000</h3>
+            </div>
+            <div className="flex justify-between items-center mt-5">
+              <div>
+                <p className="text-[9px] text-slate-400 font-medium">Target/Budget</p>
+                <p className="text-[10px] font-bold text-slate-600">Rp133.000.000</p>
+              </div>
+              <span className="px-3 py-1 bg-indigo-50 text-indigo-500 text-[10px] font-bold rounded-full">Goal Near</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: Investasi */}
+        <div className="bg-white rounded-[20px] p-6 border border-slate-100 shadow-sm flex flex-col justify-between h-[180px]">
+          <div className="flex justify-between items-start">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-2">Investasi</p>
+            <CircularProgress value={40} colorClass="text-slate-700" strokeClass="stroke-teal-600" />
+          </div>
+          <div>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-lg font-bold text-slate-900">Rp</span>
+              <h3 className="text-3xl font-black text-slate-900 tracking-tight">100.000.000</h3>
+            </div>
+            <div className="flex justify-between items-center mt-5">
+              <div>
+                <p className="text-[9px] text-slate-400 font-medium">Target/Budget</p>
+                <p className="text-[10px] font-bold text-slate-600">Rp250.000.000</p>
+              </div>
+              <span className="px-3 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full">Growing</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Middle Area (2/3 Graph + 1/3 Sidebar List) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* GRAPH SECTION (2/3) */}
+        <div className="lg:col-span-2 bg-white rounded-[24px] p-8 border border-slate-100 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-10">
+            <div>
+              <h3 className="text-[18px] font-bold text-slate-900 leading-tight">Perbandingan Kategori Tahunan</h3>
+              <p className="text-xs font-medium text-slate-400 mt-1 max-w-sm">Visual comparison of selected financial metrics across 12 months.</p>
+            </div>
+            <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-100 text-xs font-bold text-slate-400">
+              <span className="px-3 py-1.5 bg-white text-slate-700 rounded shadow-sm">Category 1: Salary</span>
+              <span className="px-2 italic text-[10px]">VS</span>
+              <span className="px-3 py-1.5 text-slate-500">Category 2: Rent</span>
+            </div>
+          </div>
+
+          {/* Simulated Bar Chart Layout */}
+          <div className="bg-slate-50/50 rounded-xl p-4 h-[280px] flex items-end justify-between gap-2 md:gap-4 relative px-4 md:px-8 border border-slate-50">
+            {/* Example 12 Months mock bars */}
+            {[
+              { m: 'JAN', b1: 45, b2: 60 },
+              { m: 'FEB', b1: 65, b2: 40 },
+              { m: 'MAR', b1: 90, b2: 50 },
+              { m: 'APR', b1: 40, b2: 70 },
+              { m: 'MAY', b1: 55, b2: 25 },
+              { m: 'JUN', b1: 35, b2: 85 },
+              { m: 'JUL', b1: 100, b2: 20 },
+              { m: 'AUG', b1: 65, b2: 55 },
+              { m: 'SEP', b1: 80, b2: 60 },
+              { m: 'OCT', b1: 30, b2: 75 },
+              { m: 'NOV', b1: 65, b2: 50 },
+              { m: 'DEC', b1: 70, b2: 85 },
+            ].map((col) => (
+              <div key={col.m} className="flex flex-col items-center gap-3 w-full h-full justify-end group">
+                <div className="flex items-end gap-1 w-full justify-center h-[200px]">
+                  <div 
+                    className="w-1/2 max-w-[12px] bg-slate-200 rounded-t-sm group-hover:bg-slate-300 transition-colors" 
+                    style={{ height: `${col.b1}%` }}
+                  />
+                  <div 
+                    className="w-1/2 max-w-[12px] bg-slate-600 rounded-t-sm group-hover:bg-slate-700 transition-colors" 
+                    style={{ height: `${col.b2}%` }}
+                  />
+                </div>
+                <span className="text-[8px] font-bold text-slate-400 tracking-widest uppercase">{col.m}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* SIDEBAR SECTION (1/3) */}
+        <div className="lg:col-span-1 space-y-4 flex flex-col">
+          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-2 px-1">Transaksi Tertinggi</h3>
+          
+          <div className="flex-1 flex flex-col gap-4">
+            {/* Transaksi 1 */}
+            <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-sky-100 flex items-center justify-center text-sky-500">
+                  <TrendingUp size={16} />
+                </div>
+                <div>
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Pemasukan</p>
+                  <p className="text-xs font-bold text-slate-900">Proyek Korporasi X</p>
+                </div>
+              </div>
+              <span className="text-xs font-black text-sky-500">+Rp 85jt</span>
+            </div>
+
+            {/* Transaksi 2 */}
+            <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-rose-100 flex items-center justify-center text-rose-500">
+                  <WalletCards size={16} />
+                </div>
+                <div>
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Pengeluaran</p>
+                  <p className="text-xs font-bold text-slate-900">Sewa Kantor Tahunan</p>
+                </div>
+              </div>
+              <span className="text-xs font-black text-rose-500">-Rp 120jt</span>
+            </div>
+
+            {/* Transaksi 3 */}
+            <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
+                  <Landmark size={16} />
+                </div>
+                <div>
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Tabungan</p>
+                  <p className="text-xs font-bold text-slate-900">Dana Darurat</p>
+                </div>
+              </div>
+              <span className="text-xs font-black text-slate-900">Rp 40jt</span>
+            </div>
+
+            {/* Transaksi 4 */}
+            <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
+                  <Activity size={16} />
+                </div>
+                <div>
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Investasi</p>
+                  <p className="text-xs font-bold text-slate-900">Saham Blue Chip</p>
+                </div>
+              </div>
+              <span className="text-xs font-black text-slate-900">Rp 65jt</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Area Tabel (Rincian Anggaran Tahunan) */}
+      <div className="bg-white rounded-[24px] shadow-sm overflow-hidden mb-10 border border-slate-100">
+        <div className="p-6 md:px-8 py-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-50">
+          <h3 className="text-[16px] font-bold text-slate-900">Rincian Anggaran Tahunan</h3>
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-full px-4 py-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Mata Uang Ditampilkan Dalam IDR</span>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs whitespace-nowrap">
+            <thead>
+              <tr className="bg-slate-50/30">
+                <th className="px-8 py-5 font-bold text-[10px] uppercase tracking-[0.15em] text-slate-400">Item</th>
+                <th className="px-6 py-5 font-bold text-[10px] uppercase tracking-[0.15em] text-slate-400">Budget</th>
+                <th className="px-6 py-5 font-bold text-[10px] uppercase tracking-[0.15em] text-slate-400">Aktual</th>
+                <th className="px-6 py-5 font-bold text-[10px] uppercase tracking-[0.15em] text-slate-400">Selisih</th>
+                <th className="px-8 py-5 font-bold text-[10px] uppercase tracking-[0.15em] text-slate-400 text-right w-28">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {[
+                { 
+                  item: 'Operasional Bisnis', 
+                  budget: 'Rp 150.000.000', 
+                  actual: 'Rp 142.500.000', 
+                  diff: 'Rp 7.500.000', 
+                  diffColor: 'text-sky-500',
+                  status: 'HEMAT', 
+                  statusStyle: 'text-sky-500 border-sky-100 bg-white'
+                },
+                { 
+                  item: 'Marketing & Ads', 
+                  budget: 'Rp 45.000.000', 
+                  actual: 'Rp 48.200.000', 
+                  diff: '-Rp 3.200.000', 
+                  diffColor: 'text-rose-500',
+                  status: 'OVER', 
+                  statusStyle: 'text-rose-500 border-rose-100 bg-white'
+                },
+                { 
+                  item: 'Pengembangan SDM', 
+                  budget: 'Rp 30.000.000', 
+                  actual: 'Rp 25.000.000', 
+                  diff: 'Rp 5.000.000', 
+                  diffColor: 'text-sky-500',
+                  status: 'HEMAT', 
+                  statusStyle: 'text-sky-500 border-sky-100 bg-white'
+                },
+                { 
+                  item: 'Infrastruktur IT', 
+                  budget: 'Rp 80.000.000', 
+                  actual: 'Rp 80.000.000', 
+                  diff: 'Rp 0', 
+                  diffColor: 'text-slate-400',
+                  status: 'SESUAI', 
+                  statusStyle: 'text-slate-400 border-slate-200 bg-white'
+                },
+              ].map((row, i) => (
+                <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-8 py-6 font-bold text-slate-800">{row.item}</td>
+                  <td className="px-6 py-6 font-bold text-slate-400 tracking-tight">{row.budget}</td>
+                  <td className="px-6 py-6 font-black text-slate-800 tracking-tight">{row.actual}</td>
+                  <td className={cn("px-6 py-6 font-black tracking-tight", row.diffColor)}>{row.diff}</td>
+                  <td className="px-8 py-6 text-right">
+                    <span className={cn(
+                      "inline-block px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest border",
+                      row.statusStyle
+                    )}>
+                      {row.status}
+                    </span>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {tableData.length > 0 ? (
-                  tableData.map((row, i) => {
-                    const selisih = row.actual - row.budget;
-                    return (
-                      <tr key={i} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="px-8 py-6">
-                          <div className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{row.item}</div>
-                        </td>
-                        <td className="px-8 py-6 text-right text-slate-500 font-mono text-sm tracking-tight">{formatCurrency(row.budget)}</td>
-                        <td className="px-8 py-6 text-right text-slate-900 font-black font-mono tracking-tight">{formatCurrency(row.actual)}</td>
-                        <td className={cn(
-                          "px-8 py-6 text-right font-black font-mono tracking-tight",
-                          selisih >= 0 ? "text-emerald-500" : "text-rose-500"
-                        )}>
-                          {selisih > 0 ? '+' : ''}{formatCurrency(selisih)}
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={4} className="px-8 py-10 text-center text-slate-400 font-medium">
-                      Tidak ada data transaksi untuk tahun {selectedYear}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
+
     </div>
   );
 }
