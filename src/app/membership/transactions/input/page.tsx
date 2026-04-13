@@ -18,20 +18,20 @@ import { cn } from '@/lib/utils';
 
 export default function InputTransactionPage() {
   return (
-    <div className="space-y-10 animate-in fade-in duration-700 max-w-[1400px] pb-12">
+    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] pb-12">
       
       {/* 1. Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">
             Input Transaksi <span className="text-blue-600 italic">Harian</span>
           </h1>
-          <p className="text-sm font-medium text-slate-400 mt-2 max-w-xl leading-relaxed">
+          <p className="text-[12px] md:text-sm font-medium text-slate-400 mt-2 max-w-xl leading-relaxed">
             Manajemen aset cerdas dimulai dengan pencatatan yang presisi. Pilih kategori input di bawah untuk memperbarui narasi finansial Anda hari ini.
           </p>
         </div>
         
-        <button className="flex items-center gap-3 bg-blue-700 text-white px-7 py-3.5 rounded-2xl text-xs font-black shadow-xl shadow-blue-200 hover:scale-105 active:scale-95 transition-all">
+        <button className="flex items-center justify-center gap-3 bg-blue-700 text-white px-6 md:px-7 py-3 md:py-3.5 rounded-2xl text-[11px] md:text-xs font-black shadow-xl shadow-blue-200 hover:scale-105 active:scale-95 transition-all">
           <PlusCircle size={18} />
           Tambah Cepat
         </button>
@@ -50,7 +50,7 @@ export default function InputTransactionPage() {
         {/* TOP CARDS GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Card: Transaksi Harian (2/3) */}
-          <div className="lg:col-span-2 bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden flex flex-col justify-between h-[240px]">
+          <div className="lg:col-span-2 bg-white rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden flex flex-col justify-between h-[200px] md:h-[240px]">
             <div className="flex justify-between items-start">
               <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100 group-hover:scale-110 transition-transform">
                 <Monitor size={24} />
@@ -59,7 +59,7 @@ export default function InputTransactionPage() {
             </div>
             
             <div className="max-w-md">
-              <h3 className="text-xl font-black text-slate-900 mb-2">Transaksi Harian</h3>
+              <h3 className="text-lg md:text-xl font-black text-slate-900 mb-2">Transaksi Harian</h3>
               <p className="text-xs font-medium text-slate-400 leading-relaxed">
                 Catat pengeluaran rutin, belanja, dan biaya operasional harian dengan kategorisasi otomatis.
               </p>
@@ -72,13 +72,13 @@ export default function InputTransactionPage() {
           </div>
 
           {/* Side Card: Investasi Saham (1/3) */}
-          <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between h-[240px]">
+          <div className="bg-white rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between h-[200px] md:h-[240px]">
             <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 shadow-sm border border-purple-100 group-hover:scale-110 transition-transform">
               <TrendingUp size={24} />
             </div>
             
             <div>
-              <h3 className="text-xl font-black text-slate-900 mb-2">Investasi Saham</h3>
+              <h3 className="text-lg md:text-xl font-black text-slate-900 mb-2">Investasi Saham</h3>
               <p className="text-xs font-medium text-slate-400 leading-relaxed">
                 Update portofolio saham, dividen, dan capital gain terbaru.
               </p>
@@ -178,7 +178,7 @@ export default function InputTransactionPage() {
         </div>
 
         {/* Right: Insights Banner (Wide) */}
-        <div className="lg:col-span-2 relative h-[220px] rounded-[32px] overflow-hidden bg-[#0a192f] group cursor-pointer border border-white/10 shadow-2xl">
+        <div className="lg:col-span-2 relative h-[180px] md:h-[220px] rounded-[32px] overflow-hidden bg-[#0a192f] group cursor-pointer border border-white/10 shadow-2xl">
           {/* Mock Candlestick Chart Background overlay */}
           <div className="absolute inset-0 opacity-20 flex items-end justify-between px-8 gap-1.5 pointer-events-none">
             {[40, 80, 50, 90, 100, 60, 40, 70, 80, 50, 30, 90, 60, 40, 70].map((h, i) => (
@@ -196,8 +196,8 @@ export default function InputTransactionPage() {
             ))}
           </div>
 
-          <div className="relative z-10 w-full h-full p-10 flex flex-col justify-center">
-            <h3 className="text-2xl font-black text-white mb-3">Automated Insights</h3>
+          <div className="relative z-10 w-full h-full p-6 md:p-10 flex flex-col justify-center">
+            <h3 className="text-xl md:text-2xl font-black text-white mb-3">Automated Insights</h3>
             <p className="text-xs font-medium text-slate-400 max-w-sm leading-relaxed">
               Sistem kami mencatat pola pengeluaran yang lebih efisien di kategori "Transaksi Harian" Anda.
             </p>

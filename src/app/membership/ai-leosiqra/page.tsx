@@ -31,19 +31,19 @@ export default function AILeosiqraPage() {
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-1000 max-w-[1240px] mb-20">
+    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-1000 max-w-[1400px] mb-20">
       
       {/* 1. Header Analysis Section */}
-      <div className="bg-white p-10 lg:p-14 rounded-[48px] border border-slate-50 shadow-sm">
-        <div className="flex flex-col lg:flex-row justify-between gap-10">
+      <div className="bg-white p-6 md:p-10 lg:p-12 rounded-[32px] md:rounded-[48px] border border-slate-50 shadow-sm">
+        <div className="flex flex-col lg:flex-row justify-between gap-8 lg:gap-10">
           <div className="max-w-xl space-y-6">
             <div className="flex items-center gap-2 px-4 py-1.5 bg-slate-100 text-slate-500 rounded-full w-fit">
-               <ChevronLeft size={14} className="opacity-60" />
-               <span className="text-[10px] font-black uppercase tracking-widest">AI Intelligence Mode: Aman</span>
+               <ChevronLeft size={12} className="opacity-60" />
+               <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest leading-none">AI Intelligence Mode: Aman</span>
             </div>
             
-            <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-[1.1]">
-              Analisis Portofolio <br />
+            <h1 className="text-2xl md:text-3xl lg:text-5xl font-black text-slate-900 tracking-tight leading-[1.2] md:leading-[1.1]">
+              Analisis Portofolio <br className="hidden md:block" />
               <span className="text-indigo-600">Ethereal Anda</span>
             </h1>
             
@@ -51,11 +51,11 @@ export default function AILeosiqraPage() {
               Berdasarkan data 30 hari terakhir, efisiensi anggaran Anda meningkat 12.4%. Mari optimalkan instrumen agresif Anda.
             </p>
 
-            <div className="flex items-center gap-3 pt-4">
+            <div className="flex flex-wrap items-center gap-2 md:gap-3 pt-4">
               {strategies.map((s, i) => (
                 <button 
                   key={s} 
-                  className={`px-8 py-3 rounded-2xl text-[11px] font-black transition-all ${
+                  className={`px-6 md:px-8 py-2.5 md:py-3 rounded-xl md:rounded-2xl text-[10px] md:text-[11px] font-black transition-all ${
                     s === "Seimbang" 
                       ? "bg-indigo-600 text-white shadow-xl shadow-indigo-100 scale-105" 
                       : "bg-slate-50 text-slate-400 hover:bg-slate-100"
@@ -67,17 +67,17 @@ export default function AILeosiqraPage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 shrink-0">
-            <button className="flex items-center justify-between w-full lg:w-64 bg-indigo-600 text-white px-8 py-4.5 rounded-[24px] text-xs font-black shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all">
+          <div className="flex flex-col gap-2 md:gap-3 shrink-0">
+            <button className="flex items-center justify-between w-full lg:w-64 bg-indigo-600 text-white px-6 md:px-8 py-3.5 md:py-4 rounded-xl md:rounded-[24px] text-[11px] md:text-xs font-black shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all">
               <span>Minta Analisis AI</span>
-              <ArrowRight size={18} />
+              <ArrowRight size={16} />
             </button>
-            <button className="flex items-center gap-3 w-fit lg:w-64 bg-slate-50/50 text-slate-500 px-8 py-4 rounded-[24px] text-xs font-black hover:bg-slate-50 transition-all border border-slate-100">
-              <RefreshCw size={16} />
+            <button className="flex items-center gap-3 w-full lg:w-64 bg-slate-50/50 text-slate-500 px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-[24px] text-[11px] md:text-xs font-black hover:bg-slate-50 transition-all border border-slate-100">
+              <RefreshCw size={14} />
               Segarkan Insight
             </button>
-            <button className="flex items-center gap-3 w-fit lg:w-64 bg-slate-50/50 text-slate-500 px-8 py-4 rounded-[24px] text-xs font-black hover:bg-slate-50 transition-all border border-slate-100">
-              <Copy size={16} />
+            <button className="flex items-center gap-3 w-full lg:w-64 bg-slate-50/50 text-slate-500 px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-[24px] text-[11px] md:text-xs font-black hover:bg-slate-50 transition-all border border-slate-100">
+              <Copy size={14} />
               Salin Prompt
             </button>
           </div>
@@ -85,22 +85,22 @@ export default function AILeosiqraPage() {
       </div>
 
       {/* 2. Top Grid Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
         {/* Recommendation */}
-        <div className="bg-white p-10 rounded-[40px] border border-slate-50 shadow-sm group hover:translate-y-[-4px] transition-all">
-          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6">01</p>
-          <h3 className="text-lg font-black text-slate-900 mb-4 tracking-tight">Rekomendasi Cerdas</h3>
+        <div className="bg-white p-6 md:p-8 lg:p-10 rounded-[32px] md:rounded-[40px] border border-slate-50 shadow-sm group hover:translate-y-[-4px] transition-all">
+          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 md:mb-6">01</p>
+          <h3 className="text-lg font-black text-slate-900 mb-2 md:mb-4 tracking-tight">Rekomendasi Cerdas</h3>
           <p className="text-[11px] font-bold text-slate-400 leading-relaxed mb-6">Pindahkan 5% dana kas ke pasar uang untuk yield optimal.</p>
           <button className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-widest">
             Lihat Detail
             <ArrowRight size={14} />
           </button>
         </div>
-
+ 
         {/* Emergency Fund */}
-        <div className="bg-white p-10 rounded-[40px] border border-slate-50 shadow-sm group">
-          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6">02</p>
-          <h3 className="text-lg font-black text-slate-900 mb-4 tracking-tight">Panduan Dana Darurat</h3>
+        <div className="bg-white p-6 md:p-8 lg:p-10 rounded-[32px] md:rounded-[40px] border border-slate-50 shadow-sm group">
+          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 md:mb-6">02</p>
+          <h3 className="text-lg font-black text-slate-900 mb-2 md:mb-4 tracking-tight">Panduan Dana Darurat</h3>
           <div className="relative h-2.5 w-full bg-slate-100 rounded-full overflow-hidden mb-4">
             <motion.div 
               className="absolute h-full bg-indigo-600 rounded-full"
@@ -109,37 +109,37 @@ export default function AILeosiqraPage() {
               transition={{ duration: 1.5, ease: "easeOut" }}
             />
           </div>
-          <p className="text-[10px] font-bold text-slate-400">75% dari target Rp 80jt tercapai</p>
+          <p className="text-[9px] md:text-[10px] font-bold text-slate-400">75% dari target Rp 80jt tercapai</p>
         </div>
 
         {/* Financial Snapshot */}
-        <div className="bg-white p-10 rounded-[40px] border border-slate-50 shadow-sm">
-          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6">03</p>
-          <h3 className="text-lg font-black text-slate-900 mb-4 tracking-tight">Snapshot Finansial</h3>
-          <p className="text-3xl font-black text-slate-900 tracking-tighter mt-6">Rp 1.42M</p>
+        <div className="bg-white p-6 md:p-8 lg:p-10 rounded-[32px] md:rounded-[40px] border border-slate-50 shadow-sm">
+          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 md:mb-6">03</p>
+          <h3 className="text-lg font-black text-slate-900 mb-2 md:mb-4 tracking-tight">Snapshot Finansial</h3>
+          <p className="text-2xl md:text-3xl font-black text-slate-900 tracking-tighter mt-4 md:mt-6 leading-none">Rp 1.42M</p>
         </div>
       </div>
 
       {/* 3. Middle Grid Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Budget Forecast */}
-        <div className="bg-white p-10 rounded-[40px] border border-slate-50 shadow-sm relative overflow-hidden group">
+        <div className="bg-white p-6 md:p-10 rounded-[32px] md:rounded-[40px] border border-slate-50 shadow-sm relative overflow-hidden group">
           <div className="absolute -right-4 -top-4 text-indigo-50/50 group-hover:text-indigo-100/50 transition-colors">
-            <LineChart size={120} />
+            <LineChart size={80} className="md:w-[120px] md:h-[120px]" />
           </div>
-          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6">04</p>
-          <h3 className="text-xl font-black text-slate-900 mb-4 tracking-tight">Forecast Anggaran</h3>
-          <p className="text-xs font-bold text-slate-400 max-w-[70%] leading-relaxed">Estimasi pengeluaran bulan depan stabil di angka Rp 12.5jt.</p>
+          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 md:mb-6">04</p>
+          <h3 className="text-lg md:text-xl font-black text-slate-900 mb-2 md:mb-4 tracking-tight">Forecast Anggaran</h3>
+          <p className="text-xs font-bold text-slate-400 max-w-[80%] md:max-w-[70%] leading-relaxed">Estimasi pengeluaran bulan depan stabil di angka Rp 12.5jt.</p>
         </div>
 
         {/* Portfolio Analysis */}
-        <div className="bg-white p-10 rounded-[40px] border border-slate-50 shadow-sm relative overflow-hidden group">
+        <div className="bg-white p-6 md:p-10 rounded-[32px] md:rounded-[40px] border border-slate-50 shadow-sm relative overflow-hidden group">
           <div className="absolute -right-4 -top-4 text-indigo-50/50 group-hover:text-indigo-100/50 transition-colors">
-            <Layout size={120} />
+            <Layout size={80} className="md:w-[120px] md:h-[120px]" />
           </div>
-          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6">05</p>
-          <h3 className="text-xl font-black text-slate-900 mb-4 tracking-tight">Analisis Portofolio</h3>
-          <p className="text-xs font-bold text-slate-400 max-w-[70%] leading-relaxed">Diversifikasi sektor teknologi Anda memberikan performa +8.2% YoY.</p>
+          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 md:mb-6">05</p>
+          <h3 className="text-lg md:text-xl font-black text-slate-900 mb-2 md:mb-4 tracking-tight">Analisis Portofolio</h3>
+          <p className="text-xs font-bold text-slate-400 max-w-[80%] md:max-w-[70%] leading-relaxed">Diversifikasi sektor teknologi Anda memberikan performa +8.2% YoY.</p>
         </div>
       </div>
 
@@ -147,25 +147,25 @@ export default function AILeosiqraPage() {
       <div className="grid grid-cols-1 lg:grid-cols-7 gap-10">
         
         {/* Insight Table */}
-        <div className="lg:col-span-3 bg-white p-10 rounded-[48px] border border-slate-50 shadow-sm h-full">
-          <div className="flex items-center gap-3 mb-10">
+        <div className="lg:col-span-3 bg-white p-6 md:p-8 lg:p-10 rounded-[32px] md:rounded-[48px] border border-slate-50 shadow-sm h-full">
+          <div className="flex items-center gap-3 mb-6 md:mb-10">
             <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
               <Sparkles size={16} />
             </div>
-            <h2 className="text-xl font-black text-slate-900 tracking-tight">Insight Leosiqra</h2>
+            <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Insight Leosiqra</h2>
           </div>
-
-          <div className="space-y-7 px-2">
+ 
+          <div className="space-y-6 md:space-y-7 px-1 md:px-2">
             {bottomInsights.map((insight, i) => (
-              <div key={i} className="flex items-center justify-between pb-2">
-                <p className="text-[13px] font-medium text-slate-400">{insight.label}</p>
+              <div key={i} className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 pb-4 xs:pb-1.5 border-b xs:border-b-0 border-slate-50 last:border-0 md:last:border-0">
+                <p className="text-[12px] md:text-[13px] font-medium text-slate-400 leading-none">{insight.label}</p>
                 <div className="flex items-center gap-2">
                    {insight.hasBadge && (
                      <span className="bg-emerald-100 text-emerald-600 text-[9px] font-black px-2 py-0.5 rounded leading-none mr-2">
                        {insight.badgeText}
                      </span>
                    )}
-                   <p className={`text-[13px] tracking-tight ${insight.isBold ? 'font-black text-slate-900' : 'font-bold'} ${insight.color || 'text-slate-900'}`}>
+                   <p className={`text-[12px] md:text-[13px] tracking-tight leading-none ${insight.isBold ? 'font-black text-slate-900' : 'font-bold'} ${insight.color || 'text-slate-900'}`}>
                      {insight.value}
                    </p>
                 </div>
@@ -175,16 +175,16 @@ export default function AILeosiqraPage() {
         </div>
 
         {/* Executive Prompt Card */}
-        <div className="lg:col-span-4 bg-[#0a0f1d] p-10 lg:p-14 rounded-[48px] shadow-2xl relative overflow-hidden h-full group">
-          <div className="absolute top-8 right-8 text-white/5 group-hover:text-white/10 transition-colors">
+        <div className="lg:col-span-4 bg-[#0a0f1d] p-6 md:p-10 lg:p-12 rounded-[32px] md:rounded-[48px] shadow-2xl relative overflow-hidden h-full group">
+          <div className="absolute top-8 right-8 text-white/5 group-hover:text-white/10 transition-colors hidden md:block">
             <Terminal size={100} />
           </div>
-
-          <div className="flex items-center gap-4 mb-10">
+ 
+          <div className="flex items-center gap-4 mb-8 md:mb-10">
             <div className="text-indigo-400">
-               <span className="text-2xl font-black">“</span>
+               <span className="text-xl md:text-2xl font-black">“</span>
             </div>
-            <h2 className="text-2xl font-black text-white tracking-tight">Prompt Eksekutif</h2>
+            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">Prompt Eksekutif</h2>
           </div>
 
           <div className="space-y-8">

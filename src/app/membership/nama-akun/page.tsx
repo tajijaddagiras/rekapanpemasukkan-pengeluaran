@@ -20,8 +20,8 @@ export default function NamaAkunPage() {
       
       {/* 1. Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight">Nama Akun Transaksi</h1>
-        <button className="flex items-center gap-2 bg-[#555555] text-white px-8 py-3.5 rounded-2xl text-[13px] font-black shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all">
+        <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Nama Akun Transaksi</h1>
+        <button className="flex items-center justify-center gap-2 bg-[#555555] text-white px-8 py-3 md:py-3.5 rounded-xl md:rounded-2xl text-[13px] font-black shadow-xl shadow-slate-200 hover:scale-[1.02] active:scale-95 transition-all w-full md:w-auto">
           <Plus size={18} />
           Tambah Cepat
         </button>
@@ -32,7 +32,7 @@ export default function NamaAkunPage() {
         {/* LEFT COLUMN (1/3) */}
         <div className="space-y-8">
           {/* Konfigurasi Ledger Card */}
-          <div className="bg-white p-8 rounded-[32px] border border-slate-50 shadow-sm space-y-8">
+          <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-50 shadow-sm space-y-6 md:space-y-8">
             <div className="flex items-center gap-3">
               <div className="w-1 h-6 bg-slate-900 rounded-full" />
               <h2 className="text-lg font-black text-slate-900 tracking-tight">Konfigurasi Ledger</h2>
@@ -43,7 +43,7 @@ export default function NamaAkunPage() {
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kategori</label>
                 <div className="relative">
-                  <select className="w-full appearance-none bg-[#e9f0f4] border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-6 text-sm font-bold text-slate-600 transition-all cursor-pointer">
+                  <select className="w-full appearance-none bg-[#e9f0f4] border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 md:py-4 px-6 text-sm font-bold text-slate-600 transition-all cursor-pointer">
                     <option>Pilih Kategori</option>
                     <option>Makanan</option>
                     <option>Transport</option>
@@ -59,12 +59,12 @@ export default function NamaAkunPage() {
                 <input 
                   type="text" 
                   placeholder="Contoh: Belanja Bulanan"
-                  className="w-full bg-[#e9f0f4] border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-6 text-sm font-bold text-slate-600 placeholder:text-slate-400 transition-all"
+                  className="w-full bg-[#e9f0f4] border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 md:py-4 px-6 text-sm font-bold text-slate-600 placeholder:text-slate-400 transition-all"
                 />
               </div>
 
               {/* SIMPAN BUTTON */}
-              <button className="w-full bg-[#e2e2e2] flex items-center justify-center gap-3 py-4 rounded-xl text-sm font-black text-slate-600 hover:bg-slate-200 transition-colors mt-4">
+              <button className="w-full bg-[#e2e2e2] flex items-center justify-center gap-3 py-3.5 md:py-4 rounded-xl text-sm font-black text-slate-600 hover:bg-slate-200 transition-colors mt-4">
                 <Save size={18} />
                 Simpan Kategori
               </button>
@@ -90,28 +90,28 @@ export default function NamaAkunPage() {
         {/* RIGHT COLUMN (2/3) */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-[32px] border border-slate-50 shadow-sm overflow-hidden h-full flex flex-col">
-            <div className="p-8 flex items-center justify-between border-b border-slate-50">
+            <div className="p-6 md:p-8 flex items-center justify-between border-b border-slate-50">
               <div className="flex items-center gap-3">
                 <div className="w-1 h-6 bg-indigo-600 rounded-full" />
                 <h2 className="text-lg font-black text-slate-900 tracking-tight">Daftar Transaksi Aktif</h2>
               </div>
               <div className="flex items-center gap-4">
                 <button className="text-slate-400 hover:text-indigo-600 transition-colors">
-                  <Filter size={20} />
+                  <Filter size={18} />
                 </button>
                 <button className="text-slate-400 hover:text-indigo-600 transition-colors">
-                  <Download size={20} />
+                  <Download size={18} />
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 overflow-x-auto">
-              <table className="w-full text-left">
+            <div className="flex-1 overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left min-w-[600px] md:min-w-0">
                 <thead className="bg-[#e9eff2]">
                   <tr>
-                    <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Kategori</th>
-                    <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Subkategori</th>
-                    <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Status</th>
+                    <th className="px-5 md:px-10 py-4 md:py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Kategori</th>
+                    <th className="px-5 md:px-10 py-4 md:py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Subkategori</th>
+                    <th className="px-5 md:px-10 py-4 md:py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -123,13 +123,13 @@ export default function NamaAkunPage() {
                     { cat: 'Hiburan', sub: 'Streaming', status: 'VERIFIED' },
                   ].map((row, i) => (
                     <tr key={i} className="group hover:bg-slate-50/50 transition-colors">
-                      <td className="px-10 py-7">
+                      <td className="px-5 md:px-10 py-5 md:py-7">
                         <p className="text-sm font-black text-slate-900">{row.cat}</p>
                       </td>
-                      <td className="px-10 py-7">
+                      <td className="px-5 md:px-10 py-5 md:py-7">
                         <p className="text-sm font-bold text-slate-400 italic font-serif tracking-tight">{row.sub}</p>
                       </td>
-                      <td className="px-10 py-7 text-right">
+                      <td className="px-5 md:px-10 py-5 md:py-7 text-right">
                         <span className={`px-4 py-1.5 rounded-full text-[8px] font-black tracking-widest uppercase ${
                           row.status === 'VERIFIED' 
                             ? 'bg-blue-50 text-blue-500' 
@@ -144,7 +144,7 @@ export default function NamaAkunPage() {
               </table>
             </div>
 
-            <div className="p-8 border-t border-slate-50 flex items-center justify-between text-[11px] font-bold text-slate-400">
+            <div className="p-6 md:p-8 border-t border-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] font-bold text-slate-400">
               <p>Menampilkan 5 entri terakhir</p>
               <div className="flex items-center gap-6">
                 <button className="hover:text-indigo-600 transition-colors">Sebelumnya</button>
@@ -159,35 +159,35 @@ export default function NamaAkunPage() {
       {/* BOTTOM SECTION - 3 SUMMARY CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* TOTAL SALDO */}
-        <div className="bg-[#f0f5f7] p-8 rounded-[28px] border border-white flex items-center gap-5 shadow-sm">
-          <div className="w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400">
-            <Landmark size={24} />
+        <div className="bg-[#f0f5f7] p-6 md:p-8 rounded-[28px] border border-white flex items-center gap-5 shadow-sm">
+          <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400 shrink-0">
+            <Landmark size={20} />
           </div>
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Saldo</p>
-            <p className="text-xl font-black text-slate-900 tracking-tight">Rp 24.500.000</p>
+            <p className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Rp 24.500.000</p>
           </div>
         </div>
-
+ 
         {/* PENGELUARAN */}
-        <div className="bg-[#f0f5f7] p-8 rounded-[28px] border border-white flex items-center gap-5 shadow-sm">
-          <div className="w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-rose-400">
-            <TrendingDown size={24} />
+        <div className="bg-[#f0f5f7] p-6 md:p-8 rounded-[28px] border border-white flex items-center gap-5 shadow-sm">
+          <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-rose-400 shrink-0">
+            <TrendingDown size={20} />
           </div>
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pengeluaran Bulan Ini</p>
-            <p className="text-xl font-black text-slate-900 tracking-tight">Rp 4.120.000</p>
+            <p className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Rp 4.120.000</p>
           </div>
         </div>
-
+ 
         {/* TARGET TABUNGAN */}
-        <div className="bg-[#555555] p-8 rounded-[28px] flex items-center gap-5 shadow-xl shadow-slate-200">
-          <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center text-white/60">
-            <PiggyBank size={24} />
+        <div className="bg-[#555555] p-6 md:p-8 rounded-[28px] flex items-center gap-5 shadow-xl shadow-slate-200">
+          <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center text-white/60 shrink-0">
+            <PiggyBank size={20} />
           </div>
           <div>
             <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Target Tabungan</p>
-            <p className="text-xl font-black text-white tracking-tight">82% Tercapai</p>
+            <p className="text-lg md:text-xl font-black text-white tracking-tight">82% Tercapai</p>
           </div>
         </div>
       </div>

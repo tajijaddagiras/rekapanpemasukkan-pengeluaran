@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 
@@ -6,16 +9,26 @@ export default function MembershipLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <Sidebar />
+      {/* Mobile Backdrop */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 min-h-screen">
-        <Header />
+      <main className="flex-1 lg:ml-72 min-h-screen flex flex-col">
+        <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
         {/* Page Content */}
-        <div className="p-8 max-w-7xl mx-auto w-full">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1">
           {children}
         </div>
       </main>
