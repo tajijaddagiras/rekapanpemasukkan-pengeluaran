@@ -59,7 +59,7 @@ export default function AnnualDashboard() {
         </div>
         
         {/* Year Selectors Pill */}
-        <div className="flex items-center bg-white border border-slate-100 rounded-xl p-1 md:p-1.5 shadow-sm w-full md:w-auto">
+        <div className="flex items-center bg-white border border-slate-100 rounded-lg md:rounded-xl p-1 shadow-sm w-full md:w-auto">
           {['2024', '2025', '2026'].map((year) => (
             <button
               key={year}
@@ -78,88 +78,88 @@ export default function AnnualDashboard() {
       </div>
 
       {/* 2. Top Summary Cards (4 Cols) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         
         {/* Card 1: Pemasukan */}
-        <div className="bg-white rounded-[24px] md:rounded-[20px] p-5 md:p-6 border border-slate-100 shadow-sm flex flex-col justify-between h-[140px] md:h-[180px]">
-          <div className="flex justify-between items-start">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-2">Pemasukan</p>
+        <div className="bg-white rounded-[20px] p-4 md:p-6 border border-slate-100 shadow-sm flex flex-col">
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pemasukan</p>
             <CircularProgress value={75} colorClass="text-slate-700" strokeClass="stroke-sky-500" />
           </div>
           <div>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-sm md:text-lg font-bold text-slate-900">Rp</span>
+              <span className="text-xs md:text-lg font-bold text-slate-900">Rp</span>
               <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">450.000.000</h3>
             </div>
-            <div className="flex justify-between items-center mt-4 md:mt-5">
+            <div className="flex justify-between items-center mt-3 md:mt-5">
               <div>
                 <p className="text-[9px] text-slate-400 font-medium leading-none mb-1">Target/Budget</p>
                 <p className="text-[10px] font-bold text-slate-600 leading-none">Rp500.000.000</p>
               </div>
-              <span className="px-3 py-1 bg-sky-50 text-sky-500 text-[10px] font-bold rounded-full">On Track</span>
+              <span className="px-2 py-0.5 md:px-3 md:py-1 bg-sky-50 text-sky-500 text-[9px] md:text-[10px] font-bold rounded-full">On Track</span>
             </div>
           </div>
         </div>
 
         {/* Card 2: Pengeluaran */}
-        <div className="bg-white rounded-[24px] md:rounded-[20px] p-5 md:p-6 border border-slate-100 shadow-sm flex flex-col justify-between h-[140px] md:h-[180px]">
-          <div className="flex justify-between items-start">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-2">Pengeluaran</p>
+        <div className="bg-white rounded-[20px] p-4 md:p-6 border border-slate-100 shadow-sm flex flex-col">
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pengeluaran</p>
             <CircularProgress value={50} colorClass="text-slate-700" strokeClass="stroke-rose-500" />
           </div>
           <div>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-sm md:text-lg font-bold text-slate-900">Rp</span>
+              <span className="text-xs md:text-lg font-bold text-slate-900">Rp</span>
               <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">210.000.000</h3>
             </div>
-            <div className="flex justify-between items-center mt-4 md:mt-5">
+            <div className="flex justify-between items-center mt-3 md:mt-5">
               <div>
                 <p className="text-[9px] text-slate-400 font-medium leading-none mb-1">Target/Budget</p>
                 <p className="text-[10px] font-bold text-slate-600 leading-none">Rp420.000.000</p>
               </div>
-              <span className="px-3 py-1 bg-rose-50 text-rose-500 text-[10px] font-bold rounded-full">Caution</span>
+              <span className="px-2 py-0.5 md:px-3 md:py-1 bg-rose-50 text-rose-500 text-[9px] md:text-[10px] font-bold rounded-full">Caution</span>
             </div>
           </div>
         </div>
 
         {/* Card 3: Tabungan */}
-        <div className="bg-white rounded-[24px] md:rounded-[20px] p-5 md:p-6 border border-slate-100 shadow-sm flex flex-col justify-between h-[140px] md:h-[180px]">
-          <div className="flex justify-between items-start">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-2">Tabungan</p>
+        <div className="bg-white rounded-[20px] p-4 md:p-6 border border-slate-100 shadow-sm flex flex-col">
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tabungan</p>
             <CircularProgress value={90} colorClass="text-slate-700" strokeClass="stroke-slate-600" />
           </div>
           <div>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-sm md:text-lg font-bold text-slate-900">Rp</span>
+              <span className="text-xs md:text-lg font-bold text-slate-900">Rp</span>
               <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">120.000.000</h3>
             </div>
-            <div className="flex justify-between items-center mt-4 md:mt-5">
+            <div className="flex justify-between items-center mt-3 md:mt-5">
               <div>
                 <p className="text-[9px] text-slate-400 font-medium leading-none mb-1">Target/Budget</p>
                 <p className="text-[10px] font-bold text-slate-600 leading-none">Rp133.000.000</p>
               </div>
-              <span className="px-3 py-1 bg-indigo-50 text-indigo-500 text-[10px] font-bold rounded-full">Goal Near</span>
+              <span className="px-2 py-0.5 md:px-3 md:py-1 bg-indigo-50 text-indigo-500 text-[9px] md:text-[10px] font-bold rounded-full">Goal Near</span>
             </div>
           </div>
         </div>
 
         {/* Card 4: Investasi */}
-        <div className="bg-white rounded-[24px] md:rounded-[20px] p-5 md:p-6 border border-slate-100 shadow-sm flex flex-col justify-between h-[140px] md:h-[180px]">
-          <div className="flex justify-between items-start">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-2">Investasi</p>
+        <div className="bg-white rounded-[20px] p-4 md:p-6 border border-slate-100 shadow-sm flex flex-col">
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Investasi</p>
             <CircularProgress value={40} colorClass="text-slate-700" strokeClass="stroke-teal-600" />
           </div>
           <div>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-sm md:text-lg font-bold text-slate-900">Rp</span>
+              <span className="text-xs md:text-lg font-bold text-slate-900">Rp</span>
               <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">100.000.000</h3>
             </div>
-            <div className="flex justify-between items-center mt-4 md:mt-5">
+            <div className="flex justify-between items-center mt-3 md:mt-5">
               <div>
                 <p className="text-[9px] text-slate-400 font-medium leading-none mb-1">Target/Budget</p>
                 <p className="text-[10px] font-bold text-slate-600 leading-none">Rp250.000.000</p>
               </div>
-              <span className="px-3 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full">Growing</span>
+              <span className="px-2 py-0.5 md:px-3 md:py-1 bg-slate-100 text-slate-500 text-[9px] md:text-[10px] font-bold rounded-full">Growing</span>
             </div>
           </div>
         </div>
@@ -169,7 +169,7 @@ export default function AnnualDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         
         {/* GRAPH SECTION (2/3) */}
-        <div className="lg:col-span-2 bg-white rounded-[24px] p-6 md:p-8 border border-slate-100 shadow-sm overflow-hidden">
+        <div className="lg:col-span-2 bg-white rounded-[20px] md:rounded-[24px] p-5 md:p-8 border border-slate-100 shadow-sm overflow-hidden">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-8 md:mb-10">
             <div>
               <h3 className="text-[14px] md:text-[18px] font-bold text-slate-900 leading-tight">Perbandingan Kategori Tahunan</h3>
@@ -185,7 +185,7 @@ export default function AnnualDashboard() {
           </div>
 
           {/* Simulated Bar Chart Layout */}
-          <div className="bg-slate-50/50 rounded-xl p-3 md:p-4 h-[240px] md:h-[280px] flex items-end justify-between gap-1.5 md:gap-4 relative px-3 md:px-8 border border-slate-50 overflow-x-auto custom-scrollbar">
+          <div className="bg-slate-50/50 rounded-xl p-3 md:p-4 h-[180px] md:h-[280px] flex items-end justify-between gap-1.5 md:gap-4 relative px-2 md:px-8 border border-slate-50 overflow-x-auto custom-scrollbar">
             {/* Example 12 Months mock bars */}
             {[
               { m: 'JAN', b1: 45, b2: 60 },
@@ -283,8 +283,8 @@ export default function AnnualDashboard() {
       </div>
 
       {/* 4. Area Tabel (Rincian Anggaran Tahunan) */}
-      <div className="bg-white rounded-[24px] shadow-sm overflow-hidden mb-10 border border-slate-100">
-        <div className="p-5 md:p-6 md:px-8 py-5 md:py-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-50">
+      <div className="bg-white rounded-[20px] md:rounded-[24px] shadow-sm overflow-hidden mb-10 border border-slate-100">
+        <div className="p-4 md:p-6 md:px-8 py-4 md:py-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-50">
           <h3 className="text-sm md:text-[16px] font-bold text-slate-900">Rincian Anggaran Tahunan</h3>
           <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-full px-3 md:px-4 py-1 md:py-1.5 w-fit">
             <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-slate-300" />

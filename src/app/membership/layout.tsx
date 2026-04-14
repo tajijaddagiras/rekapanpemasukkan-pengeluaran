@@ -12,7 +12,7 @@ export default function MembershipLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-slate-50 relative overflow-x-hidden">
       {/* Mobile Backdrop */}
       {isSidebarOpen && (
         <div 
@@ -24,7 +24,7 @@ export default function MembershipLayout({
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-72 min-h-screen flex flex-col">
+      <main className="flex-1 lg:ml-72 min-h-screen flex flex-col min-w-0">
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
         {/* Page Content */}

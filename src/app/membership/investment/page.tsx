@@ -89,7 +89,7 @@ export default function InvestmentDashboard() {
         </div>
         
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-          <div className="flex items-center bg-white border border-slate-100 rounded-xl p-1 gap-1 w-full sm:w-auto">
+          <div className="flex items-center bg-white border border-slate-100 rounded-lg md:rounded-xl p-1 gap-1 w-full sm:w-auto">
             <button className="flex-1 sm:flex-none px-4 py-2 text-[11px] font-bold text-slate-600 hover:bg-slate-50 rounded-lg whitespace-nowrap">{selectedMonth}</button>
             <button className="flex-1 sm:flex-none px-4 py-2 text-[11px] font-bold text-slate-600 hover:bg-slate-50 rounded-lg whitespace-nowrap">{selectedYear}</button>
           </div>
@@ -101,20 +101,20 @@ export default function InvestmentDashboard() {
       </div>
 
       {/* 2. Top Summary Cards (4 Cards) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         
         {/* Total Aset */}
-        <div className="bg-white rounded-[24px] p-6 md:p-6 border border-slate-100 shadow-sm relative overflow-hidden group">
-          <div className="flex justify-between items-start mb-6">
+        <div className="bg-white rounded-[20px] md:rounded-[24px] p-4 md:p-6 border border-slate-100 shadow-sm relative overflow-hidden group">
+          <div className="flex justify-between items-center mb-3 md:mb-6">
             <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">Total Aset Investasi</p>
             <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
               <Building2 size={16} />
             </div>
           </div>
           <div>
-            <h3 className="text-[12px] font-bold text-slate-900">Rp</h3>
-            <p className="text-xl md:text-2xl font-black text-slate-900 tracking-tight mt-1 leading-none">1.240.500.000</p>
-            <p className="flex items-center gap-1 text-[10px] font-bold text-emerald-500 mt-3 leading-none">
+            <h3 className="text-[10px] md:text-[12px] font-bold text-slate-900">Rp</h3>
+            <p className="text-lg md:text-2xl font-black text-slate-900 tracking-tight mt-1 leading-none">1.240.500.000</p>
+            <p className="flex items-center gap-1 text-[9px] md:text-[10px] font-bold text-emerald-500 mt-2 md:mt-3 leading-none">
               <ArrowUpRight size={12} />
               +12.4% ROI
             </p>
@@ -122,51 +122,51 @@ export default function InvestmentDashboard() {
         </div>
 
         {/* Total Modal */}
-        <div className="bg-white rounded-[24px] p-6 md:p-6 border border-slate-100 shadow-sm relative overflow-hidden group">
-          <div className="flex justify-between items-start mb-6">
+        <div className="bg-white rounded-[20px] md:rounded-[24px] p-4 md:p-6 border border-slate-100 shadow-sm relative overflow-hidden group">
+          <div className="flex justify-between items-center mb-3 md:mb-6">
             <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">Total Modal Investasi</p>
             <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
               <Wallet size={16} />
             </div>
           </div>
           <div>
-            <h3 className="text-[12px] font-bold text-slate-900">Rp</h3>
-            <p className="text-xl md:text-2xl font-black text-slate-900 tracking-tight mt-1 leading-none">1.100.000.000</p>
-            <p className="text-[10px] font-bold text-slate-400 mt-3 leading-none">
+            <h3 className="text-[10px] md:text-[12px] font-bold text-slate-900">Rp</h3>
+            <p className="text-lg md:text-2xl font-black text-slate-900 tracking-tight mt-1 leading-none">1.100.000.000</p>
+            <p className="text-[9px] md:text-[10px] font-bold text-slate-400 mt-2 md:mt-3 leading-none">
               Selisih: Rp 140.5jt
             </p>
           </div>
         </div>
 
         {/* Keuntungan Terrealisasi */}
-        <div className="bg-[#023326] rounded-[24px] p-6 md:p-6 border border-emerald-950 shadow-sm relative overflow-hidden">
-          <div className="flex justify-between items-start mb-6">
+        <div className="bg-[#023326] rounded-[20px] md:rounded-[24px] p-4 md:p-6 border border-emerald-950 shadow-sm relative overflow-hidden">
+          <div className="flex justify-between items-center mb-3 md:mb-6">
             <p className="text-[8px] md:text-[9px] font-black text-emerald-100/50 uppercase tracking-[0.1em]">Keuntungan Terrealisasi</p>
             <div className="w-8 h-8 rounded-full bg-emerald-900/50 flex items-center justify-center text-emerald-300">
               <CheckCircle2 size={16} />
             </div>
           </div>
           <div>
-            <h3 className="text-[12px] font-bold text-white">Rp</h3>
-            <p className="text-xl md:text-2xl font-black text-white tracking-tight mt-1 leading-none">45.200.000</p>
-            <p className="text-[10px] font-bold text-emerald-400 mt-3 leading-none">
+            <h3 className="text-[10px] md:text-[12px] font-bold text-white">Rp</h3>
+            <p className="text-lg md:text-2xl font-black text-white tracking-tight mt-1 leading-none">45.200.000</p>
+            <p className="text-[9px] md:text-[10px] font-bold text-emerald-400 mt-2 md:mt-3 leading-none">
               +4.1% bulan ini
             </p>
           </div>
         </div>
 
         {/* Keuntungan Belum Terrealisasi */}
-        <div className="bg-white rounded-[24px] p-5 md:p-6 border border-slate-100 shadow-sm relative overflow-hidden group">
-          <div className="flex justify-between items-start mb-6">
+        <div className="bg-white rounded-[20px] md:rounded-[24px] p-4 md:p-6 border border-slate-100 shadow-sm relative overflow-hidden group">
+          <div className="flex justify-between items-center mb-3 md:mb-6">
             <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">Keuntungan Belum Terrealisasi</p>
             <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-amber-50 group-hover:text-amber-600 transition-colors">
               <Clock size={16} />
             </div>
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-900">Rp</h3>
-            <p className="text-2xl font-black text-slate-900 tracking-tight mt-1">95.300.000</p>
-            <p className="flex items-center gap-1 text-[10px] font-bold text-emerald-500 mt-2">
+            <h3 className="text-[10px] md:text-sm font-bold text-slate-900">Rp</h3>
+            <p className="text-xl md:text-2xl font-black text-slate-900 tracking-tight mt-1">95.300.000</p>
+            <p className="flex items-center gap-1 text-[9px] md:text-[10px] font-bold text-emerald-500 mt-2">
               +8.2% floating
             </p>
           </div>
@@ -177,13 +177,13 @@ export default function InvestmentDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Alokasi Portofolio Tipe */}
-        <div className="bg-white rounded-[24px] p-6 md:p-8 border border-slate-100 shadow-sm">
-          <h3 className="text-[13px] md:text-sm font-bold text-slate-900 mb-6 md:mb-8 tracking-tight">Alokasi Portofolio Tipe</h3>
-          <div className="flex flex-col sm:flex-row items-center gap-6 md:gap-8">
+        <div className="bg-white rounded-[20px] md:rounded-[24px] p-5 md:p-8 border border-slate-100 shadow-sm">
+          <h3 className="text-[13px] md:text-sm font-bold text-slate-900 mb-4 md:mb-8 tracking-tight">Alokasi Portofolio Tipe</h3>
+          <div className="flex flex-col sm:flex-row items-center gap-4 md:gap-8">
             <div className="shrink-0">
               <SimulatedDoughnut percentage={70} />
             </div>
-            <div className="space-y-4 w-full sm:w-auto">
+            <div className="space-y-3 md:space-y-4 w-full sm:w-auto">
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 rounded-full bg-[#064e3b] shrink-0" />
                 <p className="text-[11px] font-bold text-slate-900">Saham (70%)</p>
@@ -201,8 +201,8 @@ export default function InvestmentDashboard() {
         </div>
 
         {/* Alokasi Portofolio Aset */}
-        <div className="bg-white rounded-[24px] p-6 md:p-8 border border-slate-100 shadow-sm">
-          <h3 className="text-[13px] md:text-sm font-bold text-slate-900 mb-6 md:mb-8 tracking-tight">Alokasi Portofolio Aset</h3>
+        <div className="bg-white rounded-[20px] md:rounded-[24px] p-5 md:p-8 border border-slate-100 shadow-sm">
+          <h3 className="text-[13px] md:text-sm font-bold text-slate-900 mb-4 md:mb-8 tracking-tight">Alokasi Portofolio Aset</h3>
           <div className="space-y-6">
             {[
               { label: 'BBCA', value: 25 },
@@ -226,8 +226,8 @@ export default function InvestmentDashboard() {
         </div>
 
         {/* Platform Investasi Sidebar */}
-        <div className="bg-white rounded-[24px] p-6 md:p-8 border border-slate-100 shadow-sm flex flex-col">
-          <div className="flex justify-between items-center mb-6 md:mb-8">
+        <div className="bg-white rounded-[20px] md:rounded-[24px] p-5 md:p-8 border border-slate-100 shadow-sm flex flex-col">
+          <div className="flex justify-between items-center mb-4 md:mb-8">
             <h3 className="text-[13px] md:text-sm font-bold text-slate-900 tracking-tight">Platform Investasi</h3>
             <button className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Lihat Semua</button>
           </div>
@@ -255,8 +255,8 @@ export default function InvestmentDashboard() {
 
       </div>
 
-      <div className="bg-white rounded-[24px] p-6 md:p-8 border border-slate-100 shadow-sm">
-        <h3 className="text-sm font-bold text-slate-900 mb-6">Return Investasi Tertinggi</h3>
+      <div className="bg-white rounded-[20px] md:rounded-[24px] p-5 md:p-8 border border-slate-100 shadow-sm">
+        <h3 className="text-[13px] md:text-sm font-bold text-slate-900 mb-4 md:mb-6">Return Investasi Tertinggi</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {[
             { label: 'BBCA', val: '+32.4%' },
@@ -264,9 +264,9 @@ export default function InvestmentDashboard() {
             { label: 'AMRT', val: '+19.5%' },
             { label: 'ICBP', val: '+15.2%' },
           ].map((r) => (
-            <div key={r.label} className="bg-emerald-50/30 rounded-xl p-4 border border-emerald-50/50">
-              <p className="text-[9px] font-black text-emerald-300 uppercase tracking-widest mb-1">{r.label}</p>
-              <p className="text-lg font-black text-emerald-600 tracking-tight">{r.val}</p>
+            <div key={r.label} className="bg-emerald-50/30 rounded-xl p-3 md:p-4 border border-emerald-50/50">
+              <p className="text-[8px] md:text-[9px] font-black text-emerald-300 uppercase tracking-widest mb-1">{r.label}</p>
+              <p className="text-base md:text-lg font-black text-emerald-600 tracking-tight">{r.val}</p>
             </div>
           ))}
         </div>
@@ -276,9 +276,9 @@ export default function InvestmentDashboard() {
       <div className="space-y-6">
         
         {/* Table 1: Saham */}
-        <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
-          <div className="p-6 md:p-6 md:px-8 border-b border-slate-50 flex justify-between items-center">
-            <h3 className="text-sm md:text-[15px] font-bold text-slate-900">Ringkasan Portofolio Saham</h3>
+        <div className="bg-white rounded-[20px] md:rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
+          <div className="p-4 md:p-6 md:px-8 border-b border-slate-50 flex justify-between items-center">
+            <h3 className="text-[13px] md:text-[15px] font-bold text-slate-900">Ringkasan Portofolio Saham</h3>
             <div className="flex gap-2">
               <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-400"><BarChart2 size={16} /></button>
               <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-400"><ArrowUpRight size={16} /></button>
@@ -323,9 +323,9 @@ export default function InvestmentDashboard() {
         </div>
 
         {/* Table 2: Others */}
-        <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden mb-10">
-          <div className="p-6 md:px-8 border-b border-slate-50">
-            <h3 className="text-sm md:text-[15px] font-bold text-slate-900">Ringkasan Portofolio Investasi Lainnya</h3>
+        <div className="bg-white rounded-[20px] md:rounded-[24px] shadow-sm border border-slate-100 overflow-hidden mb-10">
+          <div className="p-4 md:px-8 border-b border-slate-50">
+            <h3 className="text-[13px] md:text-[15px] font-bold text-slate-900">Ringkasan Portofolio Investasi Lainnya</h3>
           </div>
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left text-xs whitespace-nowrap min-w-[750px] md:min-w-0">
