@@ -14,6 +14,7 @@ import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { investmentService, Investment } from '@/lib/services/investmentService';
+import { accountService, Account } from '@/lib/services/accountService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -24,6 +25,8 @@ const ASSET_TYPES = ['Emas', 'Kripto', 'Properti', 'P2P Lending', 'Obligasi', 'R
 
 export default function OtherInvestmentsPage() {
   const [investments, setInvestments] = useState<Investment[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -35,6 +38,18 @@ export default function OtherInvestmentsPage() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
+        // Fetch Accounts for lookup
+        const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
+        onSnapshot(qAcc, (snap) => {
+          setAccounts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account)));
+        });
+
+        // Fetch Categories for lookup
+        const qCat = query(collection(db, 'categories'), where('userId', '==', u.uid));
+        onSnapshot(qCat, (snap) => {
+          setCategories(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+
         const q = query(
           collection(db, 'investments'),
           where('userId', '==', u.uid),
@@ -58,6 +73,16 @@ export default function OtherInvestmentsPage() {
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
   }, []);
+
+  const getAccountName = (id: string) => {
+    const acc = accounts.find(a => a.id === id);
+    return acc ? acc.name : id || '—';
+  };
+
+  const getCategoryName = (id: string) => {
+    const cat = categories.find(c => c.id === id);
+    return cat ? `${cat.category} - ${cat.subCategory}` : id || '—';
+  };
 
   const filteredInvestments = useMemo(() => {
     return investments.filter(inv => {
@@ -179,8 +204,8 @@ export default function OtherInvestmentsPage() {
                     <td className="px-4 md:px-6 py-5 text-center whitespace-nowrap"><span className="text-xs font-bold text-slate-500">{inv.unit || '—'}</span></td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatRp(inv.pricePerUnit || 0)}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || '—'}</span></td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.category || '—'}</span></td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.accountId || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{getCategoryName(inv.category || '')}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{getAccountName(inv.accountId || '')}</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                       <span className={`px-3 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest ${getAssetColor(inv.platform)}`}>
                         {inv.platform || '—'}

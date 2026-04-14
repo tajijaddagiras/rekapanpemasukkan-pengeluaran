@@ -5,6 +5,7 @@ import { Save, ChevronDown } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { investmentService } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
+import { CategorySelect } from '@/components/CategorySelect';
 
 interface OtherInvestmentModalProps {
   userId: string;
@@ -149,6 +150,35 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose }: OtherInvestmen
              <input type="date" value={formData.dateInvested} onChange={e => setFormData(p => ({...p, dateInvested: e.target.value}))}
                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
            </div>
+        </div>
+
+        {/* Tipe Transaksi & Kategori */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Transaksi</label>
+            <div className="relative">
+              <select 
+                value={formData.transactionType}
+                onChange={e => setFormData(p => ({...p, transactionType: e.target.value}))}
+                className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
+              >
+                <option value="Pembelian">Pembelian</option>
+                <option value="Penjualan">Penjualan</option>
+                <option value="Apresiasi">Apresiasi</option>
+                <option value="Dividen">Dividen</option>
+              </select>
+              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <CategorySelect 
+              label="Kategori Investasi"
+              value={formData.category}
+              type="expense"
+              onChange={(val: string) => setFormData(p => ({...p, category: val}))}
+              showBadge={false}
+            />
+          </div>
         </div>
 
         <button onClick={handleCreate} disabled={loading || !formData.name || !formData.quantity || !formData.pricePerUnit}

@@ -134,15 +134,32 @@ export const DepositModal = ({ userId, isOpen, onClose }: DepositModalProps) => 
           </div>
         </div>
 
-        {/* Kategori */}
-        <div className="space-y-2">
-          <CategorySelect 
-            label="Kategori Deposito"
-            value={formData.category}
-            type="expense" // Deposito is technically an outflow/allocation, so 'expense' category list or similar
-            onChange={(val) => setFormData(p => ({...p, category: val}))}
-            showBadge={false}
-          />
+        {/* Tipe Transaksi & Kategori */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Transaksi</label>
+            <div className="relative">
+              <select 
+                value={formData.transactionType}
+                onChange={e => setFormData(p => ({...p, transactionType: e.target.value}))}
+                className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
+              >
+                <option value="Penempatan">Penempatan</option>
+                <option value="Penarikan">Penarikan</option>
+                <option value="Bunga">Bunga</option>
+              </select>
+              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <CategorySelect 
+              label="Kategori Deposito"
+              value={formData.category}
+              type="expense"
+              onChange={(val: string) => setFormData(p => ({...p, category: val}))}
+              showBadge={false}
+            />
+          </div>
         </div>
 
         <button onClick={handleCreate} disabled={loading || !formData.name || !formData.amountInvested}

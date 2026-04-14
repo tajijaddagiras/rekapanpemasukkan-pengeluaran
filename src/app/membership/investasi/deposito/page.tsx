@@ -12,6 +12,7 @@ import {
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { investmentService, Investment } from '@/lib/services/investmentService';
+import { accountService, Account } from '@/lib/services/accountService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -20,6 +21,8 @@ import { MonthPicker } from '@/components/ui/MonthPicker';
 
 export default function DepositoPage() {
   const [investments, setInvestments] = useState<Investment[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -31,6 +34,18 @@ export default function DepositoPage() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
+        // Fetch Accounts for lookup
+        const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
+        onSnapshot(qAcc, (snap) => {
+          setAccounts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account)));
+        });
+
+        // Fetch Categories for lookup
+        const qCat = query(collection(db, 'categories'), where('userId', '==', u.uid));
+        onSnapshot(qCat, (snap) => {
+          setCategories(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+
         const q = query(
           collection(db, 'investments'),
           where('userId', '==', u.uid),
@@ -54,6 +69,16 @@ export default function DepositoPage() {
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
   }, []);
+
+  const getAccountName = (id: string) => {
+    const acc = accounts.find(a => a.id === id);
+    return acc ? acc.name : id || '—';
+  };
+
+  const getCategoryName = (id: string) => {
+    const cat = categories.find(c => c.id === id);
+    return cat ? `${cat.category} - ${cat.subCategory}` : id || '—';
+  };
 
   const filteredInvestments = useMemo(() => {
     return investments.filter(inv => {
@@ -158,8 +183,8 @@ export default function DepositoPage() {
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap"><span className="text-sm font-bold text-slate-600">{inv.durationMonths || '—'}</span></td>
                     <td className="px-4 md:px-6 py-5 text-center whitespace-nowrap"><span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-lg">{inv.returnPercentage.toFixed(2)}%</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || '—'}</span></td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.category || '—'}</span></td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.accountId || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{getCategoryName(inv.category || '')}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{getAccountName(inv.accountId || '')}</span></td>
                     <td className="px-4 md:px-6 py-5 text-center">
                       <button onClick={async () => { if (inv.id) { await investmentService.deleteInvestment(inv.id); } }}
                         className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
