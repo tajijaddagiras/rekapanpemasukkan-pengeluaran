@@ -28,11 +28,17 @@ export default function OtherInvestmentsPage() {
 
   const [formData, setFormData] = useState({
     name: '',
-    assetType: 'Emas',
-    platform: '',
-    amountInvested: '',
-    currentValue: '',
+    logoUrl: '',
     currency: 'IDR',
+    quantity: '',
+    unit: '',
+    pricePerUnit: '',
+    currentValue: '',
+    transactionType: 'Pembelian',
+    category: '',
+    accountId: '',
+    platform: '',
+    assetType: 'Emas',
     dateInvested: new Date().toISOString().split('T')[0]
   });
 
@@ -67,19 +73,29 @@ export default function OtherInvestmentsPage() {
   }, []);
 
   const handleCreate = async () => {
-    if (!user || !formData.name || !formData.amountInvested) return;
-    const invested = parseFloat(formData.amountInvested);
+    if (!user || !formData.name || !formData.quantity || !formData.pricePerUnit) return;
+    const qty = parseFloat(formData.quantity) || 0;
+    const price = parseFloat(formData.pricePerUnit) || 0;
+    const invested = qty * price;
     const current = parseFloat(formData.currentValue) || invested;
     try {
       await investmentService.createInvestment({
         userId: user.uid, name: formData.name, type: 'Lainnya',
-        platform: formData.assetType + (formData.platform ? ` - ${formData.platform}` : ''),
+        platform: formData.platform || formData.assetType,
         amountInvested: invested, currentValue: current,
-        returnPercentage: ((current - invested) / invested) * 100,
-        currency: formData.currency, dateInvested: new Date(formData.dateInvested), status: 'Active'
+        returnPercentage: invested > 0 ? ((current - invested) / invested) * 100 : 0,
+        currency: formData.currency, 
+        logoUrl: formData.logoUrl,
+        quantity: qty,
+        unit: formData.unit,
+        pricePerUnit: price,
+        transactionType: formData.transactionType,
+        category: formData.category,
+        accountId: formData.accountId,
+        dateInvested: new Date(formData.dateInvested), status: 'Active'
       });
       setIsAddModalOpen(false);
-      setFormData({ name: '', assetType: 'Emas', platform: '', amountInvested: '', currentValue: '', currency: 'IDR', dateInvested: new Date().toISOString().split('T')[0] });
+      setFormData({ name: '', logoUrl: '', currency: 'IDR', quantity: '', unit: '', pricePerUnit: '', currentValue: '', transactionType: 'Pembelian', category: '', accountId: '', platform: '', assetType: 'Emas', dateInvested: new Date().toISOString().split('T')[0] });
       // onSnapshot update otomatis
     } catch (e) { console.error(e); }
   };
@@ -159,38 +175,48 @@ export default function OtherInvestmentsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse min-w-[800px] xl:min-w-0">
+            <table className="w-full text-left border-collapse min-w-[1200px] xl:min-w-0">
               <thead>
                 <tr className="border-b border-slate-50">
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nama Aset</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Jenis</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tanggal</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Modal</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Nilai Saat Ini</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Return</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Aksi</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Produk Investasi</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Logo</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Mata Uang</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Kuantitas</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Satuan</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Harga / 1 Satuan</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tipe Transaksi</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kategori</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Rekening</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Platform</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {investments.map((inv) => (
                   <tr key={inv.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
-                    <td className="px-5 md:px-8 py-5 whitespace-nowrap">
-                      <p className="text-sm font-black text-slate-900">{inv.name}</p>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatDate(inv.dateInvested)}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><p className="text-sm font-black text-slate-900">{inv.name}</p></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center">
+                      {inv.logoUrl ? (
+                        <img src={inv.logoUrl} alt={inv.name} className="w-6 h-6 rounded-full object-cover mx-auto bg-slate-100" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-[8px] font-black">IMG</div>
+                      )}
                     </td>
-                    <td className="px-5 md:px-8 py-5 whitespace-nowrap">
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center"><span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{inv.currency || 'IDR'}</span></td>
+                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap"><span className="text-sm font-bold text-slate-700">{inv.quantity || 0}</span></td>
+                    <td className="px-4 md:px-6 py-5 text-center whitespace-nowrap"><span className="text-xs font-bold text-slate-500">{inv.unit || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatRp(inv.pricePerUnit || 0)}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.category || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.accountId || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                       <span className={`px-3 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest ${getAssetColor(inv.platform)}`}>
-                        {inv.platform?.split(' - ')[0] || 'Lainnya'}
+                        {inv.platform || '—'}
                       </span>
                     </td>
-                    <td className="px-5 md:px-8 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatDate(inv.dateInvested)}</td>
-                    <td className="px-5 md:px-8 py-5 text-right whitespace-nowrap font-black text-slate-700 text-sm">Rp {formatRp(inv.amountInvested)}</td>
-                    <td className="px-5 md:px-8 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">Rp {formatRp(inv.currentValue)}</td>
-                    <td className="px-5 md:px-8 py-5 text-center whitespace-nowrap">
-                      <span className={`px-3 py-1 text-[9px] font-black rounded-lg ${inv.returnPercentage >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'}`}>
-                        {inv.returnPercentage >= 0 ? '+' : ''}{inv.returnPercentage.toFixed(2)}%
-                      </span>
-                    </td>
-                    <td className="px-5 md:px-8 py-5 text-center">
+                    <td className="px-4 md:px-6 py-5 text-center">
                       <button onClick={async () => { if (inv.id) { await investmentService.deleteInvestment(inv.id); } }}
                         className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
                         <Trash2 size={14} />
@@ -206,45 +232,86 @@ export default function OtherInvestmentsPage() {
 
       {/* Modal */}
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Tambah Aset Investasi" maxWidth="max-w-lg">
-        <div className="space-y-5">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis Aset</label>
-            <div className="relative">
-              <select value={formData.assetType} onChange={e => setFormData(p => ({...p, assetType: e.target.value}))}
-                className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer">
-                {ASSET_TYPES.map(t => <option key={t}>{t}</option>)}
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nama Aset</label>
-            <input type="text" value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))}
-              placeholder="Emas Antam 50gr, BTC, Rumah..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Platform / Tempat</label>
-            <input type="text" value={formData.platform} onChange={e => setFormData(p => ({...p, platform: e.target.value}))}
-              placeholder="Pegadaian, Indodax, Pinhome..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
-          </div>
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1 custom-scrollbar">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Modal (Rp)</label>
-              <input type="number" value={formData.amountInvested} onChange={e => setFormData(p => ({...p, amountInvested: e.target.value}))}
-                placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Judul / Produk Investasi</label>
+              <input type="text" value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))}
+                placeholder="Emas Antam 50gr, BTC..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nilai Saat Ini (Rp)</label>
-              <input type="number" value={formData.currentValue} onChange={e => setFormData(p => ({...p, currentValue: e.target.value}))}
-                placeholder="Sama dgn modal" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">URL Logo (Opsional)</label>
+              <input type="url" value={formData.logoUrl} onChange={e => setFormData(p => ({...p, logoUrl: e.target.value}))}
+                placeholder="https://..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal Beli</label>
-            <input type="date" value={formData.dateInvested} onChange={e => setFormData(p => ({...p, dateInvested: e.target.value}))}
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mata Uang</label>
+               <input type="text" value={formData.currency} onChange={e => setFormData(p => ({...p, currency: e.target.value.toUpperCase()}))}
+                placeholder="IDR" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kuantitas</label>
+              <input type="number" value={formData.quantity} onChange={e => setFormData(p => ({...p, quantity: e.target.value}))}
+                placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
           </div>
-          <button onClick={handleCreate} disabled={!formData.name || !formData.amountInvested}
+
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Satuan</label>
+              <input type="text" value={formData.unit} onChange={e => setFormData(p => ({...p, unit: e.target.value}))}
+                placeholder="Gram, Lot, Koin..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Harga per 1 Kuantitas</label>
+              <input type="number" value={formData.pricePerUnit} onChange={e => setFormData(p => ({...p, pricePerUnit: e.target.value}))}
+                placeholder="Rp" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Transaksi</label>
+              <input type="text" value={formData.transactionType} onChange={e => setFormData(p => ({...p, transactionType: e.target.value}))}
+                placeholder="Pembelian..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kategori</label>
+              <input type="text" value={formData.category} onChange={e => setFormData(p => ({...p, category: e.target.value}))}
+                placeholder="Emas, Saham luar..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rekening</label>
+              <input type="text" value={formData.accountId} onChange={e => setFormData(p => ({...p, accountId: e.target.value}))}
+                placeholder="BCA, Tunai..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Platform</label>
+              <input type="text" value={formData.platform} onChange={e => setFormData(p => ({...p, platform: e.target.value}))}
+                placeholder="Pegadaian, Indodax, dll" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-2">
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Estimasi Valuasi (Opsional)</label>
+               <input type="number" value={formData.currentValue} onChange={e => setFormData(p => ({...p, currentValue: e.target.value}))}
+                 placeholder="Sama dgn Harga Beli x Qty" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+             </div>
+             <div className="space-y-2">
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
+               <input type="date" value={formData.dateInvested} onChange={e => setFormData(p => ({...p, dateInvested: e.target.value}))}
+                 className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+             </div>
+          </div>
+
+          <button onClick={handleCreate} disabled={!formData.name || !formData.quantity || !formData.pricePerUnit}
             className="w-full bg-black disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-6 shadow-xl shadow-slate-200">
             Simpan Aset Investasi
           </button>

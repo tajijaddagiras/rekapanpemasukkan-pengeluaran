@@ -26,11 +26,14 @@ export default function DepositoPage() {
   const [formData, setFormData] = useState({
     name: '',
     platform: '',
-    amountInvested: '',
-    returnPercentage: '',
     currency: 'IDR',
-    dateInvested: new Date().toISOString().split('T')[0],
-    tenor: '' // months (stored in subCategory via note)
+    amountInvested: '',
+    durationMonths: '',
+    returnPercentage: '',
+    transactionType: 'Penempatan',
+    category: '',
+    accountId: '',
+    dateInvested: new Date().toISOString().split('T')[0]
   });
 
   const unsubRef = useRef<(() => void) | null>(null);
@@ -71,12 +74,17 @@ export default function DepositoPage() {
       await investmentService.createInvestment({
         userId: user.uid, name: formData.name, type: 'Deposito',
         platform: formData.platform, amountInvested: invested,
-        currentValue: invested * (1 + (rate / 100 / 12) * parseInt(formData.tenor || '12')),
+        currentValue: invested * (1 + (rate / 100 / 12) * parseInt(formData.durationMonths || '12')),
         returnPercentage: rate,
-        currency: formData.currency, dateInvested: new Date(formData.dateInvested), status: 'Active'
+        currency: formData.currency, 
+        durationMonths: parseInt(formData.durationMonths) || 0,
+        transactionType: formData.transactionType,
+        category: formData.category,
+        accountId: formData.accountId,
+        dateInvested: new Date(formData.dateInvested), status: 'Active'
       });
       setIsAddModalOpen(false);
-      setFormData({ name: '', platform: '', amountInvested: '', returnPercentage: '', currency: 'IDR', dateInvested: new Date().toISOString().split('T')[0], tenor: '' });
+      setFormData({ name: '', platform: '', currency: 'IDR', amountInvested: '', durationMonths: '', returnPercentage: '', transactionType: 'Penempatan', category: '', accountId: '', dateInvested: new Date().toISOString().split('T')[0] });
       // onSnapshot otomatis update
     } catch (e) { console.error(e); }
   };
@@ -150,29 +158,33 @@ export default function DepositoPage() {
             <table className="w-full text-left border-collapse min-w-[800px] xl:min-w-0">
               <thead>
                 <tr className="border-b border-slate-50">
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nama Deposito</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Bank / Platform</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tanggal Buka</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Nominal</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Bunga/Thn</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Aksi</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Nama Deposito</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Bank/Institusi</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Mata Uang</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Nominal</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Durasi(Bln)</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Bunga Thn</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tipe Transaksi</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kategori</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Rekening</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {investments.map((inv) => (
                   <tr key={inv.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
-                    <td className="px-5 md:px-8 py-5 whitespace-nowrap">
-                      <p className="text-sm font-black text-slate-900">{inv.name}</p>
-                    </td>
-                    <td className="px-5 md:px-8 py-5 whitespace-nowrap">
-                      <span className="px-3 py-1 bg-orange-50 text-orange-600 text-[9px] font-black rounded-lg uppercase tracking-widest">{inv.platform || '—'}</span>
-                    </td>
-                    <td className="px-5 md:px-8 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatDate(inv.dateInvested)}</td>
-                    <td className="px-5 md:px-8 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">Rp {formatRp(inv.amountInvested)}</td>
-                    <td className="px-5 md:px-8 py-5 text-center whitespace-nowrap">
-                      <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-lg">{inv.returnPercentage.toFixed(2)}%</span>
-                    </td>
-                    <td className="px-5 md:px-8 py-5 text-center">
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatDate(inv.dateInvested)}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><p className="text-sm font-black text-slate-900">{inv.name}</p></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="px-3 py-1 bg-orange-50 text-orange-600 text-[9px] font-black rounded-lg uppercase tracking-widest">{inv.platform || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center"><span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{inv.currency || 'IDR'}</span></td>
+                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatRp(inv.amountInvested)}</td>
+                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap"><span className="text-sm font-bold text-slate-600">{inv.durationMonths || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 text-center whitespace-nowrap"><span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-lg">{inv.returnPercentage.toFixed(2)}%</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.category || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.accountId || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 text-center">
                       <button onClick={async () => { if (inv.id) { await investmentService.deleteInvestment(inv.id); } }}
                         className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
                         <Trash2 size={14} />
@@ -188,48 +200,72 @@ export default function DepositoPage() {
 
       {/* Modal */}
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Buka Deposito Baru" maxWidth="max-w-lg">
-        <div className="space-y-5">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nama Deposito</label>
-            <input type="text" value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))}
-              placeholder="Deposito BCA Flexi..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Bank / Platform</label>
-            <input type="text" value={formData.platform} onChange={e => setFormData(p => ({...p, platform: e.target.value}))}
-              placeholder="BCA, BNI, Mandiri..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
-          </div>
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1 custom-scrollbar">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal (Rp)</label>
-              <input type="number" value={formData.amountInvested} onChange={e => setFormData(p => ({...p, amountInvested: e.target.value}))}
-                placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nama Deposito</label>
+              <input type="text" value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))}
+                placeholder="Deposito Fleksi..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Bunga /Thn (%)</label>
-              <input type="number" step="0.01" value={formData.returnPercentage} onChange={e => setFormData(p => ({...p, returnPercentage: e.target.value}))}
-                placeholder="5.5" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Bank / Institusi</label>
+              <input type="text" value={formData.platform} onChange={e => setFormData(p => ({...p, platform: e.target.value}))}
+                placeholder="BCA, Mandiri..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tenor (Bulan)</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
               <div className="relative">
-                <select value={formData.tenor} onChange={e => setFormData(p => ({...p, tenor: e.target.value}))}
-                  className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer">
-                  <option value="1">1 Bulan</option>
-                  <option value="3">3 Bulan</option>
-                  <option value="6">6 Bulan</option>
-                  <option value="12">12 Bulan</option>
-                  <option value="24">24 Bulan</option>
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
+                <input type="number" value={formData.amountInvested} onChange={e => setFormData(p => ({...p, amountInvested: e.target.value}))}
+                  placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 pl-11 pr-4 text-sm font-bold text-slate-700 transition-all" />
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal Mulai</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mata Uang</label>
+              <input type="text" value={formData.currency} onChange={e => setFormData(p => ({...p, currency: e.target.value.toUpperCase()}))}
+                placeholder="IDR" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Durasi (Bulan)</label>
+              <input type="number" value={formData.durationMonths} onChange={e => setFormData(p => ({...p, durationMonths: e.target.value}))}
+                placeholder="12" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Bunga / Thn (%)</label>
+              <input type="number" step="0.01" value={formData.returnPercentage} onChange={e => setFormData(p => ({...p, returnPercentage: e.target.value}))}
+                placeholder="5.5" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Transaksi</label>
+              <input type="text" value={formData.transactionType} onChange={e => setFormData(p => ({...p, transactionType: e.target.value}))}
+                placeholder="Penempatan, dll..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kategori</label>
+              <input type="text" value={formData.category} onChange={e => setFormData(p => ({...p, category: e.target.value}))}
+                placeholder="Dana Darurat, dll..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rekening</label>
+              <input type="text" value={formData.accountId} onChange={e => setFormData(p => ({...p, accountId: e.target.value}))}
+                placeholder="BCA, Mandiri..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
               <input type="date" value={formData.dateInvested} onChange={e => setFormData(p => ({...p, dateInvested: e.target.value}))}
-                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
           </div>
           <button onClick={handleCreate} disabled={!formData.name || !formData.amountInvested}

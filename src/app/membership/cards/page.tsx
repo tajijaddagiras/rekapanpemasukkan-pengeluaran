@@ -90,6 +90,17 @@ export default function MyCardsPage() {
   const totalIn = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0), [transactions]);
   const totalOut = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0), [transactions]);
 
+  const creditCardStats = useMemo(() => {
+    const ccAccounts = accounts.filter(a => a.type === 'Credit Card');
+    const totalLimit = ccAccounts.reduce((s, a) => s + (a.initialBalance || 0), 0);
+    const totalBill = ccAccounts.reduce((s, a) => s + (a.balance || 0), 0);
+    return {
+      totalLimit,
+      totalBill,
+      remainingLimit: Math.max(0, totalLimit - totalBill)
+    };
+  }, [accounts]);
+
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
 
   const getTypeIcon = (type: string) => {
@@ -255,15 +266,47 @@ export default function MyCardsPage() {
             </div>
           )}
 
-          {/* Promo */}
-          <div className="bg-slate-100/50 rounded-[20px] md:rounded-3xl p-6 md:p-8 border border-white mt-4">
-            <h4 className="text-sm font-black text-slate-900 mb-2">Upgrade Portofolio?</h4>
-            <p className="text-[11px] md:text-xs font-medium text-slate-500 mb-6 leading-relaxed">
-              Dapatkan akses ke instrumen investasi eksklusif dan laporan bulanan mendalam.
-            </p>
-            <button className="px-5 py-2.5 bg-indigo-50 text-indigo-600 text-[10px] font-black rounded-xl hover:bg-indigo-100 transition-colors uppercase tracking-widest">
-              Pelajari Lebih Lanjut
-            </button>
+          {/* Card Limit Kartu Kredit */}
+          <div className="bg-white rounded-[24px] md:rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-xl shadow-slate-200/50 mt-4 relative overflow-hidden group">
+            <div className="relative z-10 flex flex-col h-full">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500">
+                  <CreditCard size={20} />
+                </div>
+                <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Informasi Limit Kartu</h4>
+              </div>
+
+              <div className="space-y-6">
+                <div className="bg-slate-50/50 rounded-2xl p-5 border border-slate-50 transition-all hover:bg-slate-50">
+                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Limit Kartu</p>
+                   <p className="text-xl font-black text-slate-900 leading-tight">{formatRp(creditCardStats.totalLimit)}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-rose-50/30 rounded-2xl p-5 border border-rose-50 transition-all hover:bg-rose-50">
+                    <p className="text-[9px] font-black text-rose-300 uppercase tracking-widest mb-1">Tagihan Berjalan</p>
+                    <p className="text-base font-black text-rose-500 leading-tight">{formatRp(creditCardStats.totalBill)}</p>
+                  </div>
+                  <div className="bg-emerald-50/30 rounded-2xl p-5 border border-emerald-50 transition-all hover:bg-emerald-50">
+                    <p className="text-[9px] font-black text-emerald-300 uppercase tracking-widest mb-1">Sisa Limit</p>
+                    <p className="text-base font-black text-emerald-600 leading-tight">{formatRp(creditCardStats.remainingLimit)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {creditCardStats.totalLimit > 0 && (
+                <div className="mt-8 pt-6 border-t border-slate-50">
+                   <div className="flex justify-between items-center mb-2">
+                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest transition-opacity group-hover:opacity-100 opacity-60">Penggunaan Limit</span>
+                     <span className="text-[10px] font-black text-rose-500">{((creditCardStats.totalBill / creditCardStats.totalLimit) * 100).toFixed(0)}%</span>
+                   </div>
+                   <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                     <div className="h-full bg-rose-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (creditCardStats.totalBill / creditCardStats.totalLimit) * 100)}%` }} />
+                   </div>
+                </div>
+              )}
+            </div>
+            <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-slate-50 rounded-full opacity-50 group-hover:scale-125 transition-transform" />
           </div>
         </div>
       </div>

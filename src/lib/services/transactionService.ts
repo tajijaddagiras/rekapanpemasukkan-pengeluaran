@@ -12,6 +12,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
+export type TransactionType = 'pemasukan' | 'pengeluaran' | 'transfer' | 'topup' | 'debt' | 'investasi' | 'tabungan' | 'pemasukkan';
+
 export interface Transaction {
   id?: string;
   userId: string;
@@ -19,9 +21,16 @@ export interface Transaction {
   amount: number;
   category: string;
   subCategory?: string;
+  currency?: string;
   accountId: string;
   targetAccountId?: string; // Untuk transfer/topup
+  lenderName?: string;
+  totalDebt?: number;
+  installmentTenor?: number;
+  monthlyInterest?: number;
+  totalInterest?: number;
   date: Date;
+  displayDate?: string;
   note?: string;
   status: 'PENDING' | 'VERIFIED' | 'FAILED';
   createdAt: Date;
@@ -93,9 +102,19 @@ export const transactionService = {
     await updateDoc(docRef, updates);
   },
 
-  // Delete
   async deleteTransaction(id: string) {
     const docRef = doc(db, COLLECTION_NAME, id);
     await deleteDoc(docRef);
   }
+};
+
+export const addTransaction = (data: any) => {
+  const mappedData = {
+    ...data,
+    type: data.type === 'pemasukkan' ? 'pemasukan' : data.type,
+    amount: data.amount || data.actual || 0,
+    note: data.note || data.item || '',
+    status: data.status || 'VERIFIED'
+  };
+  return transactionService.createTransaction(mappedData);
 };

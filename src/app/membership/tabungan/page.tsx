@@ -27,11 +27,13 @@ export default function SavingsPage() {
 
   const [formData, setFormData] = useState({
     description: '',
+    subCategory: '',
     amount: '',
     category: 'Dana Darurat',
     fromAccount: '',
     toGoal: '',
     date: new Date().toISOString().split('T')[0],
+    displayDate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }),
     currency: 'IDR'
   });
 
@@ -64,15 +66,22 @@ export default function SavingsPage() {
       await savingsService.createSaving({
         userId: user.uid,
         description: formData.description,
+        subCategory: formData.subCategory,
         amount: parseFloat(formData.amount),
         currency: formData.currency,
         category: formData.category,
         fromAccount: formData.fromAccount,
         toGoal: formData.toGoal || formData.category,
-        date: new Date(formData.date)
+        date: new Date(formData.date),
+        displayDate: formData.displayDate
       });
       setIsAddModalOpen(false);
-      setFormData({ description: '', amount: '', category: 'Dana Darurat', fromAccount: '', toGoal: '', date: new Date().toISOString().split('T')[0], currency: 'IDR' });
+      setFormData({ 
+        description: '', subCategory: '', amount: '', category: 'Dana Darurat', fromAccount: '', 
+        toGoal: '', date: new Date().toISOString().split('T')[0], 
+        displayDate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }),
+        currency: 'IDR' 
+      });
       // onSnapshot akan handle update otomatis
     } catch (e) { console.error(e); }
   };
@@ -166,30 +175,32 @@ export default function SavingsPage() {
             <table className="w-full text-left border-collapse min-w-[800px] xl:min-w-0">
               <thead>
                 <tr className="border-b border-slate-50">
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tanggal</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Deskripsi</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mata Uang</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Nominal</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Goal</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Dari</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tujuan</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Aksi</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal Display</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Mata Uang</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Nominal</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Sub Kategori</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Dari</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Ke</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((item) => (
                   <tr key={item.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
-                    <td className="px-5 md:px-8 py-5 whitespace-nowrap">
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap">
                       <p className="text-sm font-black text-slate-900">{formatDate(item.date)}</p>
                     </td>
-                    <td className="px-5 md:px-8 py-5 whitespace-nowrap font-bold text-slate-900 text-sm">{item.description}</td>
-                    <td className="px-5 md:px-8 py-5 whitespace-nowrap font-bold text-slate-600 text-sm uppercase text-center">{item.currency}</td>
-                    <td className="px-5 md:px-8 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatRp(item.amount)}</td>
-                    <td className="px-5 md:px-8 py-5 text-center whitespace-nowrap">
-                      <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[8px] font-black rounded uppercase tracking-widest">{item.category}</span>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-500 text-[11px]">{item.displayDate || formatDate(item.date)}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-900 text-sm">{item.description}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center"><span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{item.currency || 'IDR'}</span></td>
+                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm"> {formatRp(item.amount)}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap">
+                       <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[8px] font-black rounded uppercase tracking-widest">{item.subCategory || '—'}</span>
                     </td>
-                    <td className="px-5 md:px-8 py-5 whitespace-nowrap font-bold text-slate-600 text-sm">{item.fromAccount || '—'}</td>
-                    <td className="px-5 md:px-8 py-5 whitespace-nowrap font-bold text-slate-600 text-sm">{item.toGoal || '—'}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-600 text-xs">{item.fromAccount || '—'}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap font-bold text-slate-600 text-xs">{item.toGoal || '—'}</td>
                     <td className="px-5 md:px-8 py-5 text-center">
                       <button onClick={async () => { if (item.id) { await savingsService.deleteSaving(item.id); } }}
                         className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
@@ -232,25 +243,45 @@ export default function SavingsPage() {
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal (Rp)</label>
               <input type="number" value={formData.amount} onChange={e => setFormData(p => ({...p, amount: e.target.value}))}
-                placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+                placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
+            <div className="space-y-2">
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mata Uang</label>
+               <input type="text" value={formData.currency} onChange={e => setFormData(p => ({...p, currency: e.target.value.toUpperCase()}))}
+                placeholder="IDR" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
               <input type="date" value={formData.date} onChange={e => setFormData(p => ({...p, date: e.target.value}))}
-                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal Display</label>
+               <input type="text" value={formData.displayDate} onChange={e => setFormData(p => ({...p, displayDate: e.target.value}))}
+                placeholder="14 April 2024" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
           </div>
+
           <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Sub Kategori</label>
+              <input type="text" value={formData.subCategory} onChange={e => setFormData(p => ({...p, subCategory: e.target.value}))}
+                placeholder="Potongan, Bonus..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Dari Rekening</label>
               <input type="text" value={formData.fromAccount} onChange={e => setFormData(p => ({...p, fromAccount: e.target.value}))}
-                placeholder="BCA Tabungan..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+                placeholder="BCA Tabungan..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Ke Goal</label>
-              <input type="text" value={formData.toGoal} onChange={e => setFormData(p => ({...p, toGoal: e.target.value}))}
-                placeholder="Dana Darurat..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
-            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Ke Goal (Tujuan)</label>
+            <input type="text" value={formData.toGoal} onChange={e => setFormData(p => ({...p, toGoal: e.target.value}))}
+              placeholder="Dana Darurat, Liburan..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
           </div>
           <button onClick={handleCreate} disabled={!formData.description || !formData.amount}
             className="w-full bg-black disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-4 shadow-xl shadow-slate-200">

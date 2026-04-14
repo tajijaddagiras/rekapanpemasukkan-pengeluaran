@@ -26,7 +26,7 @@ export interface RecurringTransaction {
   createdAt: Date;
 }
 
-const COLLECTION_NAME = 'recurring_transactions';
+const COLLECTION_NAME = 'recurring';
 
 export const recurringService = {
   async createRecurring(data: Omit<RecurringTransaction, 'id' | 'createdAt'>) {

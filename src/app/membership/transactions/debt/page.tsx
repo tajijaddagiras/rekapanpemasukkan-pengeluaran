@@ -28,9 +28,16 @@ export default function DebtPage() {
   const [formData, setFormData] = useState({
     debtType: 'hutang' as 'hutang' | 'piutang',
     amount: '',
-    category: '',
+    currency: 'IDR',
+    lenderName: '',
     note: '',
-    date: new Date().toISOString().split('T')[0]
+    accountId: '',
+    installmentTenor: '',
+    monthlyInterest: '',
+    totalInterest: '',
+    totalDebt: '',
+    date: new Date().toISOString().split('T')[0],
+    displayDate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
   });
 
   const unsubRef = useRef<(() => void) | null>(null);
@@ -67,15 +74,27 @@ export default function DebtPage() {
         userId: user.uid,
         type: 'debt',
         amount: parseFloat(formData.amount),
+        currency: formData.currency,
         category: formData.debtType === 'hutang' ? 'Hutang' : 'Piutang',
-        subCategory: formData.category,
-        accountId: 'General',
-        date: new Date(formData.date),
+        subCategory: formData.debtType === 'hutang' ? 'Hutang' : 'Piutang',
+        lenderName: formData.lenderName,
         note: formData.note,
+        accountId: formData.accountId || 'General',
+        installmentTenor: parseInt(formData.installmentTenor) || 0,
+        monthlyInterest: parseFloat(formData.monthlyInterest) || 0,
+        totalInterest: parseFloat(formData.totalInterest) || 0,
+        totalDebt: parseFloat(formData.totalDebt) || 0,
+        date: new Date(formData.date),
+        displayDate: formData.displayDate,
         status: 'PENDING'
       });
       setIsAddModalOpen(false);
-      setFormData({ debtType: 'hutang', amount: '', category: '', note: '', date: new Date().toISOString().split('T')[0] });
+      setFormData({ 
+        debtType: 'hutang', amount: '', currency: 'IDR', lenderName: '', note: '', accountId: '', 
+        installmentTenor: '', monthlyInterest: '', totalInterest: '', totalDebt: '', 
+        date: new Date().toISOString().split('T')[0],
+        displayDate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+      });
       // onSnapshot update otomatis
     } catch (e) { console.error(e); }
   };
@@ -173,41 +192,52 @@ export default function DebtPage() {
               <table className="w-full text-left border-collapse min-w-[700px] xl:min-w-0">
                 <thead>
                   <tr className="border-b border-slate-50">
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tanggal</th>
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Keterangan</th>
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Tipe</th>
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Nominal</th>
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Aksi</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal Display</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Mata Uang</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Nominal</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Tipe</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Rekening</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Pemberi Hutang</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Tenor</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Bunga/Bln</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Total Bunga</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Total Hutang</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((trx) => (
                     <tr key={trx.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
-                      <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
+                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
                         <p className="text-sm font-black text-slate-900">{formatDate(trx.date)}</p>
                       </td>
-                      <td className="px-5 md:px-8 py-4 md:py-6">
-                        <p className="text-sm font-bold text-slate-700">{trx.note || '—'}</p>
-                        {trx.subCategory && <p className="text-[10px] text-slate-400 font-medium">{trx.subCategory}</p>}
+                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
+                        <p className="text-sm font-bold text-slate-500">{trx.displayDate || formatDate(trx.date)}</p>
                       </td>
-                      <td className="px-5 md:px-8 py-4 md:py-6 text-center whitespace-nowrap">
+                      <td className="px-4 md:px-6 py-4 md:py-6">
+                        <p className="text-sm font-bold text-slate-700">{trx.note || '—'}</p>
+                      </td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 text-center whitespace-nowrap">
+                        <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{trx.currency || 'IDR'}</span>
+                      </td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap">
+                        <p className="text-sm font-black text-slate-900"> {formatRp(trx.amount)}</p>
+                      </td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 text-center whitespace-nowrap">
                         <span className={`px-3 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest ${
                           trx.category === 'Hutang' ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-600'
                         }`}>
                           {trx.category}
                         </span>
                       </td>
-                      <td className="px-5 md:px-8 py-4 md:py-6 text-center whitespace-nowrap">
-                        <span className={`px-3 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest ${
-                          trx.status === 'VERIFIED' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'
-                        }`}>
-                          {trx.status === 'VERIFIED' ? 'Lunas' : 'Belum Lunas'}
-                        </span>
-                      </td>
-                      <td className="px-5 md:px-8 py-4 md:py-6 text-right whitespace-nowrap">
-                        <p className="text-sm font-black text-slate-900">Rp {formatRp(trx.amount)}</p>
-                      </td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap text-sm font-bold text-slate-600">{trx.accountId || '—'}</td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap text-sm font-bold text-slate-600">{trx.lenderName || '—'}</td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 text-center whitespace-nowrap text-sm font-bold text-slate-600">{trx.installmentTenor || 0} bln</td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap text-sm font-bold text-slate-600">{formatRp(trx.monthlyInterest || 0)}</td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap text-sm font-bold text-slate-600">{formatRp(trx.totalInterest || 0)}</td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatRp(trx.totalDebt || 0)}</td>
                       <td className="px-5 md:px-8 py-4 md:py-6 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <button 
@@ -239,12 +269,12 @@ export default function DebtPage() {
 
       {/* Modal */}
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Catat Hutang / Piutang" maxWidth="max-w-lg">
-        <div className="space-y-5">
+        <div className="space-y-4 max-h-[75vh] overflow-y-auto px-1 custom-scrollbar">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe</label>
             <div className="grid grid-cols-2 gap-3">
               {(['hutang', 'piutang'] as const).map(type => (
-                <button key={type} onClick={() => setFormData(p => ({...p, debtType: type}))}
+                <button key={type} type="button" onClick={() => setFormData(p => ({...p, debtType: type}))}
                   className={`py-3 rounded-xl text-sm font-black capitalize transition-all ${
                     formData.debtType === type
                       ? type === 'hutang' ? 'bg-rose-500 text-white shadow-lg shadow-rose-100' : 'bg-emerald-600 text-white shadow-lg shadow-emerald-100'
@@ -255,35 +285,78 @@ export default function DebtPage() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
-            <div className="relative">
-              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal Pokok</label>
               <input type="number" value={formData.amount} onChange={e => setFormData(p => ({...p, amount: e.target.value}))}
-                placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 pl-12 pr-5 text-sm font-bold text-slate-700 transition-all" />
+                placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mata Uang</label>
+               <input type="text" value={formData.currency} onChange={e => setFormData(p => ({...p, currency: e.target.value.toUpperCase()}))}
+                placeholder="IDR" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kepada / Dari (Nama)</label>
-            <input type="text" value={formData.category} onChange={e => setFormData(p => ({...p, category: e.target.value}))}
-              placeholder="Nama orang / institusi..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Pemberi / Penerima</label>
+              <input type="text" value={formData.lenderName} onChange={e => setFormData(p => ({...p, lenderName: e.target.value}))}
+                placeholder="Nama orang/bank..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rekening Terkait</label>
+              <input type="text" value={formData.accountId} onChange={e => setFormData(p => ({...p, accountId: e.target.value}))}
+                placeholder="BCA, Mandiri..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Keterangan (Opsional)</label>
-            <input type="text" value={formData.note} onChange={e => setFormData(p => ({...p, note: e.target.value}))}
-              placeholder="Alasan atau detail lainnya..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tenor (Bln)</label>
+              <input type="number" value={formData.installmentTenor} onChange={e => setFormData(p => ({...p, installmentTenor: e.target.value}))}
+                placeholder="12" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Bunga / Bln</label>
+              <input type="number" value={formData.monthlyInterest} onChange={e => setFormData(p => ({...p, monthlyInterest: e.target.value}))}
+                placeholder="100000" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+             <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Total Bunga</label>
+              <input type="number" value={formData.totalInterest} onChange={e => setFormData(p => ({...p, totalInterest: e.target.value}))}
+                placeholder="1200000" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
-            <input type="date" value={formData.date} onChange={e => setFormData(p => ({...p, date: e.target.value}))}
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Total Hutang</label>
+              <input type="number" value={formData.totalDebt} onChange={e => setFormData(p => ({...p, totalDebt: e.target.value}))}
+                placeholder="Nominal + Total Bunga" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+             <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
+              <input type="date" value={formData.date} onChange={e => setFormData(p => ({...p, date: e.target.value}))}
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-2">
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal Display</label>
+               <input type="text" value={formData.displayDate} onChange={e => setFormData(p => ({...p, displayDate: e.target.value}))}
+                placeholder="14 April 2024" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Deskripsi</label>
+              <input type="text" value={formData.note} onChange={e => setFormData(p => ({...p, note: e.target.value}))}
+                placeholder="Keterangan tambahan..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
           </div>
 
           <button onClick={handleCreate} disabled={!formData.amount}
-            className="w-full bg-black disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-6 shadow-xl shadow-slate-200">
+            className="w-full bg-black disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-4 shadow-xl shadow-slate-200">
             Simpan Catatan
           </button>
         </div>

@@ -32,8 +32,13 @@ export default function DailyTransactionLogPage() {
   const [formData, setFormData] = useState({
     type: 'pemasukan' as 'pemasukan' | 'pengeluaran',
     category: '',
+    subCategory: '',
+    currency: 'IDR',
     amount: '',
     accountId: '',
+    installmentTenor: '',
+    monthlyInterest: '',
+    totalInterest: '',
     note: '',
     date: new Date().toISOString().split('T')[0]
   });
@@ -67,10 +72,14 @@ export default function DailyTransactionLogPage() {
       await transactionService.createTransaction({
         userId: user.uid, type: formData.type, amount: parseFloat(formData.amount),
         category: formData.category, accountId: formData.accountId || 'General',
+        subCategory: formData.subCategory, currency: formData.currency,
+        installmentTenor: parseInt(formData.installmentTenor) || 0,
+        monthlyInterest: parseFloat(formData.monthlyInterest) || 0,
+        totalInterest: parseFloat(formData.totalInterest) || 0,
         date: new Date(formData.date), note: formData.note, status: 'VERIFIED'
       });
       setIsAddModalOpen(false);
-      setFormData({ type: 'pemasukan', category: '', amount: '', accountId: '', note: '', date: new Date().toISOString().split('T')[0] });
+      setFormData({ type: 'pemasukan', category: '', subCategory: '', currency: 'IDR', amount: '', accountId: '', installmentTenor: '', monthlyInterest: '', totalInterest: '', note: '', date: new Date().toISOString().split('T')[0] });
       // onSnapshot update otomatis
     } catch (e) { console.error(e); }
   };
@@ -178,42 +187,49 @@ export default function DailyTransactionLogPage() {
               <table className="w-full text-left border-collapse min-w-[900px] xl:min-w-0">
                 <thead>
                   <tr className="border-b border-slate-50">
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi / Catatan</th>
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kategori</th>
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Nominal</th>
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Tipe</th>
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Aksi</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Mata Uang</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Nominal</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Sub Kategori</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Rekening</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Tenor Cicilan</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Bunga Perbulan</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Total Bunga</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((trx) => (
                     <tr key={trx.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
-                      <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
+                      <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                         <p className="text-xs md:text-sm font-black text-slate-900">{formatDate(trx.date)}</p>
                       </td>
-                      <td className="px-5 md:px-8 py-4 md:py-6">
+                      <td className="px-4 md:px-6 py-4">
                         <p className="text-xs md:text-sm font-bold text-slate-700">{trx.note || '—'}</p>
                       </td>
-                      <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
-                            <Wallet size={14} />
-                          </div>
-                          <span className="text-xs font-bold text-slate-600">{trx.category}</span>
-                        </div>
+                      <td className="px-4 md:px-6 py-4 whitespace-nowrap text-center">
+                        <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{trx.currency || 'IDR'}</span>
                       </td>
-                      <td className="px-5 md:px-8 py-4 md:py-6 text-right whitespace-nowrap">
+                      <td className="px-4 md:px-6 py-4 text-right whitespace-nowrap">
                         <p className={`text-sm font-black tracking-tight ${trx.type === 'pemasukan' ? 'text-emerald-600' : 'text-rose-500'}`}>
                           {trx.type === 'pemasukan' ? '+' : '-'} {formatRp(trx.amount)}
                         </p>
                       </td>
-                      <td className="px-5 md:px-8 py-4 md:py-6 text-center whitespace-nowrap">
-                        <span className={`px-3 py-1.5 rounded-full text-[8px] font-black tracking-widest uppercase ${
-                          trx.type === 'pemasukan' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'
-                        }`}>
-                          {trx.type === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}
-                        </span>
+                      <td className="px-4 md:px-6 py-4 whitespace-nowrap">
+                        <span className="text-xs font-bold text-slate-600">{trx.subCategory || trx.category || '—'}</span>
+                      </td>
+                      <td className="px-4 md:px-6 py-4 whitespace-nowrap">
+                        <span className="text-xs font-bold text-slate-600">{trx.accountId || '—'}</span>
+                      </td>
+                      <td className="px-4 md:px-6 py-4 text-right whitespace-nowrap">
+                        <span className="text-xs font-bold text-slate-600">{trx.installmentTenor ? `${trx.installmentTenor} bln` : '—'}</span>
+                      </td>
+                      <td className="px-4 md:px-6 py-4 text-right whitespace-nowrap">
+                        <span className="text-xs font-bold text-slate-600">{trx.monthlyInterest ? formatRp(trx.monthlyInterest) : '—'}</span>
+                      </td>
+                      <td className="px-4 md:px-6 py-4 text-right whitespace-nowrap">
+                        <span className="text-xs font-bold text-slate-600">{trx.totalInterest ? formatRp(trx.totalInterest) : '—'}</span>
                       </td>
                       <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
                         <div className="flex items-center justify-center gap-2">
@@ -263,31 +279,70 @@ export default function DailyTransactionLogPage() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
-            <div className="relative">
-              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
-              <input type="number" value={formData.amount} onChange={e => setFormData(p => ({...p, amount: e.target.value}))}
-                placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 pl-12 pr-5 text-sm font-bold text-slate-700 transition-all" />
+          <div className="flex gap-4">
+            <div className="space-y-2 flex-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
+                <input type="number" value={formData.amount} onChange={e => setFormData(p => ({...p, amount: e.target.value}))}
+                  placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 pl-11 pr-4 text-sm font-bold text-slate-700 transition-all" />
+              </div>
+            </div>
+            <div className="space-y-2 w-1/3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mata Uang</label>
+               <input type="text" value={formData.currency} onChange={e => setFormData(p => ({...p, currency: e.target.value.toUpperCase()}))}
+                placeholder="IDR" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kategori</label>
+              <input type="text" value={formData.category} onChange={e => setFormData(p => ({...p, category: e.target.value}))}
+                placeholder="Makanan, Gaji..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Sub Kategori</label>
+              <input type="text" value={formData.subCategory} onChange={e => setFormData(p => ({...p, subCategory: e.target.value}))}
+                placeholder="Makan siang..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rekening</label>
+              <input type="text" value={formData.accountId} onChange={e => setFormData(p => ({...p, accountId: e.target.value}))}
+                placeholder="BCA, Tunai..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
+              <input type="date" value={formData.date} onChange={e => setFormData(p => ({...p, date: e.target.value}))}
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+             <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tenor Cicilan</label>
+              <input type="number" value={formData.installmentTenor} onChange={e => setFormData(p => ({...p, installmentTenor: e.target.value}))}
+                placeholder="Bulan" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Bunga/Bln</label>
+              <input type="number" value={formData.monthlyInterest} onChange={e => setFormData(p => ({...p, monthlyInterest: e.target.value}))}
+                placeholder="Rp" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+             <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Total Bunga</label>
+              <input type="number" value={formData.totalInterest} onChange={e => setFormData(p => ({...p, totalInterest: e.target.value}))}
+                placeholder="Rp" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kategori</label>
-            <input type="text" value={formData.category} onChange={e => setFormData(p => ({...p, category: e.target.value}))}
-              placeholder="Makanan, Transport, Gaji..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
-            <input type="date" value={formData.date} onChange={e => setFormData(p => ({...p, date: e.target.value}))}
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Catatan (Opsional)</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Deskripsi / Catatan</label>
             <input type="text" value={formData.note} onChange={e => setFormData(p => ({...p, note: e.target.value}))}
-              placeholder="Deskripsi singkat..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+              placeholder="Deskripsi..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
           </div>
 
           <button onClick={handleCreate} disabled={!formData.amount || !formData.category}

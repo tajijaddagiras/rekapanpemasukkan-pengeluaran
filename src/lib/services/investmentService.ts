@@ -21,6 +21,18 @@ export interface Investment {
   currentValue: number;
   returnPercentage: number;
   currency: string;
+  durationMonths?: number;
+  transactionType?: string;
+  category?: string;
+  accountId?: string;
+  logoUrl?: string;
+  quantity?: number;
+  unit?: string;
+  pricePerUnit?: number;
+  stockCode?: string;
+  exchangeCode?: string;
+  sharesCount?: number;
+  pricePerShare?: number;
   dateInvested: Date;
   status: 'Active' | 'Closed';
   createdAt: Date;
@@ -33,6 +45,11 @@ export const investmentService = {
     const ref = collection(db, COLLECTION_NAME);
     const newDoc = await addDoc(ref, {
       ...data,
+      durationMonths: Number(data.durationMonths) || 0,
+      quantity: Number(data.quantity) || 0,
+      pricePerUnit: Number(data.pricePerUnit) || 0,
+      sharesCount: Number(data.sharesCount) || 0,
+      pricePerShare: Number(data.pricePerShare) || 0,
       dateInvested: Timestamp.fromDate(data.dateInvested),
       createdAt: Timestamp.now()
     });

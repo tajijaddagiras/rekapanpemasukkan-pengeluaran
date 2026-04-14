@@ -19,6 +19,7 @@ export interface Account {
   currency: string;
   balance: number;
   initialBalance: number;
+  baseValue?: number;
   logoUrl?: string;
   logoLabel?: string;
   createdAt: Date;
@@ -31,7 +32,9 @@ export const accountService = {
     const accountsRef = collection(db, COLLECTION_NAME);
     const newDoc = await addDoc(accountsRef, {
       ...data,
-      balance: data.initialBalance, // Set initial balance
+      balance: Number(data.balance),
+      initialBalance: Number(data.initialBalance),
+      baseValue: Number(data.baseValue) || 0,
       createdAt: Timestamp.now()
     });
     return newDoc.id;

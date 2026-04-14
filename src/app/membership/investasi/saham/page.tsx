@@ -25,11 +25,17 @@ export default function StockInvestmentPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: '',
-    platform: '',
-    amountInvested: '',
-    currentValue: '',
+    stockCode: '',
+    logoUrl: '',
+    exchangeCode: 'IDX',
     currency: 'IDR',
+    sharesCount: '',
+    pricePerShare: '',
+    currentValue: '',
+    transactionType: 'Beli',
+    category: 'Saham',
+    accountId: '',
+    platform: '',
     dateInvested: new Date().toISOString().split('T')[0]
   });
 
@@ -64,18 +70,38 @@ export default function StockInvestmentPage() {
   }, []);
 
   const handleCreate = async () => {
-    if (!user || !formData.name || !formData.amountInvested) return;
-    const invested = parseFloat(formData.amountInvested);
+    if (!user || !formData.stockCode || !formData.sharesCount || !formData.pricePerShare) return;
+    const shares = parseFloat(formData.sharesCount) || 0;
+    const price = parseFloat(formData.pricePerShare) || 0;
+    const invested = shares * price;
     const current = parseFloat(formData.currentValue) || invested;
     try {
       await investmentService.createInvestment({
-        userId: user.uid, name: formData.name, type: 'Saham',
-        platform: formData.platform, amountInvested: invested, currentValue: current,
-        returnPercentage: ((current - invested) / invested) * 100,
-        currency: formData.currency, dateInvested: new Date(formData.dateInvested), status: 'Active'
+        userId: user.uid, 
+        name: formData.stockCode, 
+        type: 'Saham',
+        stockCode: formData.stockCode.toUpperCase(),
+        exchangeCode: formData.exchangeCode.toUpperCase(),
+        logoUrl: formData.logoUrl,
+        sharesCount: shares,
+        pricePerShare: price,
+        transactionType: formData.transactionType,
+        category: formData.category,
+        accountId: formData.accountId,
+        platform: formData.platform,
+        amountInvested: invested, 
+        currentValue: current,
+        returnPercentage: invested > 0 ? ((current - invested) / invested) * 100 : 0,
+        currency: formData.currency, 
+        dateInvested: new Date(formData.dateInvested), 
+        status: 'Active'
       });
       setIsAddModalOpen(false);
-      setFormData({ name: '', platform: '', amountInvested: '', currentValue: '', currency: 'IDR', dateInvested: new Date().toISOString().split('T')[0] });
+      setFormData({ 
+        stockCode: '', logoUrl: '', exchangeCode: 'IDX', currency: 'IDR', sharesCount: '', 
+        pricePerShare: '', currentValue: '', transactionType: 'Beli', category: 'Saham', 
+        accountId: '', platform: '', dateInvested: new Date().toISOString().split('T')[0] 
+      });
       // onSnapshot update otomatis
     } catch (e) { console.error(e); }
   };
@@ -152,32 +178,43 @@ export default function StockInvestmentPage() {
             <table className="w-full text-left border-collapse min-w-[900px] xl:min-w-0">
               <thead>
                 <tr className="border-b border-slate-50">
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Kode / Nama</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Platform</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Modal</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Nilai Saat Ini</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Return</th>
-                  <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Aksi</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kode Saham</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Icon/Logo</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kode Bursa</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Mata Uang</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Jumlah Lembar</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Harga / Lembar</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tipe Transaksi</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kategori</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Rekening</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Platform</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {investments.map((inv) => (
                   <tr key={inv.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
-                    <td className="px-5 md:px-8 py-5 whitespace-nowrap">
-                      <p className="text-sm font-black text-slate-900">{inv.name}</p>
-                      <p className="text-[10px] font-bold text-slate-400">{formatDate(inv.dateInvested)}</p>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatDate(inv.dateInvested)}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap">
+                      <p className="text-sm font-black text-slate-900">{inv.stockCode || inv.name}</p>
                     </td>
-                    <td className="px-5 md:px-8 py-5 whitespace-nowrap">
-                      <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[9px] font-black rounded-lg uppercase tracking-widest">{inv.platform || '—'}</span>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center">
+                      {inv.logoUrl ? (
+                        <img src={inv.logoUrl} alt={inv.name} className="w-6 h-6 rounded-full object-cover mx-auto bg-slate-50" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-[8px] font-black">STK</div>
+                      )}
                     </td>
-                    <td className="px-5 md:px-8 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">Rp {formatRp(inv.amountInvested)}</td>
-                    <td className="px-5 md:px-8 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">Rp {formatRp(inv.currentValue)}</td>
-                    <td className="px-5 md:px-8 py-5 text-center whitespace-nowrap">
-                      <span className={`px-3 py-1 text-[9px] font-black rounded-lg ${inv.returnPercentage >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'}`}>
-                        {inv.returnPercentage >= 0 ? '+' : ''}{inv.returnPercentage.toFixed(2)}%
-                      </span>
-                    </td>
-                    <td className="px-5 md:px-8 py-5 text-center">
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-600 uppercase tracking-tighter">{inv.exchangeCode || 'IDX'}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center"><span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{inv.currency || 'IDR'}</span></td>
+                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-bold text-slate-700">{inv.sharesCount || 0}</td>
+                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatRp(inv.pricePerShare || 0)}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || 'Beli'}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.category || 'Saham'}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.accountId || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[9px] font-black rounded-lg uppercase tracking-widest">{inv.platform || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 text-center">
                       <button onClick={async () => { if (inv.id) { await investmentService.deleteInvestment(inv.id); } }}
                         className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
                         <Trash2 size={14} />
@@ -193,35 +230,86 @@ export default function StockInvestmentPage() {
 
       {/* Modal */}
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Tambah Posisi Saham" maxWidth="max-w-lg">
-        <div className="space-y-5">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kode / Nama Saham</label>
-            <input type="text" value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))}
-              placeholder="BBCA, TLKM..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Platform Broker</label>
-            <input type="text" value={formData.platform} onChange={e => setFormData(p => ({...p, platform: e.target.value}))}
-              placeholder="Stockbit, Ajaib, BNI Sekuritas..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
-          </div>
+        <div className="space-y-4 max-h-[75vh] overflow-y-auto px-1 custom-scrollbar">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Modal (Rp)</label>
-              <input type="number" value={formData.amountInvested} onChange={e => setFormData(p => ({...p, amountInvested: e.target.value}))}
-                placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kode Saham</label>
+              <input type="text" value={formData.stockCode} onChange={e => setFormData(p => ({...p, stockCode: e.target.value}))}
+                placeholder="BBCA, TLKM..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nilai Saat Ini (Rp)</label>
-              <input type="number" value={formData.currentValue} onChange={e => setFormData(p => ({...p, currentValue: e.target.value}))}
-                placeholder="Sama dgn modal" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Icon/Logo (URL)</label>
+              <input type="text" value={formData.logoUrl} onChange={e => setFormData(p => ({...p, logoUrl: e.target.value}))}
+                placeholder="https://..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal Beli</label>
-            <input type="date" value={formData.dateInvested} onChange={e => setFormData(p => ({...p, dateInvested: e.target.value}))}
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kode Bursa</label>
+              <input type="text" value={formData.exchangeCode} onChange={e => setFormData(p => ({...p, exchangeCode: e.target.value.toUpperCase()}))}
+                placeholder="IDX, NYSE..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mata Uang</label>
+              <input type="text" value={formData.currency} onChange={e => setFormData(p => ({...p, currency: e.target.value.toUpperCase()}))}
+                placeholder="IDR" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
           </div>
-          <button onClick={handleCreate} disabled={!formData.name || !formData.amountInvested}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jumlah Lembar (Lot x 100)</label>
+              <input type="number" value={formData.sharesCount} onChange={e => setFormData(p => ({...p, sharesCount: e.target.value}))}
+                placeholder="100" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Harga per Lembar</label>
+              <input type="number" value={formData.pricePerShare} onChange={e => setFormData(p => ({...p, pricePerShare: e.target.value}))}
+                placeholder="8000" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Transaksi</label>
+              <input type="text" value={formData.transactionType} onChange={e => setFormData(p => ({...p, transactionType: e.target.value}))}
+                placeholder="Beli / Jual" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kategori</label>
+              <input type="text" value={formData.category} onChange={e => setFormData(p => ({...p, category: e.target.value}))}
+                placeholder="Blue Chip, Growth..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rekening / RDN</label>
+              <input type="text" value={formData.accountId} onChange={e => setFormData(p => ({...p, accountId: e.target.value}))}
+                placeholder="BCA RDN, Mandiri..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Platform Broker</label>
+              <input type="text" value={formData.platform} onChange={e => setFormData(p => ({...p, platform: e.target.value}))}
+                placeholder="Stockbit, Ajaib..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-2">
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Estimasi Harga Saat Ini</label>
+               <input type="number" value={formData.currentValue} onChange={e => setFormData(p => ({...p, currentValue: e.target.value}))}
+                 placeholder="Sama dgn Harga Beli x Qty" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+             </div>
+             <div className="space-y-2">
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
+               <input type="date" value={formData.dateInvested} onChange={e => setFormData(p => ({...p, dateInvested: e.target.value}))}
+                 className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+             </div>
+          </div>
+
+          <button onClick={handleCreate} disabled={!formData.stockCode || !formData.sharesCount || !formData.pricePerShare}
             className="w-full bg-black disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-6 shadow-xl shadow-slate-200">
             Simpan Posisi Saham
           </button>

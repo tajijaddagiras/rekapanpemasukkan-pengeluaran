@@ -11,9 +11,11 @@ export interface Saving {
   amount: number;
   currency: string;
   category: string;  // 'Dana Darurat', 'Liburan', dll
+  subCategory?: string;
   fromAccount: string;
   toGoal: string;
   date: Date;
+  displayDate?: string;
   createdAt: Date;
 }
 

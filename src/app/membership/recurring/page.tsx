@@ -137,39 +137,45 @@ export default function RecurringPage() {
               <table className="w-full text-left min-w-[800px] md:min-w-0">
                 <thead className="bg-[#f8fafc]">
                   <tr>
-                    <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Transaksi</th>
-                    <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Interval</th>
-                    <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Nominal</th>
-                    <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Tgl Berikutnya</th>
-                    <th className="px-5 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Aksi</th>
+                    <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Nama</th>
+                    <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Jenis</th>
+                    <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kategori</th>
+                    <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Nominal</th>
+                    <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Interval</th>
+                    <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Berikutnya</th>
+                    <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Akun</th>
+                    <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {transactions.map((trx) => (
-                    <tr key={trx.id} className="group hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 md:px-8 py-5">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                            trx.type === 'Pemasukan' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-500'
-                          }`}>
-                            <RefreshCw size={16} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-black text-slate-900 leading-none mb-1">{trx.name}</p>
-                            <p className="text-[10px] font-bold text-slate-400 tracking-wide">{trx.category}</p>
-                          </div>
-                        </div>
+                    <tr key={trx.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
+                      <td className="px-4 md:px-6 py-5">
+                        <p className="text-sm font-black text-slate-900">{trx.name}</p>
                       </td>
-                      <td className="px-5 md:px-8 py-5 text-center">
-                        <span className="px-3 py-1.5 bg-slate-100 text-[10px] font-black text-slate-500 rounded-lg tracking-widest uppercase">
+                      <td className="px-4 md:px-6 py-5 text-center">
+                        <span className={`px-3 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest ${
+                          trx.type === 'Pemasukan' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'
+                        }`}>
+                          {trx.type}
+                        </span>
+                      </td>
+                      <td className="px-4 md:px-6 py-5">
+                         <span className="text-xs font-bold text-slate-600">{trx.category || '—'}</span>
+                      </td>
+                      <td className="px-4 md:px-6 py-5 text-right font-black text-slate-900 text-sm whitespace-nowrap">
+                        {formatRp(trx.amount)}
+                      </td>
+                      <td className="px-4 md:px-6 py-5 text-center">
+                        <span className="px-3 py-1 bg-slate-100 text-[10px] font-black text-slate-500 rounded-lg tracking-widest uppercase whitespace-nowrap">
                           {trx.interval}
                         </span>
                       </td>
-                      <td className="px-5 md:px-8 py-5 text-right font-black text-slate-900 text-sm">
-                        {formatRp(trx.amount)}
-                      </td>
-                      <td className="px-5 md:px-8 py-5 text-right font-bold text-slate-500 text-xs">
+                      <td className="px-4 md:px-6 py-5 text-right font-bold text-slate-500 text-xs whitespace-nowrap">
                         {formatDate(trx.nextDate)}
+                      </td>
+                      <td className="px-4 md:px-6 py-5">
+                         <span className="text-xs font-bold text-slate-600">{trx.accountId || '—'}</span>
                       </td>
                       <td className="px-5 md:px-8 py-5">
                         <div className="flex items-center justify-center gap-2">
@@ -281,6 +287,17 @@ export default function RecurringPage() {
               type="date" 
               value={formData.nextDate}
               onChange={e => setFormData({...formData, nextDate: e.target.value})}
+              className="w-full bg-slate-50/50 border border-slate-100 focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-5 text-sm font-bold text-slate-600 transition-all"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Akun / Rekening</label>
+            <input 
+              type="text" 
+              value={formData.accountId}
+              onChange={e => setFormData({...formData, accountId: e.target.value})}
+              placeholder="BCA, Mandiri, Cash..."
               className="w-full bg-slate-50/50 border border-slate-100 focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-5 text-sm font-bold text-slate-600 transition-all"
             />
           </div>

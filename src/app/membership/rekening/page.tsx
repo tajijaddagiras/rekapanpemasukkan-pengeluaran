@@ -30,9 +30,12 @@ export default function RekeningPage() {
   // Form State
   const [formData, setFormData] = useState({
     name: '',
+    logoUrl: '',
     type: 'Bank Account' as Account['type'],
     currency: 'IDR',
-    initialBalance: ''
+    balance: '',
+    initialBalance: '',
+    baseValue: ''
   });
 
   const unsubRef = useRef<(() => void) | null>(null);
@@ -62,13 +65,15 @@ export default function RekeningPage() {
       await accountService.createAccount({
         userId: user.uid,
         name: formData.name,
+        logoUrl: formData.logoUrl,
         type: formData.type,
         currency: formData.currency,
-        balance: parseFloat(formData.initialBalance),
-        initialBalance: parseFloat(formData.initialBalance)
+        balance: parseFloat(formData.balance) || parseFloat(formData.initialBalance),
+        initialBalance: parseFloat(formData.initialBalance) || 0,
+        baseValue: parseFloat(formData.baseValue) || 0
       });
       setIsAddModalOpen(false);
-      setFormData({ name: '', type: 'Bank Account', currency: 'IDR', initialBalance: '' });
+      setFormData({ name: '', logoUrl: '', type: 'Bank Account', currency: 'IDR', balance: '', initialBalance: '', baseValue: '' });
       // onSnapshot otomatis update
     } catch (error) {
       console.error("Error creating account:", error);
@@ -178,33 +183,40 @@ export default function RekeningPage() {
               <table className="w-full text-left min-w-[1100px] md:min-w-0">
                 <thead>
                   <tr className="border-b border-slate-50">
-                    <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest">Logo</th>
-                    <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest">Nama & Jenis</th>
-                    <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest text-center">Mata Uang</th>
-                    <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest text-right">Saldo Saat Ini</th>
-                    <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest text-right">Saldo Awal</th>
+                    <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest text-center whitespace-nowrap">Logo</th>
+                    <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest whitespace-nowrap">Nama Akhir</th>
+                    <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest whitespace-nowrap">Jenis</th>
+                    <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest text-center whitespace-nowrap">Mata Uang</th>
+                    <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest text-right whitespace-nowrap">Saldo</th>
+                    <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest text-right whitespace-nowrap">Nilai Base</th>
                     <th className="px-5 md:px-10 py-5 md:py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest text-center">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {accounts.map((acc) => (
-                    <tr key={acc.id} className="group hover:bg-slate-50/50 transition-all">
+                    <tr key={acc.id} className="group hover:bg-slate-50/50 transition-all border-b border-slate-50 last:border-b-0">
                       <td className="px-5 md:px-10 py-5 md:py-8">
-                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl ${getBgForType(acc.type)} flex items-center justify-center group-hover:scale-110 transition-transform shadow-md`}>
-                          {getIconForType(acc.type)}
+                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-md overflow-hidden bg-slate-50`}>
+                           {acc.logoUrl ? (
+                             <img src={acc.logoUrl} alt={acc.name} className="w-full h-full object-cover" />
+                           ) : (
+                             <div className={`w-full h-full flex items-center justify-center ${getBgForType(acc.type)} text-white`}>
+                               {getIconForType(acc.type)}
+                             </div>
+                           )}
                         </div>
                       </td>
                       <td className="px-5 md:px-10 py-5 md:py-8">
-                        <div className="min-w-0">
-                          <p className="text-sm font-black text-slate-900 truncate">{acc.name}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide truncate">{acc.type}</p>
-                        </div>
+                        <p className="text-sm font-black text-slate-900 truncate">{acc.name}</p>
+                      </td>
+                      <td className="px-5 md:px-10 py-5 md:py-8">
+                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide truncate">{acc.type}</p>
                       </td>
                       <td className="px-5 md:px-10 py-5 md:py-8 text-center">
                         <span className="px-3 py-1.5 bg-slate-100 text-[9px] font-black text-slate-400 rounded-lg tracking-widest uppercase">{acc.currency}</span>
                       </td>
-                      <td className="px-5 md:px-10 py-5 md:py-8 text-right font-black text-slate-900 text-sm">{formatRp(acc.balance)}</td>
-                      <td className="px-5 md:px-10 py-5 md:py-8 text-right font-black text-slate-400 text-sm">{formatRp(acc.initialBalance)}</td>
+                      <td className="px-5 md:px-10 py-5 md:py-8 text-right font-black text-slate-900 text-sm"> {formatRp(acc.balance || 0)}</td>
+                      <td className="px-5 md:px-10 py-5 md:py-8 text-right font-black text-slate-700 text-sm"> {formatRp(acc.baseValue || 0)}</td>
                       <td className="px-5 md:px-10 py-5 md:py-8">
                         <div className="flex items-center justify-center gap-3">
                           <button className="p-2.5 rounded-xl bg-slate-50 text-slate-300 hover:bg-slate-900 hover:text-white transition-all shadow-sm">
@@ -247,7 +259,17 @@ export default function RekeningPage() {
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
                 placeholder="Contoh: BCA Personal"
-                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all"
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Logo URL</label>
+              <input 
+                type="text" 
+                value={formData.logoUrl}
+                onChange={(e) => setFormData({...formData, logoUrl: e.target.value})}
+                placeholder="https://..."
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
               />
             </div>
             <div className="space-y-3">
@@ -256,7 +278,7 @@ export default function RekeningPage() {
                 <select 
                   value={formData.type}
                   onChange={(e) => setFormData({...formData, type: e.target.value as Account['type']})}
-                  className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer"
+                  className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
                 >
                   <option value="Bank Account">Bank Account</option>
                   <option value="E-Wallet">E-Wallet</option>
@@ -285,17 +307,36 @@ export default function RekeningPage() {
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Saldo Awal</label>
-              <div className="relative">
-                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
-                <input 
-                  type="number" 
-                  value={formData.initialBalance}
-                  onChange={(e) => setFormData({...formData, initialBalance: e.target.value})}
-                  placeholder="0"
-                  className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 pl-12 pr-5 text-sm font-bold text-slate-700 transition-all"
-                />
-              </div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Saldo Saat Ini</label>
+              <input 
+                type="number" 
+                value={formData.balance}
+                onChange={(e) => setFormData({...formData, balance: e.target.value})}
+                placeholder="0"
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Saldo Awal (Initial)</label>
+              <input 
+                type="number" 
+                value={formData.initialBalance}
+                onChange={(e) => setFormData({...formData, initialBalance: e.target.value})}
+                placeholder="0"
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nilai Base</label>
+              <input 
+                type="number" 
+                value={formData.baseValue}
+                onChange={(e) => setFormData({...formData, baseValue: e.target.value})}
+                placeholder="0"
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
+              />
             </div>
           </div>
 

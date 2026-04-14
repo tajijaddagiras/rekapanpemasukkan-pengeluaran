@@ -28,10 +28,12 @@ export default function TopUpPage() {
   const [formData, setFormData] = useState({
     type: 'topup' as 'topup' | 'transfer',
     amount: '',
+    currency: 'IDR',
     accountId: '',
     targetAccountId: '',
     note: '',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    displayDate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
   });
 
   const unsubRef = useRef<(() => void) | null>(null);
@@ -69,15 +71,26 @@ export default function TopUpPage() {
         userId: user.uid,
         type: formData.type,
         amount: parseFloat(formData.amount),
+        currency: formData.currency,
         category: formData.type === 'topup' ? 'Top Up' : 'Transfer',
         accountId: formData.accountId || 'General',
         targetAccountId: formData.targetAccountId,
         date: new Date(formData.date),
+        displayDate: formData.displayDate,
         note: formData.note,
         status: 'VERIFIED'
       });
       setIsAddModalOpen(false);
-      setFormData({ type: 'topup', amount: '', accountId: '', targetAccountId: '', note: '', date: new Date().toISOString().split('T')[0] });
+      setFormData({ 
+        type: 'topup', 
+        amount: '', 
+        currency: 'IDR',
+        accountId: '', 
+        targetAccountId: '', 
+        note: '', 
+        date: new Date().toISOString().split('T')[0],
+        displayDate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+      });
       // onSnapshot update otomatis
     } catch (e) { console.error(e); }
   };
@@ -175,29 +188,39 @@ export default function TopUpPage() {
               <table className="w-full text-left border-collapse min-w-[700px] xl:min-w-0">
                 <thead>
                   <tr className="border-b border-slate-50">
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tanggal</th>
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Catatan</th>
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Tipe</th>
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Nominal</th>
-                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Aksi</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal Display</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Mata Uang</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Nominal</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Dari</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Ke</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((trx) => (
                     <tr key={trx.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
-                      <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
+                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
                         <p className="text-sm font-black text-slate-900">{formatDate(trx.date)}</p>
                       </td>
-                      <td className="px-5 md:px-8 py-4 md:py-6">
+                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
+                        <p className="text-sm font-bold text-slate-500">{trx.displayDate || formatDate(trx.date)}</p>
+                      </td>
+                      <td className="px-4 md:px-6 py-4 md:py-6">
                         <p className="text-sm font-bold text-slate-700">{trx.note || '—'}</p>
                       </td>
-                      <td className="px-5 md:px-8 py-4 md:py-6 text-center whitespace-nowrap">
-                        <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[9px] font-black rounded-lg uppercase tracking-widest">
-                          {trx.type === 'topup' ? 'Top Up' : 'Transfer'}
-                        </span>
+                      <td className="px-4 md:px-6 py-4 md:py-6 text-center whitespace-nowrap">
+                        <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{trx.currency || 'IDR'}</span>
                       </td>
-                      <td className="px-5 md:px-8 py-4 md:py-6 text-right whitespace-nowrap">
-                        <p className="text-sm font-black text-slate-900">Rp {formatRp(trx.amount)}</p>
+                      <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap">
+                        <p className="text-sm font-black text-slate-900"> {formatRp(trx.amount)}</p>
+                      </td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
+                        <p className="text-sm font-bold text-slate-600">{trx.accountId || '—'}</p>
+                      </td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
+                        <p className="text-sm font-bold text-slate-600">{trx.targetAccountId || '—'}</p>
                       </td>
                       <td className="px-5 md:px-8 py-4 md:py-6 text-center">
                         <button onClick={async () => { if (trx.id) { await transactionService.deleteTransaction(trx.id); } }}
@@ -233,25 +256,52 @@ export default function TopUpPage() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
-            <div className="relative">
-              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
-              <input type="number" value={formData.amount} onChange={e => setFormData(p => ({...p, amount: e.target.value}))}
-                placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 pl-12 pr-5 text-sm font-bold text-slate-700 transition-all" />
+          <div className="flex gap-4">
+            <div className="space-y-2 flex-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
+                <input type="number" value={formData.amount} onChange={e => setFormData(p => ({...p, amount: e.target.value}))}
+                  placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 pl-11 pr-4 text-sm font-bold text-slate-700 transition-all" />
+              </div>
+            </div>
+            <div className="space-y-2 w-1/3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mata Uang</label>
+               <input type="text" value={formData.currency} onChange={e => setFormData(p => ({...p, currency: e.target.value.toUpperCase()}))}
+                placeholder="IDR" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Dari (Asal)</label>
+              <input type="text" value={formData.accountId} onChange={e => setFormData(p => ({...p, accountId: e.target.value}))}
+                placeholder="E-Wallet, Bank..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Ke (Tujuan)</label>
+              <input type="text" value={formData.targetAccountId} onChange={e => setFormData(p => ({...p, targetAccountId: e.target.value}))}
+                placeholder="Bank XYZ..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
+              <input type="date" value={formData.date} onChange={e => setFormData(p => ({...p, date: e.target.value}))}
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal Display</label>
+              <input type="text" value={formData.displayDate} onChange={e => setFormData(p => ({...p, displayDate: e.target.value}))}
+                placeholder="14 April 2024" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Catatan (Opsional)</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Deskripsi / Catatan</label>
             <input type="text" value={formData.note} onChange={e => setFormData(p => ({...p, note: e.target.value}))}
-              placeholder="Tujuan transfer..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
-            <input type="date" value={formData.date} onChange={e => setFormData(p => ({...p, date: e.target.value}))}
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+              placeholder="Tujuan transfer..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
           </div>
 
           <button onClick={handleCreate} disabled={!formData.amount}
