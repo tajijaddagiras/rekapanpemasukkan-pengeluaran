@@ -26,6 +26,7 @@ import { MonthPicker } from '@/components/ui/MonthPicker';
 export default function DailyTransactionLogPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,6 +43,12 @@ export default function DailyTransactionLogPage() {
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
         onSnapshot(qAcc, (snap) => {
           setAccounts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account)));
+        });
+
+        // Fetch categories for lookup
+        const qCat = query(collection(db, 'categories'), where('userId', '==', u.uid));
+        onSnapshot(qCat, (snap) => {
+          setCategories(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         });
 
         const startOfMonth = new Date(selectedYear, selectedMonth, 1);
@@ -73,6 +80,11 @@ export default function DailyTransactionLogPage() {
   const getAccountName = (id: string) => {
     const acc = accounts.find(a => a.id === id);
     return acc ? acc.name : id || '—';
+  };
+
+  const getCategoryName = (id: string) => {
+    const cat = categories.find(c => c.id === id);
+    return cat ? `${cat.category} - ${cat.subCategory}` : id || '—';
   };
 
   const filtered = useMemo(() => {
@@ -210,7 +222,9 @@ export default function DailyTransactionLogPage() {
                         </p>
                       </td>
                       <td className="px-4 md:px-6 py-4 whitespace-nowrap">
-                        <span className="text-xs font-bold text-slate-600">{trx.subCategory || trx.category || '—'}</span>
+                        <span className="text-xs font-bold text-slate-600">
+                          {trx.subCategory || getCategoryName(trx.category || '')}
+                        </span>
                       </td>
                       <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                         <span className="text-xs font-bold text-slate-600">{getAccountName(trx.accountId || '')}</span>

@@ -90,7 +90,7 @@ export const LandingFeatures = () => (
         viewport={{ once: true }}
       >
         {[
-          { icon: Layout, title: 'Dashboard Analisis Planner', desc: 'Ringkasan rekap pengeluaran & pemasukkan yang terorganisir.' },
+          { icon: Layout, title: 'Dashboard Analisis Planner', desc: 'Ringkasan rekap pengeluaran & pemasukan yang terorganisir.' },
           { icon: Database, title: 'Alokasi Dana Instan', desc: 'Pengelompokan kategori yang efisien untuk kontrol dana harian.' },
           { icon: PieChart, title: 'Usul Dashboard', desc: 'Sistem request fitur sesuai kebutuhan member komunitas.' },
           { icon: Shield, title: 'Simpan Aman', desc: 'Enkripsi data berlapis untuk menjaga privasi finansial Anda.' },

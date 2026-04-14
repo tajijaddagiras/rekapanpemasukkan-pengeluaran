@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Save } from 'lucide-react';
+import { ChevronDown, Save } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { accountService } from '@/lib/services/accountService';
 
@@ -67,16 +67,23 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
             />
           </div>
 
-          {/* Jenis Rekening - MANUAL INPUT */}
+          {/* Jenis Rekening - SELECT DROPDOWN */}
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis Rekening (Manual)</label>
-            <input 
-              type="text" 
-              value={formData.type}
-              onChange={(e) => setFormData({...formData, type: e.target.value})}
-              placeholder="Contoh: Credit Card"
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-rose-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
-            />
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis Rekening</label>
+            <div className="relative">
+              <select 
+                value={formData.type}
+                onChange={(e) => setFormData({...formData, type: e.target.value})}
+                className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-rose-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
+              >
+                <option value="Bank Account">Bank Account</option>
+                <option value="E-Wallet">E-Wallet</option>
+                <option value="Cash">Cash</option>
+                <option value="Investment Account">Investment Account</option>
+                <option value="Credit Card">Credit Card</option>
+              </select>
+              <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+            </div>
           </div>
 
           {/* Logo URL */}

@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { accountService, Account } from '@/lib/services/accountService';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
+import { savingsService, Saving } from '@/lib/services/savingsService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -24,6 +25,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 export default function MyCardsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [savings, setSavings] = useState<Saving[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -50,10 +52,19 @@ export default function MyCardsPage() {
             const d = doc.data();
             return { ...d, id: doc.id, amount: Number(d.amount) || 0, date: d.date?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date() } as Transaction;
           }));
+        }, (err) => { console.error(err); });
+
+        // Fetch savings for totalOut
+        const qSav = query(collection(db, 'savings'), where('userId', '==', u.uid));
+        const unsubSav = onSnapshot(qSav, (snap) => {
+          setSavings(snap.docs.map(doc => {
+            const d = doc.data();
+            return { ...d, id: doc.id, amount: Number(d.amount) || 0, date: d.date?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date() } as Saving;
+          }));
           setLoading(false);
         }, (err) => { console.error(err); setLoading(false); });
 
-      } else { setAccounts([]); setTransactions([]); setLoading(false); }
+      } else { setAccounts([]); setTransactions([]); setSavings([]); setLoading(false); }
     });
     return () => { 
       unsub(); 
@@ -63,15 +74,26 @@ export default function MyCardsPage() {
   }, []);
 
   const totalIn = useMemo(() => {
-    return transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0);
+    const dailyIn = transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0);
+    // Include Debt (received money)
+    const debtIn = transactions.filter(t => t.type === 'debt' && t.category === 'Hutang').reduce((s, t) => s + t.amount, 0);
+    return dailyIn + debtIn;
   }, [transactions]);
 
   const totalOut = useMemo(() => {
-    return transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0);
-  }, [transactions]);
+    const dailyOut = transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0);
+    // Include Piutang (lent money)
+    const piutangOut = transactions.filter(t => t.type === 'debt' && t.category === 'Piutang').reduce((s, t) => s + t.amount, 0);
+    // Include Savings (money moved to goals)
+    const savingOut = savings.reduce((s, t) => s + t.amount, 0);
+    return dailyOut + piutangOut + savingOut;
+  }, [transactions, savings]);
 
   const combinedInitial = useMemo(() => {
-    return accounts.reduce((s, a) => s + (a.initialBalance || 0), 0);
+    // Exclude Credit Card limit from cash balance
+    return accounts
+      .filter(a => a.type !== 'Credit Card' && a.type !== 'kartu')
+      .reduce((s, a) => s + (a.initialBalance || 0), 0);
   }, [accounts]);
 
   const totalBalance = useMemo(() => {
@@ -148,7 +170,7 @@ export default function MyCardsPage() {
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-10 md:mb-12">
                 <div>
-                  <p className="text-[9px] md:text-[10px] font-black text-indigo-100/60 uppercase tracking-[0.2em] mb-2">Total Saldo Gabungan</p>
+                  <p className="text-[9px] md:text-[10px] font-black text-indigo-100/60 uppercase tracking-[0.2em] mb-2">Total Saldo Saya</p>
                   <h2 className="text-2xl md:text-4xl lg:text-5xl font-black tracking-tight">{formatRp(totalBalance)}</h2>
                 </div>
                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
@@ -254,42 +276,42 @@ export default function MyCardsPage() {
             </div>
           )}
 
-          {/* Card Limit Kartu Kredit */}
+          {/* Card Statistik Kekayaan (Wealth Summary) */}
           <div className="bg-white rounded-[24px] md:rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-xl shadow-slate-200/50 mt-4 relative overflow-hidden group">
             <div className="relative z-10 flex flex-col h-full">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500">
-                  <CreditCard size={20} />
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500">
+                  <LineChart size={20} />
                 </div>
-                <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Informasi Limit Kartu</h4>
+                <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Informasi Saldo & Wealth</h4>
               </div>
 
               <div className="space-y-6">
                 <div className="bg-slate-50/50 rounded-2xl p-5 border border-slate-50 transition-all hover:bg-slate-50">
-                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Limit Kartu</p>
-                   <p className="text-xl font-black text-slate-900 leading-tight">{formatRp(creditCardStats.totalLimit)}</p>
+                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Saldo Awal (Initial)</p>
+                   <p className="text-xl font-black text-slate-900 leading-tight">{formatRp(combinedInitial)}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-rose-50/30 rounded-2xl p-5 border border-rose-50 transition-all hover:bg-rose-50">
                     <p className="text-[9px] font-black text-rose-300 uppercase tracking-widest mb-1">Tagihan Berjalan</p>
-                    <p className="text-base font-black text-rose-500 leading-tight">{formatRp(creditCardStats.totalBill)}</p>
+                    <p className="text-base font-black text-rose-500 leading-tight">{formatRp(totalGlobalDebt)}</p>
                   </div>
                   <div className="bg-emerald-50/30 rounded-2xl p-5 border border-emerald-50 transition-all hover:bg-emerald-50">
-                    <p className="text-[9px] font-black text-emerald-300 uppercase tracking-widest mb-1">Sisa Limit</p>
-                    <p className="text-base font-black text-emerald-600 leading-tight">{formatRp(creditCardStats.remainingLimit)}</p>
+                    <p className="text-[9px] font-black text-emerald-300 uppercase tracking-widest mb-1">Saldo Saat Ini</p>
+                    <p className="text-base font-black text-emerald-600 leading-tight">{formatRp(totalBalance)}</p>
                   </div>
                 </div>
               </div>
 
-              {creditCardStats.totalLimit > 0 && (
+              {combinedInitial > 0 && (
                 <div className="mt-8 pt-6 border-t border-slate-50">
                    <div className="flex justify-between items-center mb-2">
-                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest transition-opacity group-hover:opacity-100 opacity-60">Penggunaan Limit</span>
-                     <span className="text-[10px] font-black text-rose-500">{((creditCardStats.totalBill / creditCardStats.totalLimit) * 100).toFixed(0)}%</span>
+                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest transition-opacity group-hover:opacity-100 opacity-60">Rasio Hutang terhadap Saldo</span>
+                     <span className="text-[10px] font-black text-rose-500">{((totalGlobalDebt / combinedInitial) * 100).toFixed(0)}%</span>
                    </div>
                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                     <div className="h-full bg-rose-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (creditCardStats.totalBill / creditCardStats.totalLimit) * 100)}%` }} />
+                     <div className="h-full bg-rose-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (totalGlobalDebt / combinedInitial) * 100)}%` }} />
                    </div>
                 </div>
               )}

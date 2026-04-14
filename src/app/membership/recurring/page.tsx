@@ -17,12 +17,15 @@ import { AddTransactionModal } from '@/components/AddTransactionModal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { MonthPicker } from '@/components/ui/MonthPicker';
 import { recurringService, RecurringTransaction } from '@/lib/services/recurringService';
+import { accountService, Account } from '@/lib/services/accountService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 
 export default function RecurringPage() {
   const [transactions, setTransactions] = useState<RecurringTransaction[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
 
@@ -35,6 +38,18 @@ export default function RecurringPage() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
+        // Fetch accounts for lookup
+        const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
+        onSnapshot(qAcc, (snap) => {
+          setAccounts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account)));
+        });
+
+        // Fetch categories for lookup
+        const qCat = query(collection(db, 'categories'), where('userId', '==', u.uid));
+        onSnapshot(qCat, (snap) => {
+          setCategories(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+
         const startOfMonth = new Date(selectedYear, selectedMonth, 1);
         const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
 
@@ -57,6 +72,16 @@ export default function RecurringPage() {
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
   }, [selectedMonth, selectedYear]);
+
+  const getAccountName = (id: string) => {
+    const acc = accounts.find(a => a.id === id);
+    return acc ? acc.name : id || '—';
+  };
+
+  const getCategoryName = (id: string) => {
+    const cat = categories.find(c => c.id === id);
+    return cat ? `${cat.category} - ${cat.subCategory}` : id || '—';
+  };
 
   const formatRp = (num: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -95,7 +120,7 @@ export default function RecurringPage() {
       </div>
 
       {/* 2. List Transaksi Berulang */}
-      <div className="bg-white rounded-[20px] md:rounded-[40px] border border-slate-50 shadow-sm overflow-hidden min-h-[400px] flex flex-col">
+      <div className="bg-white rounded-[20px] md:rounded-[40px] border border-slate-50 shadow-sm overflow-hidden flex flex-col">
         <div className="p-6 md:p-8 flex items-center justify-between border-b border-slate-50">
           <div className="flex items-center gap-3">
             <div className="w-1 h-6 bg-blue-600 rounded-full" />
@@ -119,45 +144,45 @@ export default function RecurringPage() {
               <table className="w-full text-left min-w-[800px] md:min-w-0">
                 <thead className="bg-[#f8fafc]">
                   <tr>
-                    <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Nama</th>
-                    <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Jenis</th>
-                    <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kategori</th>
-                    <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Nominal</th>
-                    <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Interval</th>
-                    <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Berikutnya</th>
-                    <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Akun</th>
-                    <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Aksi</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Nama</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Jenis</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kategori</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Nominal</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Interval</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Berikutnya</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Akun</th>
+                    <th className="px-4 md:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {transactions.map((trx) => (
                     <tr key={trx.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
-                      <td className="px-4 md:px-6 py-5">
+                      <td className="px-4 md:px-6 py-4">
                         <p className="text-sm font-black text-slate-900">{trx.name}</p>
                       </td>
-                      <td className="px-4 md:px-6 py-5 text-center">
+                      <td className="px-4 md:px-6 py-4 text-center">
                         <span className={`px-3 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest ${
                           trx.type === 'Pemasukan' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'
                         }`}>
                           {trx.type}
                         </span>
                       </td>
-                      <td className="px-4 md:px-6 py-5">
-                         <span className="text-xs font-bold text-slate-600">{trx.category || '—'}</span>
+                      <td className="px-4 md:px-6 py-4">
+                         <span className="text-xs font-bold text-slate-600">{getCategoryName(trx.category || '')}</span>
                       </td>
-                      <td className="px-4 md:px-6 py-5 text-right font-black text-slate-900 text-sm whitespace-nowrap">
+                      <td className="px-4 md:px-6 py-4 text-right font-black text-slate-900 text-sm whitespace-nowrap">
                         {formatRp(trx.amount)}
                       </td>
-                      <td className="px-4 md:px-6 py-5 text-center">
+                      <td className="px-4 md:px-6 py-4 text-center">
                         <span className="px-3 py-1 bg-slate-100 text-[10px] font-black text-slate-500 rounded-lg tracking-widest uppercase whitespace-nowrap">
                           {trx.interval}
                         </span>
                       </td>
-                      <td className="px-4 md:px-6 py-5 text-right font-bold text-slate-500 text-xs whitespace-nowrap">
+                      <td className="px-4 md:px-6 py-4 text-right font-bold text-slate-500 text-xs whitespace-nowrap">
                         {formatDate(trx.nextDate)}
                       </td>
-                      <td className="px-4 md:px-6 py-5">
-                         <span className="text-xs font-bold text-slate-600">{trx.accountId || '—'}</span>
+                      <td className="px-4 md:px-6 py-4">
+                         <span className="text-xs font-bold text-slate-600">{getAccountName(trx.accountId || '')}</span>
                       </td>
                       <td className="px-5 md:px-8 py-5">
                         <div className="flex items-center justify-center gap-2">

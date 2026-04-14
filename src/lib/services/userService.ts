@@ -56,13 +56,13 @@ export const updateMemberTotals = async (userId: string, type: string, actualAmo
   
   const updates: any = {};
   
-  if (type === 'pemasukkan') updates.totalIncome = increment(actualAmount);
+  if (type === 'pemasukan') updates.totalIncome = increment(actualAmount);
   if (type === 'pengeluaran') updates.totalExpenses = increment(actualAmount);
   if (type === 'tabungan') updates.totalSavings = increment(actualAmount);
   if (type === 'investasi') updates.totalInvestment = increment(actualAmount);
   
   // Calculate wealth (income - expenses)
-  if (type === 'pemasukkan') updates.totalWealth = increment(actualAmount);
+  if (type === 'pemasukan') updates.totalWealth = increment(actualAmount);
   if (type === 'pengeluaran') updates.totalWealth = increment(-actualAmount);
   
   await updateDoc(userRef, updates);
