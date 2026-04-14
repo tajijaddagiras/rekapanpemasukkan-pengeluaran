@@ -19,14 +19,14 @@ export default function RecurringPage() {
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Transaksi Berulang</h1>
           <p className="text-[12px] md:text-sm font-medium text-slate-500 mt-2">Manage your automated recurring transactions with ease and precision.</p>
         </div>
-        <button className="flex items-center gap-2 bg-[#555555] text-white px-8 py-3.5 rounded-2xl text-[13px] font-black shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all">
+        <button className="flex items-center justify-center gap-2 bg-[#555555] text-white px-4 py-2.5 md:px-8 md:py-3.5 rounded-xl md:rounded-2xl text-[13px] font-black shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all w-full md:w-auto mt-4 md:mt-0">
           <Plus size={18} />
           Tambah Cepat
         </button>
       </div>
 
       {/* 2. Main Settings Card */}
-      <div className="bg-[#f0f5f7] p-6 md:p-10 rounded-[32px] md:rounded-[40px] border border-white shadow-sm">
+      <div className="bg-[#f0f5f7] p-5 md:p-10 rounded-[20px] md:rounded-[40px] border border-white shadow-sm">
         <div className="mb-8 md:mb-10">
           <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-none">Settings Transaksi Berulang</h2>
           <p className="text-[10px] md:text-xs font-bold text-slate-500 mt-3 capitalize">Konfigurasi otomatisasi pembayaran dan pemasukan Anda.</p>

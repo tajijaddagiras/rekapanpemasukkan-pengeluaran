@@ -4,7 +4,6 @@ import { useState } from 'react';
 
 import { 
   Plus, 
-  Download, 
   TrendingUp,
   CreditCard,
   Landmark,
@@ -68,12 +67,9 @@ export default function MonthlyDashboard() {
           <h2 className="text-xl md:text-2xl lg:text-[28px] font-black text-slate-900 tracking-tight leading-tight">Dashboard Bulanan</h2>
           <p className="text-[12px] md:text-sm font-medium text-slate-500 mt-1">Laporan finansial komprehensif untuk periode berjalan.</p>
         </div>
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-          <button className="flex items-center justify-center gap-2 bg-black text-white hover:bg-slate-800 px-6 py-3 md:py-2.5 rounded-xl md:rounded-lg text-xs font-bold transition-all shadow-md shadow-slate-200 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
+          <button className="flex items-center justify-center gap-2 bg-black text-white hover:bg-slate-800 px-4 py-2.5 md:px-6 md:py-2.5 rounded-xl md:rounded-lg text-xs font-bold transition-all shadow-md shadow-slate-200 w-full sm:w-auto">
             <Plus size={14} /> Tambah Cepat
-          </button>
-          <button className="flex items-center justify-center gap-2 bg-slate-100 text-slate-800 hover:bg-slate-200 px-6 py-3 md:py-2.5 rounded-xl md:rounded-lg text-xs font-bold transition-all w-full sm:w-auto">
-            <Download size={14} /> Export PDF
           </button>
         </div>
       </div>
@@ -81,7 +77,7 @@ export default function MonthlyDashboard() {
       {/* Top Cards (3 Cols) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {/* Card 1: Total Kekayaan */}
-        <div className="bg-white rounded-[24px] md:rounded-2xl p-6 md:p-6 border border-slate-100 shadow-sm relative overflow-hidden">
+        <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm relative overflow-hidden">
           <div className="absolute -right-6 -top-6 w-32 h-32 bg-slate-50 rounded-full blur-3xl opacity-50" />
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Total Kekayaan</p>
           <h3 className="text-xl md:text-3xl font-black text-slate-900 mb-4 tracking-tight">Rp1.450.000.000</h3>
@@ -92,7 +88,7 @@ export default function MonthlyDashboard() {
         </div>
 
         {/* Card 2: Tagihan Kartu Kredit */}
-        <div className="bg-slate-50 rounded-[24px] md:rounded-2xl p-6 md:p-6 border border-slate-100 shadow-sm">
+        <div className="bg-slate-50 rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
           <div className="flex justify-between items-start mb-3">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tagihan Kartu Kredit</p>
             <div className="p-1.5 bg-rose-50 text-rose-600 rounded">
@@ -109,7 +105,7 @@ export default function MonthlyDashboard() {
         </div>
 
         {/* Card 3: Hutang Lainnya */}
-        <div className="bg-slate-50 rounded-[24px] md:rounded-2xl p-6 md:p-6 border border-slate-100 shadow-sm">
+        <div className="bg-slate-50 rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
           <div className="flex justify-between items-start mb-3">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Hutang Lainnya</p>
             <div className="text-slate-600 p-1.5 bg-white rounded shadow-sm border border-slate-50">
@@ -127,7 +123,7 @@ export default function MonthlyDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
         
         {/* Pulse Pasar (1/4 width) */}
-        <div className="bg-white rounded-[24px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm lg:col-span-1">
+        <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm lg:col-span-1">
           <div className="flex items-center justify-between mb-6">
             <p className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Pulse Pasar</p>
             <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
@@ -164,7 +160,7 @@ export default function MonthlyDashboard() {
         {/* 2x2 Flow Grid (3/4 width) */}
         <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {/* Pemasukan */}
-          <div className="bg-white rounded-[24px] md:rounded-2xl p-6 md:p-6 border border-slate-100 shadow-sm relative shadow-sky-500/5">
+          <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm relative shadow-sky-500/5">
              <div className="flex justify-between items-center mb-4">
                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pemasukan</p>
                <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-sky-50 text-sky-500">Sesuai Target</span>
@@ -178,7 +174,7 @@ export default function MonthlyDashboard() {
              </div>
           </div>
           {/* Pengeluaran */}
-          <div className="bg-white rounded-[24px] md:rounded-2xl p-6 md:p-6 border border-slate-100 shadow-sm">
+          <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
              <div className="flex justify-between items-center mb-4">
                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pengeluaran</p>
                <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-rose-50 text-rose-500">Waspada</span>
@@ -192,7 +188,7 @@ export default function MonthlyDashboard() {
              </div>
           </div>
           {/* Tabungan */}
-          <div className="bg-white rounded-[24px] md:rounded-2xl p-6 md:p-6 border border-slate-100 shadow-sm relative shadow-blue-500/5">
+          <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm relative shadow-blue-500/5">
              <div className="flex justify-between items-center mb-4">
                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tabungan</p>
                <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-500">-12% vs Lm</span>
@@ -206,7 +202,7 @@ export default function MonthlyDashboard() {
              </div>
           </div>
           {/* Investasi */}
-          <div className="bg-white rounded-[24px] md:rounded-2xl p-6 md:p-6 border border-slate-100 shadow-sm relative shadow-slate-500/5">
+          <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm relative shadow-slate-500/5">
              <div className="flex justify-between items-center mb-4">
                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Investasi</p>
                <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-sky-50 text-sky-500 uppercase">Aktif</span>
@@ -266,8 +262,8 @@ export default function MonthlyDashboard() {
       </div>
 
       {/* Detail Table */}
-      <div className="bg-white rounded-[24px] md:rounded-[20px] shadow-sm overflow-hidden mb-10">
-        <div className="p-6 md:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-50">
+      <div className="bg-white rounded-[20px] md:rounded-[20px] shadow-sm overflow-hidden mb-10">
+        <div className="p-5 md:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-50">
           <div className="flex items-center gap-3">
             <h3 className="text-sm md:text-[15px] font-bold text-slate-900">Detail Anggaran & Realisasi</h3>
             <span className="hidden xs:inline text-[10px] font-medium text-slate-400 tracking-wide mt-0.5">(Dalam IDR)</span>

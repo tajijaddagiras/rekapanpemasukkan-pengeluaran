@@ -26,8 +26,8 @@ export default function BudgetPage() {
           </p>
         </div>
         
-        <div className="flex items-center gap-4">
-          <button className="flex items-center gap-2 bg-[#004d40] text-white px-8 py-3.5 rounded-2xl text-[13px] font-black shadow-xl shadow-green-50 hover:scale-105 active:scale-95 transition-all">
+        <div className="flex items-center gap-4 w-full md:w-auto mt-4 md:mt-0">
+          <button className="flex items-center justify-center gap-2 bg-[#004d40] text-white px-4 py-2.5 md:px-8 md:py-3.5 rounded-xl md:rounded-2xl text-[13px] font-black shadow-xl shadow-green-50 hover:scale-105 active:scale-95 transition-all w-full md:w-auto">
             <Plus size={18} />
             Tambah Cepat
           </button>
@@ -39,7 +39,7 @@ export default function BudgetPage() {
         {/* LEFT COLUMN (1/3) */}
         <div className="space-y-8">
           {/* Settings Card */}
-          <div className="bg-white p-6 md:p-10 rounded-[32px] md:rounded-[40px] border border-slate-50 shadow-sm space-y-6 md:space-y-8">
+          <div className="bg-white p-5 md:p-10 rounded-[20px] md:rounded-[40px] border border-slate-50 shadow-sm space-y-6 md:space-y-8">
             <div className="flex items-center gap-4">
               <div className="w-1 h-6 bg-[#004d40] rounded-full" />
               <h2 className="text-lg font-black text-slate-900 tracking-tight">Settings Budget & Target</h2>
@@ -81,7 +81,7 @@ export default function BudgetPage() {
 
         {/* RIGHT COLUMN (2/3) */}
         <div className="lg:col-span-2">
-          <div className="bg-white h-full rounded-[32px] md:rounded-[40px] border border-slate-50 shadow-sm p-6 md:p-10 flex flex-col">
+          <div className="bg-white h-full rounded-[20px] md:rounded-[40px] border border-slate-50 shadow-sm p-5 md:p-10 flex flex-col">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 md:mb-10">
               <h2 className="text-lg font-black text-slate-900">Current Allocations</h2>
               <button className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-[#004d40] transition-colors w-fit">

@@ -43,7 +43,7 @@ export default function MyCardsPage() {
         <div className="lg:col-span-2 space-y-6 md:space-y-8">
           
           {/* A. The Indigo Hero Card */}
-          <div className="relative overflow-hidden bg-indigo-600 rounded-[32px] p-6 md:p-10 text-white shadow-2xl shadow-indigo-200 group">
+          <div className="relative overflow-hidden bg-indigo-600 rounded-[20px] md:rounded-[32px] p-6 md:p-10 text-white shadow-2xl shadow-indigo-200 group">
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-10 md:mb-12">
                 <div>
@@ -73,7 +73,7 @@ export default function MyCardsPage() {
           </div>
 
           {/* B. Cash Flow Section */}
-          <div className="bg-white rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-sm relative overflow-hidden">
+          <div className="bg-white rounded-[20px] md:rounded-[32px] p-5 md:p-8 border border-slate-100 shadow-sm relative overflow-hidden">
             <div className="flex items-center justify-between mb-6 md:mb-8">
               <h3 className="text-lg font-black text-slate-900">Arus Kas (Cash Flow)</h3>
               <div className="px-3 md:px-4 py-1.5 bg-slate-50 border border-slate-100 rounded-full text-[8px] md:text-[9px] font-black text-slate-400 tracking-widest uppercase">
@@ -214,7 +214,7 @@ export default function MyCardsPage() {
           </div>
 
           {/* Promotion Card */}
-          <div className="bg-slate-100/50 rounded-3xl p-6 md:p-8 border border-white mt-4 relative">
+          <div className="bg-slate-100/50 rounded-[20px] md:rounded-3xl p-6 md:p-8 border border-white mt-4 relative">
             <h4 className="text-sm font-black text-slate-900 mb-2">Upgrade Portofolio?</h4>
             <p className="text-[11px] md:text-xs font-medium text-slate-500 mb-6 leading-relaxed">
               Dapatkan akses ke instrumen investasi eksklusif dan laporan bulanan mendalam.

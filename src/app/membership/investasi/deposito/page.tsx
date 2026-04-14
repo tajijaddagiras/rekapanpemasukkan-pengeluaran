@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from 'react';
-import { 
-  PlusCircle, 
-  Search, 
-  Calendar, 
-  ChevronDown, 
+import {
+  PlusCircle,
+  Search,
+  Calendar,
+  ChevronDown,
   SlidersHorizontal,
   Banknote,
   Percent,
@@ -18,7 +18,7 @@ import {
 export default function DepositoPage() {
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
-      
+
       {/* 1. Header Section */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
         <div>
@@ -27,9 +27,9 @@ export default function DepositoPage() {
             Kelola penempatan dana deposito Anda dan pantau estimasi bunga yang akan diterima.
           </p>
         </div>
-        
-        <div className="flex flex-col items-end gap-3">
-          <button className="flex items-center gap-2 bg-black text-white px-6 py-3 rounded-2xl text-[11px] font-black shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all">
+
+        <div className="flex flex-col items-start md:items-end gap-3 w-full md:w-auto">
+          <button className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2.5 md:px-6 md:py-3 rounded-xl md:rounded-2xl text-[11px] font-black shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all w-full md:w-auto mt-4 md:mt-0">
             <PlusCircle size={16} />
             Buka Deposito
           </button>
@@ -39,7 +39,7 @@ export default function DepositoPage() {
       {/* 2. Top Status Cards (Only 2 Cards) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Total Deposito */}
-        <div className="bg-white p-6 md:p-8 rounded-[24px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col justify-between h-[150px] md:h-[180px] relative overflow-hidden group">
+        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 md:gap-8 relative overflow-hidden group">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600">
               <Banknote size={20} />
@@ -54,7 +54,7 @@ export default function DepositoPage() {
         </div>
 
         {/* Estimasi Bunga */}
-        <div className="bg-white p-6 md:p-8 rounded-[24px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col justify-between h-[150px] md:h-[180px] relative overflow-hidden group">
+        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 md:gap-8 relative overflow-hidden group">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
               <Percent size={20} />
@@ -75,9 +75,9 @@ export default function DepositoPage() {
       <div className="flex flex-wrap items-center gap-4 bg-white p-3 md:p-2 rounded-[24px] md:rounded-3xl border border-slate-50 shadow-sm">
         <div className="flex-1 min-w-[280px] relative group">
           <Search size={16} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Cari bank atau nomor bilyet..." 
+          <input
+            type="text"
+            placeholder="Cari bank atau nomor bilyet..."
             className="w-full bg-slate-50/50 border-transparent focus:border-blue-100 focus:bg-white rounded-xl md:rounded-2xl py-3 md:py-4 pl-12 md:pl-14 pr-6 text-sm font-medium transition-all"
           />
         </div>
@@ -98,9 +98,9 @@ export default function DepositoPage() {
       </div>
 
       {/* 4. Data Table Section */}
-      <div className="bg-white rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse min-w-[1200px] md:min-w-0">
+          <table className="w-full text-left border-collapse min-w-[1200px] md:min-w-0">
             <thead>
               <tr className="border-b border-slate-50">
                 <th className="px-4 md:px-8 py-5 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal Buka</th>
@@ -210,11 +210,11 @@ export default function DepositoPage() {
         </div>
 
         {/* 5. Footer Table */}
-        <div className="px-8 py-6 bg-slate-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4 border-t border-slate-50">
-          <p className="text-[11px] font-bold text-slate-400">Menampilkan 2 bilyet deposito aktif</p>
-          <div className="flex items-center gap-2">
-            <button className="px-5 py-2.5 bg-white border border-slate-100 rounded-xl text-[10px] font-black text-slate-300 uppercase tracking-widest cursor-not-allowed">Halaman Sebelumnya</button>
-            <button className="px-5 py-2.5 bg-white border border-slate-100 rounded-xl text-[10px] font-black text-slate-300 uppercase tracking-widest cursor-not-allowed">Halaman Berikutnya</button>
+        <div className="px-5 md:px-8 py-5 md:py-6 bg-slate-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4 border-t border-slate-50">
+          <p className="text-[11px] font-bold text-slate-400 text-center md:text-left">Menampilkan 2 bilyet deposito aktif</p>
+          <div className="grid grid-cols-2 gap-2 w-full md:w-auto">
+            <button className="px-4 md:px-5 py-2.5 bg-white border border-slate-100 rounded-xl text-[10px] font-black text-slate-300 uppercase tracking-widest cursor-not-allowed w-full">Sblmnya</button>
+            <button className="px-4 md:px-5 py-2.5 bg-white border border-slate-100 rounded-xl text-[10px] font-black text-slate-300 uppercase tracking-widest cursor-not-allowed w-full">Brikutnya</button>
           </div>
         </div>
       </div>

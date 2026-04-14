@@ -24,7 +24,7 @@ export default function MembershipLayout({
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-72 min-h-screen flex flex-col min-w-0">
+      <main className="flex-1 lg:ml-72 min-h-screen flex flex-col min-w-0 pt-20">
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
         {/* Page Content */}

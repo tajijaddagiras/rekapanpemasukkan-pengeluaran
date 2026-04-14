@@ -43,7 +43,7 @@ export default function ContactPage() {
           { step: 2, title: 'Isi referensi pembayaran', desc: 'Lengkapi formulir konfirmasi dengan detail bukti transaksi Anda.', active: false },
           { step: 3, title: 'Tunggu aktivasi admin', desc: 'Tim kami akan memverifikasi dalam waktu maksimal 1x24 jam.', active: false },
         ].map((item, i) => (
-          <div key={i} className="bg-white p-8 rounded-[32px] border border-slate-50 shadow-sm text-center space-y-4">
+          <div key={i} className="bg-white p-6 md:p-8 rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm text-center space-y-4">
             <div className={`w-10 h-10 rounded-full mx-auto flex items-center justify-center text-sm font-black ${item.active ? 'bg-indigo-600 text-white' : 'bg-slate-500 text-white opacity-60'}`}>
               {item.step}
             </div>
@@ -60,7 +60,7 @@ export default function ContactPage() {
         
         {/* LEFT COLUMN: Informasi Pembayaran */}
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-[#f0f5fa] p-8 rounded-[40px] border border-white shadow-sm space-y-8 relative overflow-hidden">
+          <div className="bg-[#f0f5fa] p-6 md:p-8 rounded-[20px] md:rounded-[40px] border border-white shadow-sm space-y-8 relative overflow-hidden">
             <div className="absolute top-8 right-8 text-slate-200">
               <CreditCard size={48} />
             </div>
@@ -125,7 +125,7 @@ export default function ContactPage() {
 
         {/* RIGHT COLUMN: Form Card */}
         <div className="lg:col-span-3">
-          <div className="bg-white p-10 rounded-[40px] border border-slate-50 shadow-sm space-y-10">
+          <div className="bg-white p-6 md:p-10 rounded-[20px] md:rounded-[40px] border border-slate-50 shadow-sm space-y-10">
             <h2 className="text-xl font-black text-slate-900 tracking-tight">Kirim Konfirmasi Pembayaran</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

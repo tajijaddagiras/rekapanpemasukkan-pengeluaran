@@ -34,7 +34,7 @@ export default function RekeningPage() {
         
         {/* LEFT COLUMN - FORM (2/3) */}
         <div className="lg:col-span-2">
-          <div className="bg-white p-6 md:p-10 rounded-[32px] md:rounded-[40px] border border-slate-50 shadow-sm relative overflow-hidden group">
+          <div className="bg-white p-5 md:p-10 rounded-[20px] md:rounded-[40px] border border-slate-50 shadow-sm relative overflow-hidden group">
             <div className="flex items-center gap-4 mb-8 md:mb-10">
               <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
               <h2 className="text-lg md:text-xl font-black text-slate-900 leading-tight">Settings Rekening & Saldo Awal</h2>
@@ -137,7 +137,7 @@ export default function RekeningPage() {
         {/* RIGHT COLUMN - SIDEBAR INFO (1/3) */}
         <div className="space-y-8">
           {/* KEAMANAN DATA CARD */}
-          <div className="bg-blue-600 rounded-[32px] p-8 md:p-10 text-white relative overflow-hidden group shadow-2xl shadow-blue-100">
+          <div className="bg-blue-600 rounded-[20px] md:rounded-[32px] p-6 md:p-10 text-white relative overflow-hidden group shadow-2xl shadow-blue-100">
             <div className="relative z-10 space-y-3 md:space-y-4">
               <h3 className="text-lg font-black tracking-tight">Keamanan Data</h3>
               <p className="text-[11px] md:text-xs font-medium text-blue-100 leading-relaxed">
@@ -152,7 +152,7 @@ export default function RekeningPage() {
           </div>
 
           {/* QUICK STATS CARD */}
-          <div className="bg-slate-100/50 rounded-[32px] p-8 border border-white">
+          <div className="bg-slate-100/50 rounded-[20px] md:rounded-[32px] p-6 md:p-8 border border-white">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Quick Stats</p>
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -179,7 +179,7 @@ export default function RekeningPage() {
           </button>
         </div>
 
-        <div className="bg-white rounded-[32px] md:rounded-[40px] border border-slate-50 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-[20px] md:rounded-[40px] border border-slate-50 shadow-sm overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left min-w-[1100px] md:min-w-0">
               <thead>

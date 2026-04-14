@@ -34,7 +34,7 @@ export default function ProfilePage() {
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-20">
       
       {/* 1. Profile Identity Header Card */}
-      <div className="bg-white rounded-[32px] md:rounded-[40px] border border-slate-50 shadow-sm p-6 md:p-10 lg:p-12">
+      <div className="bg-white rounded-[20px] md:rounded-[40px] border border-slate-50 shadow-sm p-5 md:p-10 lg:p-12">
         <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10">
           <div className="relative group shrink-0">
             <div className="w-24 h-24 md:w-32 lg:w-40 md:h-32 lg:h-40 rounded-[28px] md:rounded-[48px] bg-gradient-to-tr from-indigo-600 to-blue-500 p-1 md:p-1.5 shadow-xl shadow-indigo-100 flex items-center justify-center overflow-hidden">
@@ -83,7 +83,7 @@ export default function ProfilePage() {
         
         {/* LEFT COLUMN: Account Information Form */}
         <div className="lg:col-span-2 space-y-6 md:space-y-8">
-          <div className="bg-white p-6 md:p-8 lg:p-12 rounded-[32px] md:rounded-[48px] border border-slate-50 shadow-sm space-y-6 md:space-y-10">
+          <div className="bg-white p-5 md:p-8 lg:p-12 rounded-[20px] md:rounded-[48px] border border-slate-50 shadow-sm space-y-6 md:space-y-10">
             <div className="flex items-center justify-between">
               <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Identity Settings</h2>
               <button className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] hover:underline underline-offset-4">Reset Defaults</button>
@@ -166,7 +166,7 @@ export default function ProfilePage() {
         <div className="space-y-6 md:space-y-10">
           
           {/* Bank Accounts Overview */}
-          <div className="bg-[#f0f5fa] p-6 md:p-8 rounded-[32px] md:rounded-[48px] border border-white shadow-sm space-y-6 md:space-y-8">
+          <div className="bg-[#f0f5fa] p-5 md:p-8 rounded-[20px] md:rounded-[48px] border border-white shadow-sm space-y-6 md:space-y-8">
             <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Active Banks</h2>
             <div className="space-y-4">
               {bankAccounts.map((bank, i) => (
@@ -193,7 +193,7 @@ export default function ProfilePage() {
           </div>
  
           {/* Security & System Card */}
-          <div className="bg-slate-900 p-6 md:p-8 rounded-[32px] md:rounded-[48px] shadow-2xl space-y-6 md:space-y-10 relative overflow-hidden group">
+          <div className="bg-slate-900 p-5 md:p-8 rounded-[20px] md:rounded-[48px] shadow-2xl space-y-6 md:space-y-10 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-8 text-white/5 group-hover:text-white/10 transition-colors hidden md:block">
               <ShieldCheck size={120} />
             </div>

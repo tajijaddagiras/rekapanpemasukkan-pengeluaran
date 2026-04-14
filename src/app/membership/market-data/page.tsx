@@ -52,7 +52,7 @@ export default function MarketDataPage() {
         {/* LEFT COLUMN: SETTINGS & WHITELISTS (3/12) */}
         <div className="lg:col-span-3 space-y-6 md:space-y-8">
           {/* Settings Card */}
-          <div className="bg-white p-6 md:p-6 rounded-[32px] border border-slate-50 shadow-sm space-y-6">
+          <div className="bg-white p-5 md:p-6 rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm space-y-6">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
                 <RefreshCw size={18} />
@@ -88,7 +88,7 @@ export default function MarketDataPage() {
           </div>
 
           {/* Whitelists */}
-          <div className="bg-slate-50/50 p-6 rounded-[32px] border border-slate-100 space-y-5">
+          <div className="bg-slate-50/50 p-5 md:p-6 rounded-[20px] md:rounded-[32px] border border-slate-100 space-y-5">
             <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-widest pl-2">Market Whitelists</h3>
             
             <div className="space-y-4">
@@ -117,8 +117,8 @@ export default function MarketDataPage() {
         <div className="lg:col-span-9 space-y-6 md:space-y-8">
           
           {/* Exchange Rate Table */}
-          <div className="bg-white rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
-            <div className="p-6 md:p-8 pb-4 flex flex-col xs:flex-row xs:items-center justify-between gap-3 border-b border-slate-50">
+          <div className="bg-white rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
+            <div className="p-5 md:p-8 pb-4 flex flex-col xs:flex-row xs:items-center justify-between gap-3 border-b border-slate-50">
               <h2 className="text-sm md:text-base font-black text-slate-900 tracking-tight">Exchange Rate Table</h2>
               <span className="w-fit px-3 py-1 bg-cyan-50 text-cyan-600 text-[9px] font-black rounded-full uppercase tracking-widest flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse"></span>
@@ -152,7 +152,7 @@ export default function MarketDataPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             {/* Foreign Exchange */}
-            <div className="bg-white p-5 md:p-8 rounded-[32px] border border-slate-50 shadow-sm space-y-6">
+            <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-black text-slate-900 tracking-tight leading-tight">Foreign Exchange</h3>
                 <span className="text-[9px] font-bold text-slate-400 flex items-center gap-1.5 shrink-0 ml-4">
@@ -177,7 +177,7 @@ export default function MarketDataPage() {
             </div>
 
             {/* Cryptocurrency */}
-            <div className="bg-white p-5 md:p-8 rounded-[32px] border border-slate-50 shadow-sm space-y-6">
+            <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-black text-slate-900 tracking-tight leading-tight">Cryptocurrency</h3>
                 <span className="text-[9px] font-bold text-slate-400 shrink-0 ml-4">Just now</span>
@@ -205,7 +205,7 @@ export default function MarketDataPage() {
           </div>
 
           {/* Commodities & Equities */}
-          <div className="bg-white p-6 md:p-8 lg:p-10 rounded-[32px] md:rounded-[40px] border border-slate-50 shadow-sm">
+          <div className="bg-white p-5 md:p-8 lg:p-10 rounded-[20px] md:rounded-[40px] border border-slate-50 shadow-sm">
             <div className="flex items-center justify-between mb-10 px-2">
               <h3 className="text-sm font-black text-slate-900 tracking-tight">Commodities & Equities</h3>
               <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline flex items-center gap-2">

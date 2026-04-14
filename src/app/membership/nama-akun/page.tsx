@@ -32,7 +32,7 @@ export default function NamaAkunPage() {
         {/* LEFT COLUMN (1/3) */}
         <div className="space-y-8">
           {/* Konfigurasi Ledger Card */}
-          <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-50 shadow-sm space-y-6 md:space-y-8">
+          <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm space-y-6 md:space-y-8">
             <div className="flex items-center gap-3">
               <div className="w-1 h-6 bg-slate-900 rounded-full" />
               <h2 className="text-lg font-black text-slate-900 tracking-tight">Konfigurasi Ledger</h2>
@@ -72,7 +72,7 @@ export default function NamaAkunPage() {
           </div>
 
           {/* Wawasan Mingguan Banner */}
-          <div className="relative h-[180px] rounded-[32px] overflow-hidden group shadow-xl shadow-blue-50">
+          <div className="relative h-[180px] rounded-[20px] md:rounded-[32px] overflow-hidden group shadow-xl shadow-blue-50">
             {/* Background Image/Chart */}
             <div 
               className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
@@ -89,7 +89,7 @@ export default function NamaAkunPage() {
 
         {/* RIGHT COLUMN (2/3) */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-[32px] border border-slate-50 shadow-sm overflow-hidden h-full flex flex-col">
+          <div className="bg-white rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm overflow-hidden h-full flex flex-col">
             <div className="p-6 md:p-8 flex items-center justify-between border-b border-slate-50">
               <div className="flex items-center gap-3">
                 <div className="w-1 h-6 bg-indigo-600 rounded-full" />
@@ -159,7 +159,7 @@ export default function NamaAkunPage() {
       {/* BOTTOM SECTION - 3 SUMMARY CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* TOTAL SALDO */}
-        <div className="bg-[#f0f5f7] p-6 md:p-8 rounded-[28px] border border-white flex items-center gap-5 shadow-sm">
+        <div className="bg-[#f0f5f7] p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-white flex items-center gap-5 shadow-sm">
           <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400 shrink-0">
             <Landmark size={20} />
           </div>
@@ -170,7 +170,7 @@ export default function NamaAkunPage() {
         </div>
  
         {/* PENGELUARAN */}
-        <div className="bg-[#f0f5f7] p-6 md:p-8 rounded-[28px] border border-white flex items-center gap-5 shadow-sm">
+        <div className="bg-[#f0f5f7] p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-white flex items-center gap-5 shadow-sm">
           <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-rose-400 shrink-0">
             <TrendingDown size={20} />
           </div>
@@ -181,7 +181,7 @@ export default function NamaAkunPage() {
         </div>
  
         {/* TARGET TABUNGAN */}
-        <div className="bg-[#555555] p-6 md:p-8 rounded-[28px] flex items-center gap-5 shadow-xl shadow-slate-200">
+        <div className="bg-[#555555] p-5 md:p-8 rounded-[20px] md:rounded-[28px] flex items-center gap-5 shadow-xl shadow-slate-200">
           <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center text-white/60 shrink-0">
             <PiggyBank size={20} />
           </div>

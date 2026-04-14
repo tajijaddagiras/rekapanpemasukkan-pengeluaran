@@ -27,8 +27,8 @@ export default function DebtPage() {
           </p>
         </div>
         
-        <div className="flex flex-col md:items-end w-full md:w-auto">
-          <button className="flex items-center justify-center gap-2 bg-black text-white px-6 py-3.5 md:py-3 rounded-[20px] md:rounded-2xl text-[12px] md:text-[11px] font-black shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all w-full md:w-auto">
+        <div className="flex flex-col md:items-end w-full md:w-auto mt-4 md:mt-0">
+          <button className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2.5 md:px-6 md:py-3 rounded-xl md:rounded-2xl text-[12px] md:text-[11px] font-black shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all w-full md:w-auto">
             <PlusCircle size={16} />
             Catatan Baru
           </button>
@@ -38,7 +38,7 @@ export default function DebtPage() {
       {/* 2. Top Status Cards (Only 2 Cards) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {/* Total Hutang */}
-        <div className="bg-white p-5 md:p-8 rounded-[24px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col justify-between h-[140px] md:h-[180px] relative overflow-hidden group">
+        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 md:gap-6 relative overflow-hidden group">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600">
               <AlertCircle size={20} />
@@ -53,7 +53,7 @@ export default function DebtPage() {
         </div>
 
         {/* Total Piutang */}
-        <div className="bg-white p-5 md:p-8 rounded-[24px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col justify-between h-[140px] md:h-[180px] relative overflow-hidden group">
+        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 md:gap-6 relative overflow-hidden group">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
               <Banknote size={20} />
@@ -94,7 +94,7 @@ export default function DebtPage() {
       </div>
 
       {/* 4. Data Table Section */}
-      <div className="bg-white rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-collapse min-w-[1500px] 2xl:min-w-0">
             <thead>
@@ -176,9 +176,9 @@ export default function DebtPage() {
         {/* 5. Footer Table */}
         <div className="px-5 md:px-8 py-5 md:py-6 bg-slate-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4 border-t border-slate-50">
           <p className="text-[10px] md:text-[11px] font-bold text-slate-400 text-center md:text-left">Total 2 kewajiban finansial terlisting</p>
-          <div className="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto">
-            <button className="flex-1 md:flex-none px-4 md:px-5 py-3 md:py-2.5 bg-white border border-slate-100 rounded-[14px] md:rounded-xl text-[9px] md:text-[10px] font-black text-slate-300 uppercase tracking-widest cursor-not-allowed">Habis</button>
-            <button className="flex-1 md:flex-none px-4 md:px-5 py-3 md:py-2.5 bg-white border border-slate-100 rounded-[14px] md:rounded-xl text-[9px] md:text-[10px] font-black text-slate-300 uppercase tracking-widest cursor-not-allowed">Lanjut</button>
+          <div className="grid grid-cols-2 gap-2 w-full md:w-auto">
+            <button className="px-4 md:px-5 py-2.5 bg-white border border-slate-100 rounded-xl text-[10px] font-black text-slate-300 uppercase tracking-widest cursor-not-allowed w-full">Sebelumnya</button>
+            <button className="px-4 md:px-5 py-2.5 bg-white border border-slate-100 rounded-xl text-[10px] font-black text-slate-300 uppercase tracking-widest cursor-not-allowed w-full">Berikutnya</button>
           </div>
         </div>
       </div>
