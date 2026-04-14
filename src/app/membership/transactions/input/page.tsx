@@ -30,11 +30,6 @@ export default function InputTransactionPage() {
             Manajemen aset cerdas dimulai dengan pencatatan yang presisi. Pilih kategori input di bawah untuk memperbarui narasi finansial Anda hari ini.
           </p>
         </div>
-        
-        <button className="flex items-center justify-center gap-3 bg-blue-700 text-white px-6 md:px-7 py-3 md:py-3.5 rounded-2xl text-[11px] md:text-xs font-black shadow-xl shadow-blue-200 hover:scale-105 active:scale-95 transition-all">
-          <PlusCircle size={18} />
-          Tambah Cepat
-        </button>
       </div>
 
       {/* 2. Pilih Jenis Input Section */}

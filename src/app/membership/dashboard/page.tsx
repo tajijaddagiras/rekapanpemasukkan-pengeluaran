@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 
-import { 
-  Plus, 
+import {
+  Plus,
   TrendingUp,
   CreditCard,
   Wallet,
@@ -36,14 +36,12 @@ export default function MonthlyDashboard() {
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [marketTickers, setMarketTickers] = useState<MarketTicker[]>([]);
   const [marketLoading, setMarketLoading] = useState(true);
-  const [formData, setFormData] = useState({
-    type: 'pemasukan' as 'pemasukan' | 'pengeluaran',
-    category: '', amount: '',
-    date: new Date().toISOString().split('T')[0], note: ''
-  });
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
+  const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
 
   const unsubTrxRef = useRef<(() => void) | null>(null);
 
@@ -51,10 +49,17 @@ export default function MonthlyDashboard() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
-        // Setup real-time listener untuk transaksi
+        setLoading(true);
+        // Calculate date range
+        const startOfMonth = new Date(selectedYear, selectedMonth, 1);
+        const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
+
+        // Setup real-time listener untuk transaksi dengan filter bulan/tahun
         const q = query(
           collection(db, 'transactions'),
           where('userId', '==', u.uid),
+          where('date', '>=', startOfMonth),
+          where('date', '<=', endOfMonth),
           orderBy('date', 'desc')
         );
         // Cleanup listener lama jika ada
@@ -89,7 +94,7 @@ export default function MonthlyDashboard() {
       unsub();
       if (unsubTrxRef.current) unsubTrxRef.current();
     };
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
   const fetchMarket = useCallback(async () => {
     setMarketLoading(true);
@@ -101,31 +106,17 @@ export default function MonthlyDashboard() {
       const crypto = cryptoRes.ok ? await cryptoRes.json() : null;
       const fx = fxRes.ok ? await fxRes.json() : null;
       const tickers: MarketTicker[] = [
-        { label: 'BTC/USD', sub: 'Bitcoin', val: crypto ? `$${Number(crypto.bitcoin?.usd).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})}` : '—', pct: crypto ? `${Number(crypto.bitcoin?.usd_24h_change).toFixed(2)}%` : '—', up: crypto ? crypto.bitcoin?.usd_24h_change >= 0 : null, color: 'bg-amber-100 text-amber-600' },
-        { label: 'ETH/USD', sub: 'Ethereum', val: crypto ? `$${Number(crypto.ethereum?.usd).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})}` : '—', pct: crypto ? `${Number(crypto.ethereum?.usd_24h_change).toFixed(2)}%` : '—', up: crypto ? crypto.ethereum?.usd_24h_change >= 0 : null, color: 'bg-slate-100 text-slate-600' },
-        { label: 'USD/IDR', sub: 'Rupiah', val: fx ? `Rp${Number(fx.rates?.IDR).toLocaleString('id-ID',{maximumFractionDigits:0})}` : '—', pct: '—', up: null, color: 'bg-emerald-100 text-emerald-600' },
-        { label: 'EUR/USD', sub: 'Euro', val: fx ? `$${(1/Number(fx.rates?.EUR)).toFixed(4)}` : '—', pct: '—', up: null, color: 'bg-blue-100 text-blue-600' },
+        { label: 'BTC/USD', sub: 'Bitcoin', val: crypto ? `$${Number(crypto.bitcoin?.usd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—', pct: crypto ? `${Number(crypto.bitcoin?.usd_24h_change).toFixed(2)}%` : '—', up: crypto ? crypto.bitcoin?.usd_24h_change >= 0 : null, color: 'bg-amber-100 text-amber-600' },
+        { label: 'ETH/USD', sub: 'Ethereum', val: crypto ? `$${Number(crypto.ethereum?.usd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—', pct: crypto ? `${Number(crypto.ethereum?.usd_24h_change).toFixed(2)}%` : '—', up: crypto ? crypto.ethereum?.usd_24h_change >= 0 : null, color: 'bg-slate-100 text-slate-600' },
+        { label: 'USD/IDR', sub: 'Rupiah', val: fx ? `Rp${Number(fx.rates?.IDR).toLocaleString('id-ID', { maximumFractionDigits: 0 })}` : '—', pct: '—', up: null, color: 'bg-emerald-100 text-emerald-600' },
+        { label: 'EUR/USD', sub: 'Euro', val: fx ? `$${(1 / Number(fx.rates?.EUR)).toFixed(4)}` : '—', pct: '—', up: null, color: 'bg-blue-100 text-blue-600' },
       ];
       setMarketTickers(tickers);
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
     finally { setMarketLoading(false); }
   }, []);
 
   useEffect(() => { fetchMarket(); }, [fetchMarket]);
-
-  const handleCreate = async () => {
-    if (!user || !formData.amount || !formData.category) return;
-    try {
-      await transactionService.createTransaction({
-        userId: user.uid, type: formData.type, amount: parseFloat(formData.amount),
-        category: formData.category, accountId: 'General',
-        date: new Date(formData.date), note: formData.note, status: 'VERIFIED'
-      });
-      setIsAddModalOpen(false);
-      setFormData({ type: 'pemasukan', category: '', amount: '', date: new Date().toISOString().split('T')[0], note: '' });
-      // onSnapshot otomatis update tabel — tidak perlu fetch manual
-    } catch (e) { console.error(e); }
-  };
 
   const filteredData = useMemo(() => {
     if (filterType === 'Semua') return transactions;
@@ -154,17 +145,56 @@ export default function MonthlyDashboard() {
 
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1400px]">
-      
+
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
         <div>
-          <h2 className="text-xl md:text-2xl lg:text-[28px] font-black text-slate-900 tracking-tight leading-tight">Dashboard Bulanan</h2>
-          <p className="text-[12px] md:text-sm font-medium text-slate-500 mt-1">Laporan finansial komprehensif untuk periode berjalan.</p>
+          <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Dashboard Bulanan</h2>
+          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Laporan Periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}</p>
         </div>
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
-          <button onClick={() => setIsAddModalOpen(true)} className="flex items-center justify-center gap-2 bg-black text-white hover:bg-slate-800 px-4 py-2.5 md:px-6 md:py-2.5 rounded-xl md:rounded-lg text-xs font-bold transition-all shadow-md shadow-slate-200 w-full sm:w-auto">
-            <Plus size={14} /> Tambah Cepat
-          </button>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Month Selector */}
+          <div className="relative">
+            <button
+              onClick={() => { setIsMonthDropdownOpen(!isMonthDropdownOpen); setIsYearDropdownOpen(false); }}
+              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black text-slate-700 flex items-center gap-2 transition-all"
+            >
+              {new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2024, selectedMonth))}
+              <ChevronDown size={14} className={cn("transition-transform", isMonthDropdownOpen && "rotate-180")} />
+            </button>
+            {isMonthDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-40 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2 max-h-60 overflow-y-auto custom-scrollbar">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <button key={i} onClick={() => { setSelectedMonth(i); setIsMonthDropdownOpen(false); }}
+                    className={cn("w-full text-left px-4 py-2 text-xs font-bold transition-colors", selectedMonth === i ? "text-indigo-600 bg-indigo-50" : "text-slate-600 hover:bg-slate-50")}>
+                    {new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2024, i))}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Year Selector */}
+          <div className="relative">
+            <button
+              onClick={() => { setIsYearDropdownOpen(!isYearDropdownOpen); setIsMonthDropdownOpen(false); }}
+              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black text-slate-700 flex items-center gap-2 transition-all"
+            >
+              {selectedYear}
+              <ChevronDown size={14} className={cn("transition-transform", isYearDropdownOpen && "rotate-180")} />
+            </button>
+            {isYearDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-32 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2">
+                {[2023, 2024, 2025, 2026].map(year => (
+                  <button key={year} onClick={() => { setSelectedYear(year); setIsYearDropdownOpen(false); }}
+                    className={cn("w-full text-left px-4 py-2 text-xs font-bold transition-colors", selectedYear === year ? "text-indigo-600 bg-indigo-50" : "text-slate-600 hover:bg-slate-50")}>
+                    {year}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -215,7 +245,7 @@ export default function MonthlyDashboard() {
 
       {/* Middle Grid (Pulse + Cashflows) */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
-        
+
         {/* Pulse Pasar (1/4 width) - Live */}
         <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm lg:col-span-1">
           <div className="flex items-center justify-between mb-6">
@@ -226,12 +256,12 @@ export default function MonthlyDashboard() {
           </div>
           <div className="space-y-5">
             {marketLoading ? (
-              [1,2,3,4].map(i => <div key={i} className="h-10 bg-slate-50 rounded-xl animate-pulse" />)
+              [1, 2, 3, 4].map(i => <div key={i} className="h-10 bg-slate-50 rounded-xl animate-pulse" />)
             ) : marketTickers.map((m, i) => (
               <div key={i} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-black", m.color)}>
-                    {m.label.split('/')[0].slice(0,3)}
+                    {m.label.split('/')[0].slice(0, 3)}
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-900 leading-none mb-1">{m.label}</p>
@@ -254,73 +284,73 @@ export default function MonthlyDashboard() {
         <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {/* Pemasukan — Firebase */}
           <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
-             <div className="flex justify-between items-center mb-4">
-               <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                 <TrendingUp size={12} className="text-emerald-500" /> Pemasukan
-               </div>
-               <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${pengeluaranPct <= 80 ? 'bg-sky-50 text-sky-500' : 'bg-rose-50 text-rose-500'}`}>
-                 {pengeluaranPct <= 80 ? 'Sehat' : 'Waspada'}
-               </span>
-             </div>
-             <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(totalPemasukan)}</h3>
-             <div className="flex justify-between items-end gap-3">
-               <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                 <div className="h-full bg-emerald-500 transition-all" style={{ width: `${pemasukanPct}%` }} />
-               </div>
-               <span className="text-[9px] font-medium text-slate-400 leading-none">{transactions.filter(t=>t.type==='pemasukan').length} trx</span>
-             </div>
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <TrendingUp size={12} className="text-emerald-500" /> Pemasukan
+              </div>
+              <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${pengeluaranPct <= 80 ? 'bg-sky-50 text-sky-500' : 'bg-rose-50 text-rose-500'}`}>
+                {pengeluaranPct <= 80 ? 'Sehat' : 'Waspada'}
+              </span>
+            </div>
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(totalPemasukan)}</h3>
+            <div className="flex justify-between items-end gap-3">
+              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-500 transition-all" style={{ width: `${pemasukanPct}%` }} />
+              </div>
+              <span className="text-[9px] font-medium text-slate-400 leading-none">{transactions.filter(t => t.type === 'pemasukan').length} trx</span>
+            </div>
           </div>
           {/* Pengeluaran — Firebase */}
           <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
-             <div className="flex justify-between items-center mb-4">
-               <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                 <TrendingDown size={12} className="text-rose-500" /> Pengeluaran
-               </div>
-               <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${pengeluaranPct > 90 ? 'bg-rose-50 text-rose-500' : 'bg-slate-50 text-slate-400'}`}>
-                 {pengeluaranPct > 90 ? 'Waspada' : 'Normal'}
-               </span>
-             </div>
-             <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(totalPengeluaran)}</h3>
-             <div className="flex justify-between items-end gap-3">
-               <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                 <div className="h-full bg-rose-500 transition-all" style={{ width: `${pengeluaranPct}%` }} />
-               </div>
-               <span className="text-[9px] font-medium text-slate-400 leading-none">{pengeluaranPct}% dari masuk</span>
-             </div>
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <TrendingDown size={12} className="text-rose-500" /> Pengeluaran
+              </div>
+              <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${pengeluaranPct > 90 ? 'bg-rose-50 text-rose-500' : 'bg-slate-50 text-slate-400'}`}>
+                {pengeluaranPct > 90 ? 'Waspada' : 'Normal'}
+              </span>
+            </div>
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(totalPengeluaran)}</h3>
+            <div className="flex justify-between items-end gap-3">
+              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-rose-500 transition-all" style={{ width: `${pengeluaranPct}%` }} />
+              </div>
+              <span className="text-[9px] font-medium text-slate-400 leading-none">{pengeluaranPct}% dari masuk</span>
+            </div>
           </div>
           {/* Tabungan — dihitung dari Net */}
           <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
-             <div className="flex justify-between items-center mb-4">
-               <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                 <PiggyBank size={12} className="text-blue-500" /> Tabungan
-               </div>
-               <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-500">{tabunganPct}% sisa</span>
-             </div>
-             <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(netTabungan)}</h3>
-             <div className="flex justify-between items-end gap-3">
-               <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                 <div className="h-full bg-blue-500 transition-all" style={{ width: `${tabunganPct}%` }} />
-               </div>
-               <span className="text-[9px] font-medium text-slate-400 leading-none">Saldo bersih</span>
-             </div>
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <PiggyBank size={12} className="text-blue-500" /> Tabungan
+              </div>
+              <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-500">{tabunganPct}% sisa</span>
+            </div>
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(netTabungan)}</h3>
+            <div className="flex justify-between items-end gap-3">
+              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 transition-all" style={{ width: `${tabunganPct}%` }} />
+              </div>
+              <span className="text-[9px] font-medium text-slate-400 leading-none">Saldo bersih</span>
+            </div>
           </div>
           {/* Investasi — Firebase */}
           <div className="bg-white rounded-[20px] md:rounded-2xl p-5 md:p-6 border border-slate-100 shadow-sm">
-             <div className="flex justify-between items-center mb-4">
-               <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                 <Wallet size={12} className="text-slate-600" /> Investasi
-               </div>
-               <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-sky-50 text-sky-500 uppercase">
-                 {investments.filter(i=>i.status==='Active').length} Aktif
-               </span>
-             </div>
-             <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(totalInvestasi)}</h3>
-             <div className="flex justify-between items-end gap-3">
-               <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                 <div className="h-full bg-slate-800 transition-all" style={{ width: `${investasiPct}%` }} />
-               </div>
-               <span className="text-[9px] font-medium text-slate-400 leading-none">{investasiPct}% dari masuk</span>
-             </div>
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <Wallet size={12} className="text-slate-600" /> Investasi
+              </div>
+              <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-sky-50 text-sky-500 uppercase">
+                {investments.filter(i => i.status === 'Active').length} Aktif
+              </span>
+            </div>
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-6 tracking-tight">{formatRp(totalInvestasi)}</h3>
+            <div className="flex justify-between items-end gap-3">
+              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-slate-800 transition-all" style={{ width: `${investasiPct}%` }} />
+              </div>
+              <span className="text-[9px] font-medium text-slate-400 leading-none">{investasiPct}% dari masuk</span>
+            </div>
           </div>
         </div>
       </div>
@@ -340,7 +370,7 @@ export default function MonthlyDashboard() {
               .map((trx, i) => (
                 <div key={trx.id || i} className="bg-white rounded-xl p-3.5 md:p-4 border border-slate-100 shadow-sm flex items-center gap-4">
                   <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 text-sm font-black">
-                    #{i+1}
+                    #{i + 1}
                   </div>
                   <div className="min-w-0">
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{trx.category}</p>
@@ -366,7 +396,7 @@ export default function MonthlyDashboard() {
               <input type="text" placeholder="Cari item..." className="w-full pl-9 pr-4 py-2.5 md:py-2 bg-slate-50 border-none rounded-lg text-xs text-slate-600 font-medium focus:ring-0 outline-none" />
             </div>
             <div className="relative w-full sm:w-auto">
-              <button 
+              <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="h-10 md:h-8 w-full sm:w-[140px] px-3 flex items-center justify-between gap-2 bg-slate-50 text-slate-600 rounded-lg text-xs font-bold"
               >
@@ -394,7 +424,7 @@ export default function MonthlyDashboard() {
           <div className="p-12 text-center text-sm font-medium text-slate-400">Memuat transaksi...</div>
         ) : filteredData.length === 0 ? (
           <div className="p-8">
-            <EmptyState title="Belum ada transaksi" description="Gunakan tombol Tambah Cepat untuk mencatat pemasukan atau pengeluaran pertama Anda." icon={<LayoutDashboard size={24} />} />
+            <EmptyState title="Belum ada transaksi" description="Catat pemasukan atau pengeluaran pertama Anda melalui menu Tambah Cepat di header." icon={<LayoutDashboard size={24} />} />
           </div>
         ) : (
           <div className="overflow-x-auto custom-scrollbar">
@@ -420,9 +450,8 @@ export default function MonthlyDashboard() {
                       </div>
                     </td>
                     <td className="px-5 md:px-6 py-4 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
-                        trx.type === 'pemasukan' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'
-                      }`}>{trx.type}</span>
+                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${trx.type === 'pemasukan' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'
+                        }`}>{trx.type}</span>
                     </td>
                     <td className={cn(
                       "px-6 py-4 text-right font-black",
@@ -453,36 +482,6 @@ export default function MonthlyDashboard() {
           </div>
         )}
       </div>
-      {/* Modal Tambah Cepat */}
-      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Tambah Transaksi Cepat" maxWidth="max-w-md">
-        <div className="space-y-5">
-          <div className="grid grid-cols-2 gap-3">
-            {(['pemasukan', 'pengeluaran'] as const).map(type => (
-              <button key={type} onClick={() => setFormData(p => ({...p, type}))}
-                className={`py-3 rounded-xl text-sm font-black capitalize transition-all ${
-                  formData.type === type
-                    ? type === 'pemasukan' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-100' : 'bg-rose-500 text-white shadow-lg shadow-rose-100'
-                    : 'bg-slate-50 text-slate-500'
-                }`}>{type}</button>
-            ))}
-          </div>
-          <div className="relative">
-            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
-            <input type="number" value={formData.amount} onChange={e => setFormData(p => ({...p, amount: e.target.value}))}
-              placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 pl-12 pr-5 text-sm font-bold text-slate-700 transition-all" />
-          </div>
-          <input type="text" value={formData.category} onChange={e => setFormData(p => ({...p, category: e.target.value}))}
-            placeholder="Kategori (Makanan, Gaji...)" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
-          <input type="date" value={formData.date} onChange={e => setFormData(p => ({...p, date: e.target.value}))}
-            className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
-          <input type="text" value={formData.note} onChange={e => setFormData(p => ({...p, note: e.target.value}))}
-            placeholder="Catatan singkat..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
-          <button onClick={handleCreate} disabled={!formData.amount || !formData.category}
-            className="w-full bg-black disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-4 shadow-xl shadow-slate-200">
-            Simpan Transaksi
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }

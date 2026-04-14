@@ -7,14 +7,17 @@ import {
   Target,
   Trash2,
   TrendingUp,
-  ChevronDown
+  ChevronDown,
+  Plus
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { savingsService, Saving } from '@/lib/services/savingsService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { AddTransactionModal } from '@/components/AddTransactionModal';
 
 const SAVING_GOALS = ['Dana Darurat', 'Liburan', 'Pendidikan', 'Properti', 'Kendaraan', 'Bisnis', 'Lainnya'];
 
@@ -22,20 +25,17 @@ export default function SavingsPage() {
   const [savings, setSavings] = useState<Saving[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const [formData, setFormData] = useState({
-    description: '',
-    subCategory: '',
-    amount: '',
-    category: 'Dana Darurat',
-    fromAccount: '',
-    toGoal: '',
-    date: new Date().toISOString().split('T')[0],
-    displayDate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }),
-    currency: 'IDR'
-  });
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
+  const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
+
+  const months = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
 
   const unsubRef = useRef<(() => void) | null>(null);
 
@@ -43,7 +43,16 @@ export default function SavingsPage() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
-        const q = query(collection(db, 'savings'), where('userId', '==', u.uid));
+        const startOfMonth = new Date(parseInt(selectedYear), selectedMonth, 1);
+        const endOfMonth = new Date(parseInt(selectedYear), selectedMonth + 1, 0, 23, 59, 59);
+
+        const q = query(
+          collection(db, 'savings'), 
+          where('userId', '==', u.uid),
+          where('date', '>=', startOfMonth),
+          where('date', '<=', endOfMonth),
+          orderBy('date', 'desc')
+        );
         if (unsubRef.current) unsubRef.current();
         unsubRef.current = onSnapshot(q, (snap) => {
           setSavings(snap.docs.map(doc => {
@@ -58,33 +67,7 @@ export default function SavingsPage() {
       } else { setSavings([]); setLoading(false); }
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
-  }, []);
-
-  const handleCreate = async () => {
-    if (!user || !formData.description || !formData.amount) return;
-    try {
-      await savingsService.createSaving({
-        userId: user.uid,
-        description: formData.description,
-        subCategory: formData.subCategory,
-        amount: parseFloat(formData.amount),
-        currency: formData.currency,
-        category: formData.category,
-        fromAccount: formData.fromAccount,
-        toGoal: formData.toGoal || formData.category,
-        date: new Date(formData.date),
-        displayDate: formData.displayDate
-      });
-      setIsAddModalOpen(false);
-      setFormData({ 
-        description: '', subCategory: '', amount: '', category: 'Dana Darurat', fromAccount: '', 
-        toGoal: '', date: new Date().toISOString().split('T')[0], 
-        displayDate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }),
-        currency: 'IDR' 
-      });
-      // onSnapshot akan handle update otomatis
-    } catch (e) { console.error(e); }
-  };
+  }, [selectedMonth, selectedYear]);
 
   const totalSaldo = useMemo(() => savings.reduce((s, item) => s + item.amount, 0), [savings]);
 
@@ -100,18 +83,55 @@ export default function SavingsPage() {
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
       
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Tabungan</h1>
-          <p className="text-[12px] md:text-sm font-medium text-slate-400 mt-2 max-w-xl leading-relaxed">
-            Kelola dana cadangan dan pantau progres pencapaian target tabungan impian Anda.
-          </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
+        <div className="flex flex-col">
+          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Tabungan & Dana Darurat</h1>
+          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Periode {months[selectedMonth]} {selectedYear}</p>
         </div>
-        <button onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2.5 md:px-6 md:py-3 rounded-xl md:rounded-2xl text-[11px] font-black shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all w-full md:w-auto mt-4 md:mt-0">
-          <PlusCircle size={16} />
-          Setoran Baru
-        </button>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Month Selector */}
+          <div className="relative">
+            <button
+              onClick={() => { setIsMonthDropdownOpen(!isMonthDropdownOpen); setIsYearDropdownOpen(false); }}
+              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black text-slate-700 flex items-center gap-2 transition-all border border-slate-100 min-w-[120px]"
+            >
+              {months[selectedMonth]}
+              <ChevronDown size={14} className={cn("transition-transform", isMonthDropdownOpen && "rotate-180")} />
+            </button>
+            {isMonthDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-40 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2 max-h-60 overflow-y-auto custom-scrollbar">
+                {months.map((month, idx) => (
+                  <button key={month} onClick={() => { setSelectedMonth(idx); setIsMonthDropdownOpen(false); }}
+                    className={cn("w-full text-left px-4 py-2 text-xs font-bold transition-colors", selectedMonth === idx ? "text-indigo-600 bg-indigo-50" : "text-slate-600 hover:bg-slate-50")}>
+                    {month}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Year Selector */}
+          <div className="relative">
+            <button
+              onClick={() => { setIsYearDropdownOpen(!isYearDropdownOpen); setIsMonthDropdownOpen(false); }}
+              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black text-slate-700 flex items-center gap-2 transition-all border border-slate-100"
+            >
+              {selectedYear}
+              <ChevronDown size={14} className={cn("transition-transform", isYearDropdownOpen && "rotate-180")} />
+            </button>
+            {isYearDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-32 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2">
+                {['2024', '2025', '2026'].map(year => (
+                  <button key={year} onClick={() => { setSelectedYear(year); setIsYearDropdownOpen(false); }}
+                    className={cn("w-full text-left px-4 py-2 text-xs font-bold transition-colors", selectedYear === year ? "text-indigo-600 bg-indigo-50" : "text-slate-600 hover:bg-slate-50")}>
+                    {year}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Stats */}
@@ -220,75 +240,6 @@ export default function SavingsPage() {
           </div>
         )}
       </div>
-
-      {/* Modal */}
-      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Catat Setoran Tabungan" maxWidth="max-w-lg">
-        <div className="space-y-5">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Deskripsi</label>
-            <input type="text" value={formData.description} onChange={e => setFormData(p => ({...p, description: e.target.value}))}
-              placeholder="Setoran Dana Darurat..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Goal / Kategori</label>
-            <div className="relative">
-              <select value={formData.category} onChange={e => setFormData(p => ({...p, category: e.target.value}))}
-                className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer">
-                {SAVING_GOALS.map(g => <option key={g}>{g}</option>)}
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal (Rp)</label>
-              <input type="number" value={formData.amount} onChange={e => setFormData(p => ({...p, amount: e.target.value}))}
-                placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-            <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mata Uang</label>
-               <input type="text" value={formData.currency} onChange={e => setFormData(p => ({...p, currency: e.target.value.toUpperCase()}))}
-                placeholder="IDR" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
-              <input type="date" value={formData.date} onChange={e => setFormData(p => ({...p, date: e.target.value}))}
-                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-            <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal Display</label>
-               <input type="text" value={formData.displayDate} onChange={e => setFormData(p => ({...p, displayDate: e.target.value}))}
-                placeholder="14 April 2024" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Sub Kategori</label>
-              <input type="text" value={formData.subCategory} onChange={e => setFormData(p => ({...p, subCategory: e.target.value}))}
-                placeholder="Potongan, Bonus..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Dari Rekening</label>
-              <input type="text" value={formData.fromAccount} onChange={e => setFormData(p => ({...p, fromAccount: e.target.value}))}
-                placeholder="BCA Tabungan..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Ke Goal (Tujuan)</label>
-            <input type="text" value={formData.toGoal} onChange={e => setFormData(p => ({...p, toGoal: e.target.value}))}
-              placeholder="Dana Darurat, Liburan..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-          </div>
-          <button onClick={handleCreate} disabled={!formData.description || !formData.amount}
-            className="w-full bg-black disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-4 shadow-xl shadow-slate-200">
-            Simpan Setoran
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }

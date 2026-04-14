@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
+import { ModalProvider } from '@/context/ModalContext';
+import { GlobalModalWrapper } from '@/components/GlobalModalWrapper';
 
 export default function MembershipLayout({
   children,
@@ -12,26 +14,30 @@ export default function MembershipLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-slate-50 relative overflow-x-hidden">
-      {/* Mobile Backdrop */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
+    <ModalProvider>
+      <div className="flex min-h-screen bg-slate-50 relative overflow-x-hidden">
+        {/* Mobile Backdrop */}
+        {isSidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
 
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-      {/* Main Content */}
-      <main className="flex-1 lg:ml-72 min-h-screen flex flex-col min-w-0 pt-20">
-        <Header onMenuClick={() => setIsSidebarOpen(true)} />
+        {/* Main Content */}
+        <main className="flex-1 lg:ml-72 min-h-screen flex flex-col min-w-0 pt-20">
+          <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
-        {/* Page Content */}
-        <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1">
-          {children}
-        </div>
-      </main>
-    </div>
+          {/* Page Content */}
+          <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1">
+            {children}
+          </div>
+        </main>
+
+        <GlobalModalWrapper />
+      </div>
+    </ModalProvider>
   );
 }

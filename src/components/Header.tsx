@@ -1,9 +1,10 @@
+"use client";
+
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
-import { auth } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { getUserProfile, UserProfile } from '@/lib/services/userService';
-import { Menu } from 'lucide-react';
+import { Menu, PlusCircle, ChevronDown, TrendingUp, Briefcase, PiggyBank, CreditCard, Banknote, Target, RefreshCw, ArrowUpDown } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { useModal, ModalType } from '@/context/ModalContext';
+import { cn } from '@/lib/utils';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -11,21 +12,33 @@ interface HeaderProps {
 
 export const Header = ({ onMenuClick }: HeaderProps) => {
   const pathname = usePathname();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const { openModal } = useModal();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const prof = await getUserProfile(user.uid);
-        setProfile(prof);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
       }
-    });
-    return () => unsub();
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
-  }
+  const menuItems: { id: ModalType; label: string; icon: any; color: string }[] = [
+    { id: 'harian', label: 'Transaksi Harian', icon: TrendingUp, color: 'text-emerald-600' },
+    { id: 'saham', label: 'Investasi Saham', icon: Briefcase, color: 'text-blue-600' },
+    { id: 'deposito', label: 'Deposito', icon: PiggyBank, color: 'text-indigo-600' },
+    { id: 'investasi_lain', label: 'Investasi Lainnya', icon: Target, color: 'text-purple-600' },
+    { id: 'tabungan', label: 'Tabungan', icon: PiggyBank, color: 'text-rose-600' },
+    { id: 'hutang_piutang', label: 'Hutang & Piutang', icon: Banknote, color: 'text-orange-600' },
+    { id: 'topup_transfer', label: 'Top Up & Transfer', icon: ArrowUpDown, color: 'text-cyan-600' },
+    { id: 'budget_target', label: 'Budget dan Target', icon: Target, color: 'text-teal-600' },
+    { id: 'recurring', label: 'Recurring', icon: RefreshCw, color: 'text-slate-600' },
+    { id: 'ledger', label: 'Kategori Ledger', icon: Target, color: 'text-blue-900' },
+    { id: 'rekening', label: 'Rekening Baru', icon: CreditCard, color: 'text-blue-600' },
+  ];
 
   return (
     <header className="fixed top-0 right-0 left-0 lg:left-72 h-20 border-b border-slate-200 flex items-center justify-between px-4 md:px-8 bg-white/80 backdrop-blur-md z-30">
@@ -69,15 +82,49 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
         </div>
       </div>
 
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2 md:gap-4 px-3 md:px-4 py-2 rounded-full bg-slate-50 border border-slate-200 group cursor-pointer hover:bg-white hover:shadow-sm transition-all duration-300">
-          <div className="hidden xs:flex flex-col text-right">
-            <span className="text-xs font-black text-slate-900 line-clamp-1">{profile?.name || 'Loading...'}</span>
-            <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">{profile?.role || 'User'}</span>
-          </div>
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-indigo-600 border-2 md:border-4 border-white shadow-md flex items-center justify-center text-[10px] md:text-xs font-black text-white transform group-hover:scale-110 transition-transform">
-            {profile ? getInitials(profile.name) : '??'}
-          </div>
+      <div className="flex items-center gap-4">
+        {/* Quick Add Button & Dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button 
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="flex items-center gap-2 bg-[#064e3b] text-white px-4 py-2.5 rounded-xl text-xs font-black shadow-lg shadow-emerald-100 hover:bg-[#054031] transition-all"
+          >
+            <PlusCircle size={16} />
+            <span className="hidden sm:inline text-[#f0fdf4]">Tambah Cepat</span>
+            <ChevronDown size={14} className={cn("transition-transform ml-1", isDropdownOpen && "rotate-180")} />
+          </button>
+
+          {isDropdownOpen && (
+            <div className="absolute right-0 mt-3 w-64 bg-white border border-slate-100 rounded-[24px] shadow-2xl py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="px-5 py-2 mb-2">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Akses Cepat Transaksi</p>
+              </div>
+              <div className="max-h-[70vh] overflow-y-auto custom-scrollbar">
+                {menuItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        openModal(item.id);
+                        setIsDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-colors group text-left"
+                    >
+                      <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center bg-slate-50 group-hover:scale-110 transition-transform", item.color)}>
+                        <Icon size={18} />
+                      </div>
+                      <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="hidden md:flex px-4 py-2 rounded-full bg-slate-50 border border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+           System Status: Online
         </div>
       </div>
     </header>

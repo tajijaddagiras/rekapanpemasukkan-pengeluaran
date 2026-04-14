@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
@@ -30,8 +30,9 @@ import {
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { getUserProfile, UserProfile } from '@/lib/services/userService';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -95,6 +96,21 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const [openGroups, setOpenGroups] = useState<string[]>(['Utama']);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const prof = await getUserProfile(user.uid);
+        setProfile(prof);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+  }
 
   const isItemActive = (item: { label: string; href: string }) => {
     return pathname === item.href;
@@ -128,11 +144,11 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           <Link href="/" className="block group flex-1" onClick={() => { if (window.innerWidth < 1024) onClose?.(); }}>
             <div className="bg-white rounded-[20px] p-3 border border-slate-100 shadow-sm flex items-center gap-3 transition-all">
               <div className="w-10 h-10 flex items-center justify-center shrink-0 overflow-hidden">
-                <Image 
-                  src="/images/Logo-new.png" 
-                  alt="Leosiqra" 
-                  width={34} 
-                  height={34} 
+                <Image
+                  src="/images/Logo-new.png"
+                  alt="Leosiqra"
+                  width={34}
+                  height={34}
                   className="object-contain"
                 />
               </div>
@@ -142,8 +158,8 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               </div>
             </div>
           </Link>
-          
-          <button 
+
+          <button
             onClick={onClose}
             className="lg:hidden p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all ml-2"
           >
@@ -198,11 +214,27 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
         {/* Footer */}
         <div className="p-4 mt-auto border-t border-slate-200 bg-white/50 shrink-0 space-y-4">
-          <div className="p-3 rounded-xl bg-white border border-slate-100 shadow-sm hidden md:block">
-            <p className="text-[10px] font-bold text-indigo-500 mb-1 uppercase tracking-wider leading-none">Pro Plan</p>
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-extrabold text-slate-900 leading-none">Active Membership</p>
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          {/* Profile Card */}
+          <div className="p-3 bg-white border border-slate-100 rounded-2xl shadow-sm group">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-xs font-black text-white shadow-lg shadow-indigo-100 transform group-hover:scale-110 transition-transform">
+                {profile ? getInitials(profile.name) : '??'}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[13px] font-black text-slate-900 truncate pr-2">
+                  {profile?.name || 'Loading...'}
+                </span>
+                <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">
+                  {profile?.role || 'Member'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 hidden md:block">
+            <div className="flex items-center justify-between mb-1">
+               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-none">Pro Plan Active</p>
+               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             </div>
           </div>
 

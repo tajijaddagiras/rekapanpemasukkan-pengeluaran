@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { 
+  ChevronDown,
+  TrendingDown,
   TrendingUp, 
   WalletCards, 
   Landmark, 
@@ -13,7 +15,7 @@ import { investmentService, Investment } from '@/lib/services/investmentService'
 import { budgetService, Budget } from '@/lib/services/budgetService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 
 export default function AnnualDashboard() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
@@ -21,6 +23,7 @@ export default function AnnualDashboard() {
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [user, setUser] = useState<User | null>(null);
+  const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
 
   useEffect(() => {
     let unsubTrx: (() => void) | null = null;
@@ -30,7 +33,17 @@ export default function AnnualDashboard() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
-        const qTrx = query(collection(db, 'transactions'), where('userId', '==', u.uid));
+        // Calculate year range
+        const startOfYear = new Date(parseInt(selectedYear), 0, 1);
+        const endOfYear = new Date(parseInt(selectedYear), 11, 31, 23, 59, 59);
+
+        const qTrx = query(
+          collection(db, 'transactions'),
+          where('userId', '==', u.uid),
+          where('date', '>=', startOfYear),
+          where('date', '<=', endOfYear),
+          orderBy('date', 'desc')
+        );
         unsubTrx = onSnapshot(qTrx, (snap) => {
           setTransactions(snap.docs.map(doc => {
             const d = doc.data();
@@ -65,11 +78,11 @@ export default function AnnualDashboard() {
       if (unsubInv) unsubInv();
       if (unsubBdg) unsubBdg();
     };
-  }, []);
+  }, [selectedYear]);
 
   const yearTransactions = useMemo(() =>
-    transactions.filter(t => t.date.getFullYear().toString() === selectedYear),
-    [transactions, selectedYear]
+    transactions,
+    [transactions]
   );
 
   const totalPemasukan = useMemo(() => yearTransactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0), [yearTransactions]);
@@ -172,28 +185,33 @@ export default function AnnualDashboard() {
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1400px]">
       
       {/* 1. Header (Top Bar) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
         <div>
-          <h2 className="text-xl md:text-2xl lg:text-[28px] font-black text-slate-900 tracking-tight leading-tight">Annual Dashboard</h2>
-          <p className="text-[12px] md:text-sm font-medium text-slate-500 mt-1 max-w-sm leading-relaxed">Reviewing your financial performance for the current fiscal year.</p>
+          <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Dashboard Tahunan</h2>
+          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Laporan Fiskal Tahun {selectedYear}</p>
         </div>
         
-        {/* Year Selectors Pill */}
-        <div className="flex items-center bg-white border border-slate-100 rounded-lg md:rounded-xl p-1 shadow-sm w-full md:w-auto">
-          {['2024', '2025', '2026'].map((year) => (
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Year Selector Dropdown */}
+          <div className="relative">
             <button
-              key={year}
-              onClick={() => setSelectedYear(year)}
-              className={cn(
-                "flex-1 md:flex-none px-4 md:px-6 py-2 md:py-2 text-[11px] md:text-xs font-bold rounded-lg transition-all",
-                selectedYear === year 
-                  ? "bg-slate-900 text-white shadow" 
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-              )}
+              onClick={() => { setIsYearDropdownOpen(!isYearDropdownOpen); }}
+              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black text-slate-700 flex items-center gap-2 transition-all border border-slate-100"
             >
-              {year}
+              Tahun {selectedYear}
+              <ChevronDown size={14} className={cn("transition-transform", isYearDropdownOpen && "rotate-180")} />
             </button>
-          ))}
+            {isYearDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-32 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2">
+                {['2024', '2025', '2026'].map(year => (
+                  <button key={year} onClick={() => { setSelectedYear(year); setIsYearDropdownOpen(false); }}
+                    className={cn("w-full text-left px-4 py-2 text-xs font-bold transition-colors", selectedYear === year ? "text-indigo-600 bg-indigo-50" : "text-slate-600 hover:bg-slate-50")}>
+                    {year}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -403,7 +421,6 @@ export default function AnnualDashboard() {
           </table>
         </div>
       </div>
-
     </div>
   );
 }

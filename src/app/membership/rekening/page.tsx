@@ -8,13 +8,10 @@ import {
   Banknote,
   Edit2,
   Trash2,
-  Plus,
   ExternalLink,
   ShieldCheck,
-  ChevronDown,
-  CloudUpload
+  ChevronDown
 } from 'lucide-react';
-import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { accountService, Account } from '@/lib/services/accountService';
 import { auth, db } from '@/lib/firebase';
@@ -25,18 +22,6 @@ export default function RekeningPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
-  // Form State
-  const [formData, setFormData] = useState({
-    name: '',
-    logoUrl: '',
-    type: 'Bank Account' as Account['type'],
-    currency: 'IDR',
-    balance: '',
-    initialBalance: '',
-    baseValue: ''
-  });
 
   const unsubRef = useRef<(() => void) | null>(null);
 
@@ -58,27 +43,6 @@ export default function RekeningPage() {
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
   }, []);
-
-  const handleCreate = async () => {
-    if (!user || !formData.name || !formData.initialBalance) return;
-    try {
-      await accountService.createAccount({
-        userId: user.uid,
-        name: formData.name,
-        logoUrl: formData.logoUrl,
-        type: formData.type,
-        currency: formData.currency,
-        balance: parseFloat(formData.balance) || parseFloat(formData.initialBalance),
-        initialBalance: parseFloat(formData.initialBalance) || 0,
-        baseValue: parseFloat(formData.baseValue) || 0
-      });
-      setIsAddModalOpen(false);
-      setFormData({ name: '', logoUrl: '', type: 'Bank Account', currency: 'IDR', balance: '', initialBalance: '', baseValue: '' });
-      // onSnapshot otomatis update
-    } catch (error) {
-      console.error("Error creating account:", error);
-    }
-  };
 
   const getIconForType = (type: string) => {
     switch (type) {
@@ -117,16 +81,9 @@ export default function RekeningPage() {
         <div>
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Rekening</h1>
           <p className="text-[12px] md:text-sm font-medium text-slate-400 mt-2 max-w-xl leading-relaxed">
-            Manage your financial accounts and initial balances with editorial precision.
+            Kelola akun keuangan dan saldo awal Anda melalui menu 'Tambah Cepat' di header.
           </p>
         </div>
-        <button 
-          onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3.5 rounded-xl md:rounded-2xl text-[13px] font-black shadow-xl shadow-blue-100 hover:scale-[1.02] active:scale-95 transition-all w-full md:w-auto"
-        >
-          <Plus size={18} />
-          Tambah Rekening
-        </button>
       </div>
 
       {/* 2. Top Statistic Cards */}
@@ -174,7 +131,7 @@ export default function RekeningPage() {
             <div className="p-6">
                <EmptyState 
                  title="Belum ada rekening" 
-                 description="Tambahkan rekening bank, e-wallet, atau kas tunai Anda untuk mulai melacak keuangan."
+                 description="Klik 'Tambah Cepat' di header dan pilih 'Rekening Baru' untuk mulai melacak keuangan."
                  icon={<Building2 size={24} />}
                />
             </div>
@@ -226,7 +183,6 @@ export default function RekeningPage() {
                             onClick={async () => {
                               if(acc.id) {
                                 await accountService.deleteAccount(acc.id);
-                                // onSnapshot otomatis update
                               }
                             }}
                             className="p-2.5 rounded-xl bg-slate-50 text-slate-300 hover:bg-rose-500 hover:text-white transition-all shadow-sm">
@@ -242,114 +198,6 @@ export default function RekeningPage() {
           )}
         </div>
       </div>
-
-      {/* Modal Tambah Rekening */}
-      <Modal 
-        isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
-        title="Tambah Rekening Baru"
-        maxWidth="max-w-xl"
-      >
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nama Rekening</label>
-              <input 
-                type="text" 
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                placeholder="Contoh: BCA Personal"
-                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Logo URL</label>
-              <input 
-                type="text" 
-                value={formData.logoUrl}
-                onChange={(e) => setFormData({...formData, logoUrl: e.target.value})}
-                placeholder="https://..."
-                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis Rekening</label>
-              <div className="relative">
-                <select 
-                  value={formData.type}
-                  onChange={(e) => setFormData({...formData, type: e.target.value as Account['type']})}
-                  className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
-                >
-                  <option value="Bank Account">Bank Account</option>
-                  <option value="E-Wallet">E-Wallet</option>
-                  <option value="Cash">Cash</option>
-                  <option value="Investment Account">Investment Account</option>
-                  <option value="Credit Card">Credit Card</option>
-                </select>
-                <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mata Uang</label>
-              <div className="relative">
-                <select 
-                  value={formData.currency}
-                  onChange={(e) => setFormData({...formData, currency: e.target.value})}
-                  className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer"
-                >
-                  <option value="IDR">IDR - Rupiah</option>
-                  <option value="USD">USD - US Dollar</option>
-                  <option value="EUR">EUR - Euro</option>
-                </select>
-                <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Saldo Saat Ini</label>
-              <input 
-                type="number" 
-                value={formData.balance}
-                onChange={(e) => setFormData({...formData, balance: e.target.value})}
-                placeholder="0"
-                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
-              />
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Saldo Awal (Initial)</label>
-              <input 
-                type="number" 
-                value={formData.initialBalance}
-                onChange={(e) => setFormData({...formData, initialBalance: e.target.value})}
-                placeholder="0"
-                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
-              />
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nilai Base</label>
-              <input 
-                type="number" 
-                value={formData.baseValue}
-                onChange={(e) => setFormData({...formData, baseValue: e.target.value})}
-                placeholder="0"
-                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
-              />
-            </div>
-          </div>
-
-          <button 
-            onClick={handleCreate}
-            disabled={!formData.name || !formData.initialBalance}
-            className="w-full bg-blue-600 disabled:bg-slate-300 text-white px-6 py-4 rounded-xl text-xs font-black shadow-lg shadow-blue-100 disabled:shadow-none transition-all mt-6"
-          >
-            Simpan Rekening Baru
-          </button>
-        </div>
-      </Modal>
-
     </div>
   );
 }

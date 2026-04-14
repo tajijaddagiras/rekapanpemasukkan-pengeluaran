@@ -14,7 +14,6 @@ import {
   Copy,
   TrendingUp
 } from 'lucide-react';
-import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { auth, db } from '@/lib/firebase';
@@ -26,22 +25,7 @@ export default function DailyTransactionLogPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
-  const [formData, setFormData] = useState({
-    type: 'pemasukan' as 'pemasukan' | 'pengeluaran',
-    category: '',
-    subCategory: '',
-    currency: 'IDR',
-    amount: '',
-    accountId: '',
-    installmentTenor: '',
-    monthlyInterest: '',
-    totalInterest: '',
-    note: '',
-    date: new Date().toISOString().split('T')[0]
-  });
 
   const unsubRef = useRef<(() => void) | null>(null);
 
@@ -65,24 +49,6 @@ export default function DailyTransactionLogPage() {
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
   }, []);
-
-  const handleCreate = async () => {
-    if (!user || !formData.amount || !formData.category) return;
-    try {
-      await transactionService.createTransaction({
-        userId: user.uid, type: formData.type, amount: parseFloat(formData.amount),
-        category: formData.category, accountId: formData.accountId || 'General',
-        subCategory: formData.subCategory, currency: formData.currency,
-        installmentTenor: parseInt(formData.installmentTenor) || 0,
-        monthlyInterest: parseFloat(formData.monthlyInterest) || 0,
-        totalInterest: parseFloat(formData.totalInterest) || 0,
-        date: new Date(formData.date), note: formData.note, status: 'VERIFIED'
-      });
-      setIsAddModalOpen(false);
-      setFormData({ type: 'pemasukan', category: '', subCategory: '', currency: 'IDR', amount: '', accountId: '', installmentTenor: '', monthlyInterest: '', totalInterest: '', note: '', date: new Date().toISOString().split('T')[0] });
-      // onSnapshot update otomatis
-    } catch (e) { console.error(e); }
-  };
 
   const filtered = useMemo(() => {
     if (!searchQuery) return transactions;
@@ -109,13 +75,6 @@ export default function DailyTransactionLogPage() {
             Lacak dan kelola aliran keuangan Anda dengan presisi editorial dan kejelasan mutlak.
           </p>
         </div>
-        <button 
-          onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2.5 md:px-6 md:py-3 rounded-xl md:rounded-2xl text-[12px] font-black shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all w-full md:w-auto mt-4 md:mt-0"
-        >
-          <PlusCircle size={16} />
-          Tambah Cepat
-        </button>
       </div>
 
       {/* 2. Stats Cards */}
@@ -177,7 +136,7 @@ export default function DailyTransactionLogPage() {
           <div className="p-10">
             <EmptyState 
               title="Belum ada transaksi"
-              description="Catat pemasukan atau pengeluaran pertama Anda dengan klik tombol Tambah Cepat di atas."
+              description="Catat pemasukan atau pengeluaran pertama Anda melalui menu Tambah Cepat di header."
               icon={<TrendingUp size={24} />}
             />
           </div>
@@ -258,99 +217,6 @@ export default function DailyTransactionLogPage() {
           </>
         )}
       </div>
-
-      {/* Modal Tambah Transaksi */}
-      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Tambah Transaksi Baru" maxWidth="max-w-lg">
-        <div className="space-y-5">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Transaksi</label>
-            <div className="grid grid-cols-2 gap-3">
-              {(['pemasukan', 'pengeluaran'] as const).map(type => (
-                <button
-                  key={type}
-                  onClick={() => setFormData(p => ({...p, type}))}
-                  className={`py-3 rounded-xl text-sm font-black capitalize transition-all ${
-                    formData.type === type
-                      ? type === 'pemasukan' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-100' : 'bg-rose-500 text-white shadow-lg shadow-rose-100'
-                      : 'bg-slate-50 text-slate-500'
-                  }`}
-                >{type}</button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="space-y-2 flex-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
-                <input type="number" value={formData.amount} onChange={e => setFormData(p => ({...p, amount: e.target.value}))}
-                  placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 pl-11 pr-4 text-sm font-bold text-slate-700 transition-all" />
-              </div>
-            </div>
-            <div className="space-y-2 w-1/3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mata Uang</label>
-               <input type="text" value={formData.currency} onChange={e => setFormData(p => ({...p, currency: e.target.value.toUpperCase()}))}
-                placeholder="IDR" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kategori</label>
-              <input type="text" value={formData.category} onChange={e => setFormData(p => ({...p, category: e.target.value}))}
-                placeholder="Makanan, Gaji..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Sub Kategori</label>
-              <input type="text" value={formData.subCategory} onChange={e => setFormData(p => ({...p, subCategory: e.target.value}))}
-                placeholder="Makan siang..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rekening</label>
-              <input type="text" value={formData.accountId} onChange={e => setFormData(p => ({...p, accountId: e.target.value}))}
-                placeholder="BCA, Tunai..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
-              <input type="date" value={formData.date} onChange={e => setFormData(p => ({...p, date: e.target.value}))}
-                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tenor Cicilan</label>
-              <input type="number" value={formData.installmentTenor} onChange={e => setFormData(p => ({...p, installmentTenor: e.target.value}))}
-                placeholder="Bulan" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Bunga/Bln</label>
-              <input type="number" value={formData.monthlyInterest} onChange={e => setFormData(p => ({...p, monthlyInterest: e.target.value}))}
-                placeholder="Rp" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Total Bunga</label>
-              <input type="number" value={formData.totalInterest} onChange={e => setFormData(p => ({...p, totalInterest: e.target.value}))}
-                placeholder="Rp" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Deskripsi / Catatan</label>
-            <input type="text" value={formData.note} onChange={e => setFormData(p => ({...p, note: e.target.value}))}
-              placeholder="Deskripsi..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-          </div>
-
-          <button onClick={handleCreate} disabled={!formData.amount || !formData.category}
-            className="w-full bg-black disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-6 shadow-xl shadow-slate-200">
-            Simpan Transaksi
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }

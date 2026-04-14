@@ -26,14 +26,6 @@ export default function BudgetPage() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
-  // Form State
-  const [formData, setFormData] = useState({
-    category: '',
-    amount: '',
-    period: 'monthly' as Budget['period']
-  });
 
   const unsubRef = useRef<(() => void) | null>(null);
 
@@ -55,23 +47,6 @@ export default function BudgetPage() {
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
   }, []);
-
-  const handleCreate = async () => {
-    if (!user || !formData.category || !formData.amount) return;
-    try {
-      await budgetService.createBudget({
-        userId: user.uid,
-        category: formData.category,
-        amount: parseFloat(formData.amount),
-        period: formData.period
-      });
-      setIsAddModalOpen(false);
-      setFormData({ category: '', amount: '', period: 'monthly' });
-      // onSnapshot otomatis update
-    } catch (error) {
-      console.error("Error creating budget:", error);
-    }
-  };
 
   const getIconForCategory = (cat: string) => {
     const lower = cat.toLowerCase();
@@ -110,16 +85,6 @@ export default function BudgetPage() {
           <p className="text-[12px] md:text-sm font-medium text-slate-500 mt-2 leading-relaxed">
             Orchestrate your financial future with precision. Set your limits, define your targets, and let our Atelier track the progress of your fiscal journey.
           </p>
-        </div>
-        
-        <div className="flex items-center gap-4 w-full md:w-auto mt-4 md:mt-0">
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center justify-center gap-2 bg-[#004d40] text-white px-4 py-2.5 md:px-8 md:py-3.5 rounded-xl md:rounded-2xl text-[13px] font-black shadow-xl shadow-green-50 hover:scale-105 active:scale-95 transition-all w-full md:w-auto"
-          >
-            <Plus size={18} />
-            Tambah Cepat
-          </button>
         </div>
       </div>
 
@@ -218,73 +183,6 @@ export default function BudgetPage() {
           </div>
         </div>
       </div>
-
-      {/* Modal Tambah Budget */}
-      <Modal 
-        isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
-        title="Settings Budget Baru"
-      >
-        <div className="space-y-6">
-          <div className="space-y-3">
-            <label className="text-xs font-bold text-slate-600">Kategori</label>
-            <div className="relative">
-              <select 
-                value={formData.category}
-                onChange={(e) => setFormData({...formData, category: e.target.value})}
-                className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-[#004d40] focus:outline-none rounded-xl py-4 px-6 text-sm font-bold text-slate-700 transition-all cursor-pointer"
-              >
-                <option value="">Select Category</option>
-                <option value="Groceries & Living">Groceries & Living</option>
-                <option value="Travel & Discovery">Travel & Discovery</option>
-                <option value="Health & Wellness">Health & Wellness</option>
-                <option value="Digital Subscriptions">Digital Subscriptions</option>
-                <option value="Lainnya">Lainnya...</option>
-              </select>
-              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <label className="text-xs font-bold text-slate-600">Limit Budget</label>
-            <div className="relative">
-              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
-              <input 
-                type="number" 
-                value={formData.amount}
-                onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                placeholder="0"
-                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-[#004d40] focus:outline-none rounded-xl py-4 pl-14 pr-6 text-sm font-bold text-slate-700 transition-all"
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-3">
-            <label className="text-xs font-bold text-slate-600">Periode</label>
-            <div className="relative">
-              <select 
-                value={formData.period}
-                onChange={(e) => setFormData({...formData, period: e.target.value as 'monthly' | 'yearly'})}
-                className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-[#004d40] focus:outline-none rounded-xl py-4 px-6 text-sm font-bold text-slate-700 transition-all cursor-pointer"
-              >
-                <option value="monthly">Bulanan (Monthly Target)</option>
-                <option value="yearly">Tahunan (Yearly Target)</option>
-              </select>
-              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
-            </div>
-          </div>
-
-          <button 
-            onClick={handleCreate}
-            disabled={!formData.category || !formData.amount}
-            className="w-full bg-[#004d40] disabled:bg-slate-300 flex items-center justify-center gap-3 py-4 rounded-2xl text-xs font-black text-white outline-none transition-all shadow-lg shadow-[#004d40]/20 mt-8"
-          >
-            <Save size={16} />
-            Simpan Budget
-          </button>
-        </div>
-      </Modal>
-
     </div>
   );
 }

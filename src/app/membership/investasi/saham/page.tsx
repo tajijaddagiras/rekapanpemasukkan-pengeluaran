@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   PlusCircle, 
   Search, 
@@ -8,36 +8,32 @@ import {
   Briefcase, 
   Trash2, 
   BarChart3,
-  Edit2
+  Edit2,
+  ChevronDown
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { useRef } from 'react';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { cn } from '@/lib/utils';
 
-export default function StockInvestmentPage() {
+export default function SahamPage() {
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const [formData, setFormData] = useState({
-    stockCode: '',
-    logoUrl: '',
-    exchangeCode: 'IDX',
-    currency: 'IDR',
-    sharesCount: '',
-    pricePerShare: '',
-    currentValue: '',
-    transactionType: 'Beli',
-    category: 'Saham',
-    accountId: '',
-    platform: '',
-    dateInvested: new Date().toISOString().split('T')[0]
-  });
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
+  const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
+
+  const months = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
 
   const unsubRef = useRef<(() => void) | null>(null);
 
@@ -45,10 +41,16 @@ export default function StockInvestmentPage() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
+        const startOfMonth = new Date(parseInt(selectedYear), selectedMonth, 1);
+        const endOfMonth = new Date(parseInt(selectedYear), selectedMonth + 1, 0, 23, 59, 59);
+
         const q = query(
-          collection(db, 'investments'),
+          collection(db, 'investments'), 
           where('userId', '==', u.uid),
-          where('type', '==', 'Saham')
+          where('type', '==', 'Saham'),
+          where('dateInvested', '>=', startOfMonth),
+          where('dateInvested', '<=', endOfMonth),
+          orderBy('dateInvested', 'desc')
         );
         if (unsubRef.current) unsubRef.current();
         unsubRef.current = onSnapshot(q, (snap) => {
@@ -67,70 +69,73 @@ export default function StockInvestmentPage() {
       } else { setInvestments([]); setLoading(false); }
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
-  }, []);
-
-  const handleCreate = async () => {
-    if (!user || !formData.stockCode || !formData.sharesCount || !formData.pricePerShare) return;
-    const shares = parseFloat(formData.sharesCount) || 0;
-    const price = parseFloat(formData.pricePerShare) || 0;
-    const invested = shares * price;
-    const current = parseFloat(formData.currentValue) || invested;
-    try {
-      await investmentService.createInvestment({
-        userId: user.uid, 
-        name: formData.stockCode, 
-        type: 'Saham',
-        stockCode: formData.stockCode.toUpperCase(),
-        exchangeCode: formData.exchangeCode.toUpperCase(),
-        logoUrl: formData.logoUrl,
-        sharesCount: shares,
-        pricePerShare: price,
-        transactionType: formData.transactionType,
-        category: formData.category,
-        accountId: formData.accountId,
-        platform: formData.platform,
-        amountInvested: invested, 
-        currentValue: current,
-        returnPercentage: invested > 0 ? ((current - invested) / invested) * 100 : 0,
-        currency: formData.currency, 
-        dateInvested: new Date(formData.dateInvested), 
-        status: 'Active'
-      });
-      setIsAddModalOpen(false);
-      setFormData({ 
-        stockCode: '', logoUrl: '', exchangeCode: 'IDX', currency: 'IDR', sharesCount: '', 
-        pricePerShare: '', currentValue: '', transactionType: 'Beli', category: 'Saham', 
-        accountId: '', platform: '', dateInvested: new Date().toISOString().split('T')[0] 
-      });
-      // onSnapshot update otomatis
-    } catch (e) { console.error(e); }
-  };
+  }, [selectedMonth, selectedYear]);
 
   const totalInvested = useMemo(() => investments.reduce((s, i) => s + i.amountInvested, 0), [investments]);
   const totalCurrent = useMemo(() => investments.reduce((s, i) => s + i.currentValue, 0), [investments]);
   const totalReturn = totalInvested > 0 ? ((totalCurrent - totalInvested) / totalInvested) * 100 : 0;
 
-  const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n).replace('Rp', '').trim();
+  const filtered = useMemo(() =>
+    searchQuery ? investments.filter(s => (s.stockCode || s.name || '').toLowerCase().includes(searchQuery.toLowerCase())) : investments,
+    [investments, searchQuery]
+  );
+
+  const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0 }).format(n);
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
 
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
-
+      
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Investasi Saham</h1>
-          <p className="text-[12px] md:text-sm font-medium text-slate-400 mt-2 max-w-xl leading-relaxed">
-            Pantau portofolio saham Anda dengan analisis posisi dan modal secara real-time.
-          </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
+        <div className="flex flex-col">
+          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Portofolio Saham</h1>
+          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Periode {months[selectedMonth]} {selectedYear}</p>
         </div>
-        <button 
-          onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2.5 md:px-6 md:py-3 rounded-xl md:rounded-2xl text-[11px] font-black shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all w-full md:w-auto mt-4 md:mt-0"
-        >
-          <PlusCircle size={16} />
-          Tambah Posisi
-        </button>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Month Selector */}
+          <div className="relative">
+            <button
+              onClick={() => { setIsMonthDropdownOpen(!isMonthDropdownOpen); setIsYearDropdownOpen(false); }}
+              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black text-slate-700 flex items-center gap-2 transition-all border border-slate-100 min-w-[120px]"
+            >
+              {months[selectedMonth]}
+              <ChevronDown size={14} className={cn("transition-transform", isMonthDropdownOpen && "rotate-180")} />
+            </button>
+            {isMonthDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-40 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2 max-h-60 overflow-y-auto custom-scrollbar">
+                {months.map((month, idx) => (
+                  <button key={month} onClick={() => { setSelectedMonth(idx); setIsMonthDropdownOpen(false); }}
+                    className={cn("w-full text-left px-4 py-2 text-xs font-bold transition-colors", selectedMonth === idx ? "text-indigo-600 bg-indigo-50" : "text-slate-600 hover:bg-slate-50")}>
+                    {month}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Year Selector */}
+          <div className="relative">
+            <button
+              onClick={() => { setIsYearDropdownOpen(!isYearDropdownOpen); setIsMonthDropdownOpen(false); }}
+              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black text-slate-700 flex items-center gap-2 transition-all border border-slate-100"
+            >
+              {selectedYear}
+              <ChevronDown size={14} className={cn("transition-transform", isYearDropdownOpen && "rotate-180")} />
+            </button>
+            {isYearDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-32 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2">
+                {['2024', '2025', '2026'].map(year => (
+                  <button key={year} onClick={() => { setSelectedYear(year); setIsYearDropdownOpen(false); }}
+                    className={cn("w-full text-left px-4 py-2 text-xs font-bold transition-colors", selectedYear === year ? "text-indigo-600 bg-indigo-50" : "text-slate-600 hover:bg-slate-50")}>
+                    {year}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -165,11 +170,21 @@ export default function StockInvestmentPage() {
         </div>
       </div>
 
+      {/* Filter Bar */}
+      <div className="flex flex-wrap items-center gap-4 bg-white p-3 md:p-2 rounded-[24px] md:rounded-3xl border border-slate-50 shadow-sm">
+        <div className="flex-1 min-w-[200px] relative group">
+          <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Cari kode saham..."
+            className="w-full bg-slate-50/50 border-transparent rounded-xl md:rounded-2xl py-3 md:py-4 pl-12 pr-6 text-sm font-medium focus:ring-0 outline-none transition-all" />
+        </div>
+      </div>
+
       {/* Table */}
       <div className="bg-white rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-sm font-medium text-slate-400">Memuat portofolio...</div>
-        ) : investments.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="p-10">
             <EmptyState title="Portofolio Saham Kosong" description="Tambahkan posisi saham pertama Anda untuk mulai tracking kinerja portofolio." icon={<BarChart3 size={24} />} />
           </div>
@@ -193,7 +208,7 @@ export default function StockInvestmentPage() {
                 </tr>
               </thead>
               <tbody>
-                {investments.map((inv) => (
+                {filtered.map((inv) => (
                   <tr key={inv.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatDate(inv.dateInvested)}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap">
@@ -227,94 +242,6 @@ export default function StockInvestmentPage() {
           </div>
         )}
       </div>
-
-      {/* Modal */}
-      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Tambah Posisi Saham" maxWidth="max-w-lg">
-        <div className="space-y-4 max-h-[75vh] overflow-y-auto px-1 custom-scrollbar">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kode Saham</label>
-              <input type="text" value={formData.stockCode} onChange={e => setFormData(p => ({...p, stockCode: e.target.value}))}
-                placeholder="BBCA, TLKM..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Icon/Logo (URL)</label>
-              <input type="text" value={formData.logoUrl} onChange={e => setFormData(p => ({...p, logoUrl: e.target.value}))}
-                placeholder="https://..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kode Bursa</label>
-              <input type="text" value={formData.exchangeCode} onChange={e => setFormData(p => ({...p, exchangeCode: e.target.value.toUpperCase()}))}
-                placeholder="IDX, NYSE..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mata Uang</label>
-              <input type="text" value={formData.currency} onChange={e => setFormData(p => ({...p, currency: e.target.value.toUpperCase()}))}
-                placeholder="IDR" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jumlah Lembar (Lot x 100)</label>
-              <input type="number" value={formData.sharesCount} onChange={e => setFormData(p => ({...p, sharesCount: e.target.value}))}
-                placeholder="100" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Harga per Lembar</label>
-              <input type="number" value={formData.pricePerShare} onChange={e => setFormData(p => ({...p, pricePerShare: e.target.value}))}
-                placeholder="8000" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Transaksi</label>
-              <input type="text" value={formData.transactionType} onChange={e => setFormData(p => ({...p, transactionType: e.target.value}))}
-                placeholder="Beli / Jual" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kategori</label>
-              <input type="text" value={formData.category} onChange={e => setFormData(p => ({...p, category: e.target.value}))}
-                placeholder="Blue Chip, Growth..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rekening / RDN</label>
-              <input type="text" value={formData.accountId} onChange={e => setFormData(p => ({...p, accountId: e.target.value}))}
-                placeholder="BCA RDN, Mandiri..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Platform Broker</label>
-              <input type="text" value={formData.platform} onChange={e => setFormData(p => ({...p, platform: e.target.value}))}
-                placeholder="Stockbit, Ajaib..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Estimasi Harga Saat Ini</label>
-               <input type="number" value={formData.currentValue} onChange={e => setFormData(p => ({...p, currentValue: e.target.value}))}
-                 placeholder="Sama dgn Harga Beli x Qty" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-             </div>
-             <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
-               <input type="date" value={formData.dateInvested} onChange={e => setFormData(p => ({...p, dateInvested: e.target.value}))}
-                 className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-             </div>
-          </div>
-
-          <button onClick={handleCreate} disabled={!formData.stockCode || !formData.sharesCount || !formData.pricePerShare}
-            className="w-full bg-black disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-6 shadow-xl shadow-slate-200">
-            Simpan Posisi Saham
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }

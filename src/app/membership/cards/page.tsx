@@ -11,11 +11,9 @@ import {
   Building2,
   Smartphone,
   Banknote,
-  Plus,
   Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { accountService, Account } from '@/lib/services/accountService';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
@@ -28,13 +26,6 @@ export default function MyCardsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    type: 'Bank Account' as Account['type'],
-    currency: 'IDR',
-    initialBalance: ''
-  });
 
   const unsubAccRef = useRef<(() => void) | null>(null);
   const unsubTrxRef = useRef<(() => void) | null>(null);
@@ -70,21 +61,6 @@ export default function MyCardsPage() {
       if (unsubTrxRef.current) unsubTrxRef.current(); 
     };
   }, []);
-
-  const handleCreate = async () => {
-    if (!user || !formData.name || !formData.initialBalance) return;
-    try {
-      await accountService.createAccount({
-        userId: user.uid, name: formData.name, type: formData.type,
-        currency: formData.currency,
-        balance: parseFloat(formData.initialBalance),
-        initialBalance: parseFloat(formData.initialBalance)
-      });
-      setIsAddModalOpen(false);
-      setFormData({ name: '', type: 'Bank Account', currency: 'IDR', initialBalance: '' });
-      // onSnapshot akan update otomatis
-    } catch (e) { console.error(e); }
-  };
 
   const totalBalance = useMemo(() => accounts.reduce((s, a) => s + a.balance, 0), [accounts]);
   const totalIn = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0), [transactions]);
@@ -138,7 +114,7 @@ export default function MyCardsPage() {
         <div>
           <h1 className="text-2xl md:text-[28px] font-black text-slate-900 tracking-tight">Kartu Saya</h1>
           <p className="text-[12px] md:text-sm font-medium text-slate-500 mt-1 max-w-lg leading-relaxed">
-            Kelola seluruh aset keuangan dan pantau arus kas Anda dalam satu tampilan.
+            Pantau arus kas Anda dan kelola rekening melalui menu 'Tambah Cepat' di header.
           </p>
         </div>
         <div className="bg-white border border-slate-100 rounded-xl px-6 py-3 shadow-sm text-right">
@@ -220,17 +196,13 @@ export default function MyCardsPage() {
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between px-2">
             <h3 className="text-lg font-black text-slate-900">Daftar Akun</h3>
-            <button onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-1.5 text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline underline-offset-4">
-              <Plus size={12} /> Tambah
-            </button>
           </div>
 
           {loading ? (
             <div className="p-6 text-center text-sm text-slate-400">Memuat akun...</div>
           ) : accounts.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-100 p-6">
-              <EmptyState title="Belum ada rekening" description="Tambah rekening bank atau e-wallet Anda." icon={<Wallet size={20} />} />
+              <EmptyState title="Belum ada rekening" description="Tambah rekening bank melalui menu 'Tambah Cepat' di header." icon={<Wallet size={20} />} />
             </div>
           ) : (
             <div className="space-y-4">
@@ -254,7 +226,6 @@ export default function MyCardsPage() {
                     <button onClick={async () => {
                                 if (acc.id) {
                                   await accountService.deleteAccount(acc.id);
-                                  // onSnapshot handle otomatis
                                 }
                               }}
                       className="p-1.5 rounded-lg bg-slate-50 text-slate-300 opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all">
@@ -310,33 +281,6 @@ export default function MyCardsPage() {
           </div>
         </div>
       </div>
-
-      {/* Modal */}
-      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Tambah Rekening Baru" maxWidth="max-w-md">
-        <div className="space-y-5">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nama Rekening</label>
-            <input type="text" value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))}
-              placeholder="BCA Tabungan..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Akun</label>
-            <select value={formData.type} onChange={e => setFormData(p => ({...p, type: e.target.value as Account['type']}))}
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700">
-              {['Bank Account', 'E-Wallet', 'Cash', 'Investment Account', 'Credit Card'].map(t => <option key={t}>{t}</option>)}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Saldo Awal (Rp)</label>
-            <input type="number" value={formData.initialBalance} onChange={e => setFormData(p => ({...p, initialBalance: e.target.value}))}
-              placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
-          </div>
-          <button onClick={handleCreate} disabled={!formData.name || !formData.initialBalance}
-            className="w-full bg-black disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-4 shadow-xl shadow-slate-200">
-            Simpan Rekening
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }

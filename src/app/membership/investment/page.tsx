@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
+  ChevronDown,
+  TrendingDown,
   TrendingUp, 
-  Plus,
   CheckCircle2,
   Clock,
   Briefcase,
@@ -19,12 +20,19 @@ import { cn } from '@/lib/utils';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { useEffect, useMemo } from 'react';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 
 export default function InvestmentDashboard() {
-  const [selectedMonth, setSelectedMonth] = useState('Februari');
-  const [selectedYear, setSelectedYear] = useState('2024');
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  
+  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
+  const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
+  
+  const months = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
   
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +43,17 @@ export default function InvestmentDashboard() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
-        const qInv = query(collection(db, 'investments'), where('userId', '==', u.uid));
+        // Calculate date range for filtering
+        const startOfMonth = new Date(parseInt(selectedYear), selectedMonth, 1);
+        const endOfMonth = new Date(parseInt(selectedYear), selectedMonth + 1, 0, 23, 59, 59);
+
+        const qInv = query(
+          collection(db, 'investments'), 
+          where('userId', '==', u.uid),
+          where('dateInvested', '>=', startOfMonth),
+          where('dateInvested', '<=', endOfMonth),
+          orderBy('dateInvested', 'desc')
+        );
         unsubInv = onSnapshot(qInv, (snap) => {
           setInvestments(snap.docs.map(doc => {
             const d = doc.data();
@@ -56,7 +74,7 @@ export default function InvestmentDashboard() {
       }
     });
     return () => { unsub(); if (unsubInv) unsubInv(); };
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
   const totalModal = useMemo(() => investments.reduce((sum, i) => sum + i.amountInvested, 0), [investments]);
   const totalAset = useMemo(() => investments.reduce((sum, i) => sum + i.currentValue, 0), [investments]);
@@ -176,23 +194,54 @@ export default function InvestmentDashboard() {
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1400px]">
       
       {/* 1. Header (Title & Controls) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
         <div>
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight">Ringkasan Investasi</h1>
-          <p className="text-[11px] md:text-xs font-medium text-slate-400 mt-1 max-w-lg leading-relaxed">
-            Analisis performa portofolio Anda secara real-time. Data diperbarui berdasarkan penutupan pasar terakhir.
-          </p>
+          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Ringkasan Investasi</h1>
+          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Laporan Portofolio {months[selectedMonth]} {selectedYear}</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-          <div className="flex items-center bg-white border border-slate-100 rounded-lg md:rounded-xl p-1 gap-1 w-full sm:w-auto">
-            <button className="flex-1 sm:flex-none px-4 py-2 text-[11px] font-bold text-slate-600 hover:bg-slate-50 rounded-lg whitespace-nowrap">{selectedMonth}</button>
-            <button className="flex-1 sm:flex-none px-4 py-2 text-[11px] font-bold text-slate-600 hover:bg-slate-50 rounded-lg whitespace-nowrap">{selectedYear}</button>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Month Selector */}
+          <div className="relative">
+            <button
+              onClick={() => { setIsMonthDropdownOpen(!isMonthDropdownOpen); setIsYearDropdownOpen(false); }}
+              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black text-slate-700 flex items-center gap-2 transition-all border border-slate-100 min-w-[120px]"
+            >
+              {months[selectedMonth]}
+              <ChevronDown size={14} className={cn("transition-transform", isMonthDropdownOpen && "rotate-180")} />
+            </button>
+            {isMonthDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-40 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2 max-h-60 overflow-y-auto custom-scrollbar">
+                {months.map((month, idx) => (
+                  <button key={month} onClick={() => { setSelectedMonth(idx); setIsMonthDropdownOpen(false); }}
+                    className={cn("w-full text-left px-4 py-2 text-xs font-bold transition-colors", selectedMonth === idx ? "text-indigo-600 bg-indigo-50" : "text-slate-600 hover:bg-slate-50")}>
+                    {month}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          <button className="flex items-center justify-center gap-2 bg-[#064e3b] text-white px-6 py-3 rounded-xl md:rounded-full text-xs font-black shadow-lg shadow-emerald-900/10 hover:scale-[1.02] active:scale-95 transition-all w-full sm:w-auto">
-            <Plus size={14} />
-            <span className="whitespace-nowrap">Tambah Investasi</span>
-          </button>
+
+          {/* Year Selector */}
+          <div className="relative">
+            <button
+              onClick={() => { setIsYearDropdownOpen(!isYearDropdownOpen); setIsMonthDropdownOpen(false); }}
+              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black text-slate-700 flex items-center gap-2 transition-all border border-slate-100"
+            >
+              {selectedYear}
+              <ChevronDown size={14} className={cn("transition-transform", isYearDropdownOpen && "rotate-180")} />
+            </button>
+            {isYearDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-32 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2">
+                {['2024', '2025', '2026'].map(year => (
+                  <button key={year} onClick={() => { setSelectedYear(year); setIsYearDropdownOpen(false); }}
+                    className={cn("w-full text-left px-4 py-2 text-xs font-bold transition-colors", selectedYear === year ? "text-indigo-600 bg-indigo-50" : "text-slate-600 hover:bg-slate-50")}>
+                    {year}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -441,7 +490,6 @@ export default function InvestmentDashboard() {
         </div>
 
       </div>
-
     </div>
   );
 }

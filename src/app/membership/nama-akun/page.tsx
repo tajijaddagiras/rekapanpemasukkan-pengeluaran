@@ -2,17 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { 
-  Plus, 
-  ChevronDown, 
-  Save, 
-  Filter, 
-  Download, 
   Landmark,
   TrendingDown,
   PiggyBank,
   FolderOpen
 } from 'lucide-react';
-import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { categoryService, Category } from '@/lib/services/categoryService';
 import { auth, db } from '@/lib/firebase';
@@ -24,13 +18,6 @@ export default function NamaAkunPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
-  // Form State
-  const [formData, setFormData] = useState({
-    category: '',
-    subCategory: '',
-  });
 
   const unsubRef = useRef<(() => void) | null>(null);
 
@@ -55,36 +42,17 @@ export default function NamaAkunPage() {
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
   }, []);
 
-  const handleCreate = async () => {
-    if (!user || !formData.category || !formData.subCategory) return;
-    try {
-      await categoryService.createCategory({
-        userId: user.uid,
-        category: formData.category,
-        subCategory: formData.subCategory,
-        status: 'VERIFIED'
-      });
-      setIsAddModalOpen(false);
-      setFormData({ category: '', subCategory: '' });
-      // onSnapshot update otomatis
-    } catch (error) {
-      console.error("Error creating category:", error);
-    }
-  };
-
   return (
     <div className="space-y-8 animate-in fade-in duration-700 max-w-[1400px] mb-12">
       
       {/* 1. Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Nama Akun Transaksi</h1>
-        <button 
-          onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center justify-center gap-2 bg-[#555555] text-white px-8 py-3 md:py-3.5 rounded-xl md:rounded-2xl text-[13px] font-black shadow-xl shadow-slate-200 hover:scale-[1.02] active:scale-95 transition-all w-full md:w-auto"
-        >
-          <Plus size={18} />
-          Tambah Cepat
-        </button>
+        <div>
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Nama Akun Transaksi</h1>
+          <p className="text-[12px] md:text-sm font-medium text-slate-400 mt-2 max-w-xl">
+            Konfigurasi kategori dan subkategori ledger untuk pelaporan keuangan yang lebih terperinci.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -123,7 +91,7 @@ export default function NamaAkunPage() {
                 <div className="p-6">
                   <EmptyState 
                     title="Ledger masih kosong" 
-                    description="Anda belum memiliki kategori khusus. Klik Tambah Cepat untuk membuatnya."
+                    description="Anda belum memiliki kategori khusus. Klik 'Tambah Cepat' di header dan pilih 'Kategori Ledger' untuk membuatnya."
                     icon={<FolderOpen size={24} />}
                   />
                 </div>
@@ -172,7 +140,7 @@ export default function NamaAkunPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-[#f0f5f7] p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-white flex items-center gap-5 shadow-sm">
           <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400 shrink-0">
-            <Landmark size={20} />
+            < Landmark size={20} />
           </div>
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Ledger</p>
@@ -198,53 +166,6 @@ export default function NamaAkunPage() {
           </div>
         </div>
       </div>
-
-      {/* Modal Tambah Kategori */}
-      <Modal 
-        isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
-        title="Konfigurasi Ledger Baru"
-      >
-        <div className="space-y-6">
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kategori Utama</label>
-            <div className="relative">
-              <select 
-                value={formData.category}
-                onChange={(e) => setFormData({...formData, category: e.target.value})}
-                className="w-full appearance-none bg-[#e9f0f4] border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer"
-              >
-                <option value="">Pilih Kategori</option>
-                <option value="Makanan">Makanan</option>
-                <option value="Transport">Transport</option>
-                <option value="Tagihan">Tagihan</option>
-                <option value="Belanja">Belanja</option>
-                <option value="Hiburan">Hiburan</option>
-              </select>
-              <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-            </div>
-          </div>
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Subkategori Spesifik</label>
-            <input 
-              type="text" 
-              value={formData.subCategory}
-              onChange={(e) => setFormData({...formData, subCategory: e.target.value})}
-              placeholder="Contoh: Bensin Kendaraan"
-              className="w-full bg-[#e9f0f4] border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all"
-            />
-          </div>
-          <button 
-            onClick={handleCreate}
-            disabled={!formData.category || !formData.subCategory}
-            className="w-full bg-slate-900 disabled:bg-slate-300 text-white flex items-center justify-center gap-3 py-4 rounded-xl text-xs font-black transition-all mt-6 shadow-xl shadow-slate-200"
-          >
-            <Save size={16} />
-            Simpan Konfigurasi
-          </button>
-        </div>
-      </Modal>
-
     </div>
   );
 }

@@ -8,37 +8,35 @@ import {
   Banknote,
   Trash2,
   Calendar,
-  CheckCircle2
+  CheckCircle2,
+  ChevronDown,
+  Plus
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { useRef } from 'react';
+import { AddTransactionModal } from '@/components/AddTransactionModal';
 
 export default function DebtPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const [formData, setFormData] = useState({
-    debtType: 'hutang' as 'hutang' | 'piutang',
-    amount: '',
-    currency: 'IDR',
-    lenderName: '',
-    note: '',
-    accountId: '',
-    installmentTenor: '',
-    monthlyInterest: '',
-    totalInterest: '',
-    totalDebt: '',
-    date: new Date().toISOString().split('T')[0],
-    displayDate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
-  });
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
+  const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
+
+  const months = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
 
   const unsubRef = useRef<(() => void) | null>(null);
 
@@ -46,10 +44,16 @@ export default function DebtPage() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
+        const startOfMonth = new Date(parseInt(selectedYear), selectedMonth, 1);
+        const endOfMonth = new Date(parseInt(selectedYear), selectedMonth + 1, 0, 23, 59, 59);
+
         const q = query(
           collection(db, 'transactions'), 
           where('userId', '==', u.uid),
-          where('type', '==', 'debt')
+          where('type', '==', 'debt'),
+          where('date', '>=', startOfMonth),
+          where('date', '<=', endOfMonth),
+          orderBy('date', 'desc')
         );
         if (unsubRef.current) unsubRef.current();
         unsubRef.current = onSnapshot(q, (snap) => {
@@ -65,39 +69,7 @@ export default function DebtPage() {
       } else { setTransactions([]); setLoading(false); }
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
-  }, []);
-
-  const handleCreate = async () => {
-    if (!user || !formData.amount) return;
-    try {
-      await transactionService.createTransaction({
-        userId: user.uid,
-        type: 'debt',
-        amount: parseFloat(formData.amount),
-        currency: formData.currency,
-        category: formData.debtType === 'hutang' ? 'Hutang' : 'Piutang',
-        subCategory: formData.debtType === 'hutang' ? 'Hutang' : 'Piutang',
-        lenderName: formData.lenderName,
-        note: formData.note,
-        accountId: formData.accountId || 'General',
-        installmentTenor: parseInt(formData.installmentTenor) || 0,
-        monthlyInterest: parseFloat(formData.monthlyInterest) || 0,
-        totalInterest: parseFloat(formData.totalInterest) || 0,
-        totalDebt: parseFloat(formData.totalDebt) || 0,
-        date: new Date(formData.date),
-        displayDate: formData.displayDate,
-        status: 'PENDING'
-      });
-      setIsAddModalOpen(false);
-      setFormData({ 
-        debtType: 'hutang', amount: '', currency: 'IDR', lenderName: '', note: '', accountId: '', 
-        installmentTenor: '', monthlyInterest: '', totalInterest: '', totalDebt: '', 
-        date: new Date().toISOString().split('T')[0],
-        displayDate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
-      });
-      // onSnapshot update otomatis
-    } catch (e) { console.error(e); }
-  };
+  }, [selectedMonth, selectedYear]);
 
   const filtered = useMemo(() => {
     if (!searchQuery) return transactions;
@@ -117,20 +89,55 @@ export default function DebtPage() {
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
       
       {/* 1. Header */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Hutang & Piutang</h1>
-          <p className="text-[12px] md:text-sm font-medium text-slate-400 mt-2 max-w-xl leading-relaxed">
-            Lacak kewajiban pembayaran dan dana yang dipinjamkan kepada orang lain secara terorganisir.
-          </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
+        <div className="flex flex-col">
+          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Hutang & Piutang</h1>
+          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Periode {months[selectedMonth]} {selectedYear}</p>
         </div>
-        <button 
-          onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2.5 md:px-6 md:py-3 rounded-xl md:rounded-2xl text-[12px] font-black shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all w-full md:w-auto mt-4 md:mt-0"
-        >
-          <PlusCircle size={16} />
-          Catatan Baru
-        </button>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Month Selector */}
+          <div className="relative">
+            <button
+              onClick={() => { setIsMonthDropdownOpen(!isMonthDropdownOpen); setIsYearDropdownOpen(false); }}
+              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black text-slate-700 flex items-center gap-2 transition-all border border-slate-100 min-w-[120px]"
+            >
+              {months[selectedMonth]}
+              <ChevronDown size={14} className={cn("transition-transform", isMonthDropdownOpen && "rotate-180")} />
+            </button>
+            {isMonthDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-40 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2 max-h-60 overflow-y-auto custom-scrollbar">
+                {months.map((month, idx) => (
+                  <button key={month} onClick={() => { setSelectedMonth(idx); setIsMonthDropdownOpen(false); }}
+                    className={cn("w-full text-left px-4 py-2 text-xs font-bold transition-colors", selectedMonth === idx ? "text-indigo-600 bg-indigo-50" : "text-slate-600 hover:bg-slate-50")}>
+                    {month}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Year Selector */}
+          <div className="relative">
+            <button
+              onClick={() => { setIsYearDropdownOpen(!isYearDropdownOpen); setIsMonthDropdownOpen(false); }}
+              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black text-slate-700 flex items-center gap-2 transition-all border border-slate-100"
+            >
+              {selectedYear}
+              <ChevronDown size={14} className={cn("transition-transform", isYearDropdownOpen && "rotate-180")} />
+            </button>
+            {isYearDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-32 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2">
+                {['2024', '2025', '2026'].map(year => (
+                  <button key={year} onClick={() => { setSelectedYear(year); setIsYearDropdownOpen(false); }}
+                    className={cn("w-full text-left px-4 py-2 text-xs font-bold transition-colors", selectedYear === year ? "text-indigo-600 bg-indigo-50" : "text-slate-600 hover:bg-slate-50")}>
+                    {year}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* 2. Stats Cards */}
@@ -266,101 +273,6 @@ export default function DebtPage() {
           </>
         )}
       </div>
-
-      {/* Modal */}
-      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Catat Hutang / Piutang" maxWidth="max-w-lg">
-        <div className="space-y-4 max-h-[75vh] overflow-y-auto px-1 custom-scrollbar">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe</label>
-            <div className="grid grid-cols-2 gap-3">
-              {(['hutang', 'piutang'] as const).map(type => (
-                <button key={type} type="button" onClick={() => setFormData(p => ({...p, debtType: type}))}
-                  className={`py-3 rounded-xl text-sm font-black capitalize transition-all ${
-                    formData.debtType === type
-                      ? type === 'hutang' ? 'bg-rose-500 text-white shadow-lg shadow-rose-100' : 'bg-emerald-600 text-white shadow-lg shadow-emerald-100'
-                      : 'bg-slate-50 text-slate-500'
-                  }`}
-                >{type}</button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal Pokok</label>
-              <input type="number" value={formData.amount} onChange={e => setFormData(p => ({...p, amount: e.target.value}))}
-                placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-            <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mata Uang</label>
-               <input type="text" value={formData.currency} onChange={e => setFormData(p => ({...p, currency: e.target.value.toUpperCase()}))}
-                placeholder="IDR" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Pemberi / Penerima</label>
-              <input type="text" value={formData.lenderName} onChange={e => setFormData(p => ({...p, lenderName: e.target.value}))}
-                placeholder="Nama orang/bank..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rekening Terkait</label>
-              <input type="text" value={formData.accountId} onChange={e => setFormData(p => ({...p, accountId: e.target.value}))}
-                placeholder="BCA, Mandiri..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tenor (Bln)</label>
-              <input type="number" value={formData.installmentTenor} onChange={e => setFormData(p => ({...p, installmentTenor: e.target.value}))}
-                placeholder="12" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Bunga / Bln</label>
-              <input type="number" value={formData.monthlyInterest} onChange={e => setFormData(p => ({...p, monthlyInterest: e.target.value}))}
-                placeholder="100000" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Total Bunga</label>
-              <input type="number" value={formData.totalInterest} onChange={e => setFormData(p => ({...p, totalInterest: e.target.value}))}
-                placeholder="1200000" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Total Hutang</label>
-              <input type="number" value={formData.totalDebt} onChange={e => setFormData(p => ({...p, totalDebt: e.target.value}))}
-                placeholder="Nominal + Total Bunga" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
-              <input type="date" value={formData.date} onChange={e => setFormData(p => ({...p, date: e.target.value}))}
-                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal Display</label>
-               <input type="text" value={formData.displayDate} onChange={e => setFormData(p => ({...p, displayDate: e.target.value}))}
-                placeholder="14 April 2024" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Deskripsi</label>
-              <input type="text" value={formData.note} onChange={e => setFormData(p => ({...p, note: e.target.value}))}
-                placeholder="Keterangan tambahan..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-            </div>
-          </div>
-
-          <button onClick={handleCreate} disabled={!formData.amount}
-            className="w-full bg-black disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-4 shadow-xl shadow-slate-200">
-            Simpan Catatan
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }
