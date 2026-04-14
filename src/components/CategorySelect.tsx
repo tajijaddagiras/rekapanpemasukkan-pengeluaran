@@ -3,24 +3,39 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
 
-interface Option {
-  label: string;
-  value: string;
+interface CategoryData {
+  id: string;
+  category: string;
+  subCategory: string;
 }
-
-const options: Option[] = [
-  { label: 'Gaji Pokok', value: 'gaji' },
-  { label: 'Bonus Tahunan', value: 'bonus' },
-  { label: 'Hasil Investasi', value: 'investasi' },
-  { label: 'Makan & Minum', value: 'makan' },
-  { label: 'Transportasi', value: 'transport' },
-  { label: 'Sewa & Cicilan', value: 'rent' },
-];
 
 export const CategorySelect = ({ label, value, type, onChange, showBadge = true }: { label: string, value: string, type: 'income' | 'expense', onChange: (val: string) => void, showBadge?: boolean }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [categories, setCategories] = useState<CategoryData[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const q = query(collection(db, 'categories'), where('userId', '==', user.uid));
+    const unsub = onSnapshot(q, (snap) => {
+      setCategories(snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as CategoryData)));
+    });
+
+    return () => unsub();
+  }, []);
+
+  const options = categories.map(c => ({
+    label: `${c.category} - ${c.subCategory}`,
+    value: c.id
+  }));
 
   const selectedOption = options.find(opt => opt.value === value);
 

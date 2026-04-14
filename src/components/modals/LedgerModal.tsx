@@ -43,24 +43,13 @@ export const LedgerModal = ({ isOpen, onClose, userId }: LedgerModalProps) => {
       <div className="space-y-6">
         <div className="space-y-3">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kategori Utama</label>
-          <div className="relative">
-            <select 
-              value={formData.category}
-              onChange={(e) => setFormData({...formData, category: e.target.value})}
-              className="w-full appearance-none bg-[#e9f0f4] border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all cursor-pointer"
-            >
-              <option value="">Pilih Kategori</option>
-              <option value="Makanan">Makanan</option>
-              <option value="Transport">Transport</option>
-              <option value="Tagihan">Tagihan</option>
-              <option value="Belanja">Belanja</option>
-              <option value="Hiburan">Hiburan</option>
-              <option value="Gaji">Gaji</option>
-              <option value="Bonus">Bonus</option>
-              <option value="Lain-lain">Lain-lain</option>
-            </select>
-            <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-          </div>
+          <input 
+            type="text" 
+            value={formData.category}
+            onChange={(e) => setFormData({...formData, category: e.target.value})}
+            placeholder="Contoh: Kebutuhan Hiburan"
+            className="w-full bg-[#e9f0f4] border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all"
+          />
         </div>
         <div className="space-y-3">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Subkategori Spesifik</label>
