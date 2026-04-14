@@ -15,30 +15,32 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    type: 'Credit Card', // Manual text input, but defaulted to Credit Card
+    type: 'Credit Card',
     logoUrl: '',
-    uangMasuk: '', // Mapping to initialBalance
-    uangKeluar: ''  // Mapping to balance
+    initialBalance: '', 
+    baseValue: ''
   });
 
   const handleCreate = async () => {
     if (!userId || !formData.name) return;
     setLoading(true);
     try {
+      const initialBal = parseFloat(formData.initialBalance) || 0;
+      const isCard = formData.type === 'Credit Card' || formData.type === 'kartu';
       await accountService.createAccount({
         userId: userId,
         name: formData.name,
         type: formData.type,
         logoUrl: formData.logoUrl,
         currency: 'IDR',
-        initialBalance: parseFloat(formData.uangMasuk) || 0,
-        balance: parseFloat(formData.uangKeluar) || (parseFloat(formData.uangMasuk) || 0),
-        baseValue: 0
+        initialBalance: initialBal,
+        balance: isCard ? 0 : initialBal, // Cards start with 0 bill/balance, others start with initialBal
+        baseValue: parseFloat(formData.baseValue) || 0
       });
-      setFormData({ name: '', type: 'Credit Card', logoUrl: '', uangMasuk: '', uangKeluar: '' });
+      setFormData({ name: '', type: 'Credit Card', logoUrl: '', initialBalance: '', baseValue: '' });
       onClose();
     } catch (error) {
-      console.error("Error creating card:", error);
+      console.error("Error creating card/account:", error);
     } finally {
       setLoading(false);
     }
@@ -89,27 +91,27 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
             />
           </div>
 
-          {/* Uang Masuk */}
+          {/* Saldo Sekarang / Awal */}
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 text-emerald-500">Uang Masuk</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 text-emerald-500">Saldo Sekarang</label>
             <input 
               type="number" 
-              value={formData.uangMasuk}
-              onChange={(e) => setFormData({...formData, uangMasuk: e.target.value})}
+              value={formData.initialBalance}
+              onChange={(e) => setFormData({...formData, initialBalance: e.target.value})}
               placeholder="0"
               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-emerald-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
             />
           </div>
 
-          {/* Uang Keluar */}
+          {/* Nilai Base */}
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 text-rose-500">Uang Keluar</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 text-blue-500">Nilai Base</label>
             <input 
               type="number" 
-              value={formData.uangKeluar}
-              onChange={(e) => setFormData({...formData, uangKeluar: e.target.value})}
+              value={formData.baseValue}
+              onChange={(e) => setFormData({...formData, baseValue: e.target.value})}
               placeholder="0"
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-rose-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
             />
           </div>
         </div>

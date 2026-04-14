@@ -37,7 +37,6 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
     { id: 'budget_target', label: 'Budget dan Target', icon: Target, color: 'text-teal-600' },
     { id: 'recurring', label: 'Recurring', icon: RefreshCw, color: 'text-slate-600' },
     { id: 'ledger', label: 'Kategori Ledger', icon: Target, color: 'text-blue-900' },
-    { id: 'rekening', label: 'Rekening Baru', icon: CreditCard, color: 'text-blue-600' },
     { id: 'kartu', label: 'Kartu Baru', icon: CreditCard, color: 'text-rose-600' },
   ];
 

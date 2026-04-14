@@ -62,32 +62,37 @@ export default function MyCardsPage() {
     };
   }, []);
 
-  const totalBalance = useMemo(() => accounts.reduce((s, a) => s + a.balance, 0), [accounts]);
-  
   const totalIn = useMemo(() => {
-    const trxIn = transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0);
-    const accIn = accounts.reduce((s, a) => s + (a.initialBalance || 0), 0);
-    return trxIn + accIn;
-  }, [transactions, accounts]);
+    return transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0);
+  }, [transactions]);
 
   const totalOut = useMemo(() => {
-    const trxOut = transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0);
-    const accOut = accounts.filter(a => a.type === 'Credit Card').reduce((s, a) => s + (a.balance || 0), 0);
-    // For normal accounts, we don't necessarily count balance as 'Out' unless it's a debt.
-    // In the user's CardModal, 'Uang Keluar' is saved to 'balance' for a card.
-    return trxOut + accOut;
-  }, [transactions, accounts]);
+    return transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0);
+  }, [transactions]);
+
+  const combinedInitial = useMemo(() => {
+    return accounts.reduce((s, a) => s + (a.initialBalance || 0), 0);
+  }, [accounts]);
+
+  const totalBalance = useMemo(() => {
+    return combinedInitial + totalIn - totalOut;
+  }, [combinedInitial, totalIn, totalOut]);
+
+  const totalGlobalDebt = useMemo(() => {
+    return transactions.filter(t => t.type === 'debt' && t.category === 'Hutang').reduce((s, t) => s + t.amount, 0);
+  }, [transactions]);
 
   const creditCardStats = useMemo(() => {
-    const ccAccounts = accounts.filter(a => a.type === 'Credit Card');
+    const ccAccounts = accounts.filter(a => a.type === 'Credit Card' || a.type === 'kartu');
     const totalLimit = ccAccounts.reduce((s, a) => s + (a.initialBalance || 0), 0);
-    const totalBill = ccAccounts.reduce((s, a) => s + (a.balance || 0), 0);
+    // Use totalGlobalDebt instead of account balance for the bill percentage
+    const totalBill = totalGlobalDebt;
     return {
       totalLimit,
       totalBill,
       remainingLimit: Math.max(0, totalLimit - totalBill)
     };
-  }, [accounts]);
+  }, [accounts, totalGlobalDebt]);
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
 

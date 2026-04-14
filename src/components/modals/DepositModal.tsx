@@ -5,6 +5,7 @@ import { Save, ChevronDown } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { investmentService } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
+import { CategorySelect } from '@/components/CategorySelect';
 
 interface DepositModalProps {
   userId: string;
@@ -131,6 +132,17 @@ export const DepositModal = ({ userId, isOpen, onClose }: DepositModalProps) => 
             <input type="date" value={formData.dateInvested} onChange={e => setFormData(p => ({...p, dateInvested: e.target.value}))}
               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
           </div>
+        </div>
+
+        {/* Kategori */}
+        <div className="space-y-2">
+          <CategorySelect 
+            label="Kategori Deposito"
+            value={formData.category}
+            type="expense" // Deposito is technically an outflow/allocation, so 'expense' category list or similar
+            onChange={(val) => setFormData(p => ({...p, category: val}))}
+            showBadge={false}
+          />
         </div>
 
         <button onClick={handleCreate} disabled={loading || !formData.name || !formData.amountInvested}
