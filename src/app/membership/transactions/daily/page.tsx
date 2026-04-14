@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   PlusCircle, 
   Search, 
@@ -8,19 +8,91 @@ import {
   ChevronDown, 
   SlidersHorizontal,
   ArrowUpRight,
-  TrendingUp,
+  ArrowDownRight,
   Wallet,
-  Minus,
+  Trash2,
   Copy,
-  Trash2
+  TrendingUp
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Modal } from '@/components/ui/Modal';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { transactionService, Transaction } from '@/lib/services/transactionService';
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { useRef } from 'react';
 
 export default function DailyTransactionLogPage() {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const [formData, setFormData] = useState({
+    type: 'pemasukan' as 'pemasukan' | 'pengeluaran',
+    category: '',
+    amount: '',
+    accountId: '',
+    note: '',
+    date: new Date().toISOString().split('T')[0]
+  });
+
+  const unsubRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (u) {
+        const q = query(collection(db, 'transactions'), where('userId', '==', u.uid));
+        if (unsubRef.current) unsubRef.current();
+        unsubRef.current = onSnapshot(q, (snap) => {
+          setTransactions(snap.docs.map(doc => {
+            const d = doc.data();
+            return {
+              ...d, id: doc.id, amount: Number(d.amount) || 0,
+              date: d.date?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date()
+            } as Transaction;
+          }));
+          setLoading(false);
+        }, (err) => { console.error(err); setLoading(false); });
+      } else { setTransactions([]); setLoading(false); }
+    });
+    return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
+  }, []);
+
+  const handleCreate = async () => {
+    if (!user || !formData.amount || !formData.category) return;
+    try {
+      await transactionService.createTransaction({
+        userId: user.uid, type: formData.type, amount: parseFloat(formData.amount),
+        category: formData.category, accountId: formData.accountId || 'General',
+        date: new Date(formData.date), note: formData.note, status: 'VERIFIED'
+      });
+      setIsAddModalOpen(false);
+      setFormData({ type: 'pemasukan', category: '', amount: '', accountId: '', note: '', date: new Date().toISOString().split('T')[0] });
+      // onSnapshot update otomatis
+    } catch (e) { console.error(e); }
+  };
+
+  const filtered = useMemo(() => {
+    if (!searchQuery) return transactions;
+    return transactions.filter(t =>
+      t.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (t.note || '').toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [transactions, searchQuery]);
+
+  const totalPemasukan = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0), [transactions]);
+  const totalPengeluaran = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0), [transactions]);
+
+  const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 2 }).format(n).replace('Rp', '').trim();
+  const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
       
-      {/* 1. Header Section */}
+      {/* 1. Header */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
         <div>
           <h1 className="text-2xl md:text-4xl font-black text-slate-900 tracking-tight">Transaksi Harian</h1>
@@ -28,235 +100,202 @@ export default function DailyTransactionLogPage() {
             Lacak dan kelola aliran keuangan Anda dengan presisi editorial dan kejelasan mutlak.
           </p>
         </div>
-        
-        <div className="flex flex-col md:items-end w-full md:w-auto mt-4 md:mt-0">
-          <button className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2.5 md:px-6 md:py-3 rounded-xl md:rounded-2xl text-[12px] md:text-[11px] font-black shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all w-full md:w-auto">
-            <PlusCircle size={16} />
-            Tambah Cepat
-          </button>
-        </div>
+        <button 
+          onClick={() => setIsAddModalOpen(true)}
+          className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2.5 md:px-6 md:py-3 rounded-xl md:rounded-2xl text-[12px] font-black shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all w-full md:w-auto mt-4 md:mt-0"
+        >
+          <PlusCircle size={16} />
+          Tambah Cepat
+        </button>
       </div>
 
-      {/* 2. Top Status Cards */}
+      {/* 2. Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        {/* Total Data */}
-        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 md:gap-6 relative">
+        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Data</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl md:text-4xl font-black text-slate-900">2</span>
-            <span className="text-[10px] md:text-xs font-bold text-slate-400">Transaksi</span>
+            <span className="text-3xl md:text-4xl font-black text-slate-900">{loading ? '-' : transactions.length}</span>
+            <span className="text-xs font-bold text-slate-400">Transaksi</span>
           </div>
-          <div className="h-1 w-full bg-slate-50 rounded-full overflow-hidden">
-            <div className="h-full bg-slate-900 w-1/3" />
-          </div>
+          <div className="h-1 w-full bg-slate-50 rounded-full"><div className="h-full bg-slate-900 rounded-full" style={{ width: transactions.length > 0 ? '60%' : '0%' }} /></div>
         </div>
 
-        {/* Pemasukan */}
-        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 md:gap-6 relative overflow-hidden group">
+        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 relative overflow-hidden group">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pemasukan</p>
           <div>
-            <h3 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">Rp 4.000.000</h3>
-            <p className="text-[9px] md:text-[10px] font-bold text-emerald-500 mt-1 uppercase tracking-wider">+12.5% vs bulan lalu</p>
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">Rp {formatRp(totalPemasukan)}</h3>
           </div>
           <ArrowUpRight size={32} className="absolute right-5 top-1/2 -translate-y-1/2 text-emerald-100 group-hover:scale-110 transition-transform" />
         </div>
 
-        {/* Pengeluaran */}
-        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 md:gap-6 relative">
+        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 relative overflow-hidden group">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pengeluaran</p>
           <div>
-            <h3 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">Rp 0</h3>
-            <p className="text-[9px] md:text-[10px] font-medium text-slate-400 mt-1">Belum ada pengeluaran</p>
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">Rp {formatRp(totalPengeluaran)}</h3>
           </div>
-          <div className="w-8 h-[2px] bg-slate-100" />
+          <ArrowDownRight size={32} className="absolute right-5 top-1/2 -translate-y-1/2 text-rose-100 group-hover:scale-110 transition-transform" />
         </div>
 
-        {/* Filter Aktif */}
-        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 md:gap-6 relative">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filter Aktif</p>
-          <div className="flex flex-wrap gap-1.5 md:gap-2">
-            <span className="px-2.5 md:px-3 py-1 md:py-1.5 bg-blue-50 text-blue-600 text-[8px] font-black rounded-lg uppercase tracking-widest">Februari 2024</span>
-            <span className="px-2.5 md:px-3 py-1 md:py-1.5 bg-slate-50 text-slate-400 text-[8px] font-black rounded-lg uppercase tracking-widest">All Type</span>
+        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Bersih</p>
+          <div className="flex items-baseline gap-2">
+            <h3 className={`text-xl md:text-2xl font-black leading-tight ${totalPemasukan - totalPengeluaran >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+              Rp {formatRp(totalPemasukan - totalPengeluaran)}
+            </h3>
           </div>
-          <button className="text-[9px] font-black text-slate-300 uppercase tracking-widest text-left hover:text-rose-500 transition-colors w-fit">Clear All</button>
         </div>
       </div>
 
       {/* 3. Filter Bar */}
-      <div className="flex flex-wrap items-center gap-4 bg-white p-3 md:p-2 rounded-[24px] md:rounded-3xl border border-slate-50 shadow-sm">
-        <div className="w-full md:flex-1 md:w-auto md:min-w-[280px] relative group">
+      <div className="flex flex-wrap items-center gap-4 bg-white p-3 rounded-[24px] md:rounded-3xl border border-slate-50 shadow-sm">
+        <div className="w-full md:flex-1 relative group">
           <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
           <input 
             type="text" 
-            placeholder="Cari deskripsi atau nominal..." 
-            className="w-full bg-slate-50/50 border-transparent focus:border-blue-100 focus:bg-white rounded-[16px] md:rounded-2xl py-3.5 md:py-4 pl-12 md:pl-14 pr-6 text-sm font-medium transition-all"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Cari kategori atau catatan..." 
+            className="w-full bg-slate-50/50 border-transparent focus:border-blue-100 focus:bg-white rounded-[16px] md:rounded-2xl py-3.5 pl-12 pr-6 text-sm font-medium transition-all"
           />
         </div>
-
-        <div className="h-10 w-[1px] bg-slate-100 hidden md:block" />
-
-        <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
-          <div className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white border border-slate-100 rounded-[14px] md:rounded-2xl px-4 py-3 text-[11px] md:text-xs font-bold text-slate-600">
-            <Calendar size={14} className="text-slate-400 hidden xs:block" />
-            <span>12/02/2024</span>
-          </div>
-          <button className="flex items-center gap-2 bg-white border border-slate-100 rounded-[14px] md:rounded-2xl px-4 py-3 text-[11px] md:text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
-            Feb <span className="hidden xs:inline">ruari</span> <ChevronDown size={14} />
-          </button>
-          <button className="flex items-center gap-2 bg-white border border-slate-100 rounded-[14px] md:rounded-2xl px-4 py-3 text-[11px] md:text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
-            2024 <ChevronDown size={14} />
-          </button>
-          <button className="flex items-center gap-2 bg-white border border-slate-100 rounded-[14px] md:rounded-2xl px-4 py-3 text-[11px] md:text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
-            Tipe <ChevronDown size={14} className="hidden xs:block" />
-          </button>
-          <button className="w-[42px] h-[42px] md:w-12 md:h-12 rounded-[14px] md:rounded-2xl bg-slate-50 border border-slate-100 flexitems-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center shrink-0">
-            <SlidersHorizontal size={16} />
-          </button>
-        </div>
       </div>
 
-      {/* 4. Data Table Section */}
+      {/* 4. Table */}
       <div className="bg-white rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left border-collapse min-w-[1100px] xl:min-w-0">
-            <thead>
-              <tr className="border-b border-slate-50">
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Mata Uang</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Nominal</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kategori</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Rekening</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Tenor</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Bunga/Bln</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Total Bunga</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Row 1 */}
-              <tr className="group hover:bg-slate-50/50 transition-colors">
-                <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
-                  <p className="text-xs md:text-sm font-black text-slate-900">12 Feb 2024</p>
-                  <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase mt-0.5">14:20 WIB</p>
-                </td>
-                <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
-                  <p className="text-xs md:text-sm font-bold text-slate-900">Gaji Bulanan</p>
-                  <span className="text-[8px] md:text-[9px] font-black text-blue-600 uppercase tracking-widest">Income</span>
-                </td>
-                <td className="px-8 py-6 text-center whitespace-nowrap">
-                  <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[8px] font-black rounded uppercase tracking-widest">IDR</span>
-                </td>
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <p className="text-sm font-black text-blue-600 tracking-tight">4.000.000,00</p>
-                </td>
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-white transition-colors">
-                      <Wallet size={14} />
-                    </div>
-                    <span className="text-xs font-bold text-slate-600">Main Salary</span>
-                  </div>
-                </td>
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-[8px] font-black text-white">
-                      BCA
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-900">Tabungan Utama</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-8 py-6 text-center whitespace-nowrap">
-                  <Minus size={14} className="mx-auto text-slate-300" />
-                </td>
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <p className="text-sm font-black text-slate-900">Rp 0</p>
-                </td>
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <p className="text-sm font-black text-slate-900">Rp 0</p>
-                </td>
-                <td className="px-4 md:px-8 py-5 md:py-6 whitespace-nowrap">
-                  <div className="flex items-center justify-center gap-2">
-                    <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all" title="Duplikat">
-                      <Copy size={14} />
-                    </button>
-                    <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all" title="Hapus">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-
-              {/* Row 2 */}
-              <tr className="group hover:bg-slate-50/50 transition-colors">
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <p className="text-sm font-black text-slate-900">10 Feb 2024</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">09:15 WIB</p>
-                </td>
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <p className="text-sm font-bold text-slate-900">Bonus Project X</p>
-                  <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Income</span>
-                </td>
-                <td className="px-8 py-6 text-center whitespace-nowrap">
-                  <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[8px] font-black rounded uppercase tracking-widest">IDR</span>
-                </td>
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <p className="text-sm font-black text-blue-600 tracking-tight">1.500.000,00</p>
-                </td>
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-white transition-colors">
-                      <TrendingUp size={14} />
-                    </div>
-                    <span className="text-xs font-bold text-slate-600">Bonus</span>
-                  </div>
-                </td>
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-[8px] font-black text-white">
-                      BCA
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-900">Tabungan Utama</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-8 py-6 text-center whitespace-nowrap">
-                  <Minus size={14} className="mx-auto text-slate-300" />
-                </td>
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <p className="text-sm font-black text-slate-900">Rp 0</p>
-                </td>
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <p className="text-sm font-black text-slate-900">Rp 0</p>
-                </td>
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <div className="flex items-center justify-center gap-2">
-                    <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all" title="Duplikat">
-                      <Copy size={14} />
-                    </button>
-                    <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all" title="Hapus">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* 5. Footer Table (Pagination) */}
-        <div className="px-5 md:px-8 py-5 md:py-6 bg-slate-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4 border-t border-slate-50">
-          <p className="text-[10px] md:text-[11px] font-bold text-slate-400 text-center md:text-left">Menampilkan 2 dari 2 transaksi</p>
-          <div className="grid grid-cols-2 gap-2 w-full md:w-auto">
-            <button className="px-4 md:px-5 py-2.5 bg-white border border-slate-100 rounded-xl text-[10px] font-black text-slate-300 uppercase tracking-widest cursor-not-allowed w-full">Sebelumnya</button>
-            <button className="px-4 md:px-5 py-2.5 bg-white border border-slate-100 rounded-xl text-[10px] font-black text-slate-300 uppercase tracking-widest cursor-not-allowed w-full">Berikutnya</button>
+        {loading ? (
+          <div className="p-12 text-center text-sm font-medium text-slate-400">Memuat transaksi...</div>
+        ) : filtered.length === 0 ? (
+          <div className="p-10">
+            <EmptyState 
+              title="Belum ada transaksi"
+              description="Catat pemasukan atau pengeluaran pertama Anda dengan klik tombol Tambah Cepat di atas."
+              icon={<TrendingUp size={24} />}
+            />
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left border-collapse min-w-[900px] xl:min-w-0">
+                <thead>
+                  <tr className="border-b border-slate-50">
+                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
+                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi / Catatan</th>
+                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kategori</th>
+                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Nominal</th>
+                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Tipe</th>
+                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((trx) => (
+                    <tr key={trx.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
+                      <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
+                        <p className="text-xs md:text-sm font-black text-slate-900">{formatDate(trx.date)}</p>
+                      </td>
+                      <td className="px-5 md:px-8 py-4 md:py-6">
+                        <p className="text-xs md:text-sm font-bold text-slate-700">{trx.note || '—'}</p>
+                      </td>
+                      <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
+                            <Wallet size={14} />
+                          </div>
+                          <span className="text-xs font-bold text-slate-600">{trx.category}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 md:px-8 py-4 md:py-6 text-right whitespace-nowrap">
+                        <p className={`text-sm font-black tracking-tight ${trx.type === 'pemasukan' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                          {trx.type === 'pemasukan' ? '+' : '-'} {formatRp(trx.amount)}
+                        </p>
+                      </td>
+                      <td className="px-5 md:px-8 py-4 md:py-6 text-center whitespace-nowrap">
+                        <span className={`px-3 py-1.5 rounded-full text-[8px] font-black tracking-widest uppercase ${
+                          trx.type === 'pemasukan' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'
+                        }`}>
+                          {trx.type === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}
+                        </span>
+                      </td>
+                      <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-2">
+                          <button 
+                            onClick={async () => {
+                              if (trx.id) {
+                                await transactionService.deleteTransaction(trx.id);
+                              }
+                            }}
+                            className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-5 md:px-8 py-5 md:py-6 bg-slate-50/30 flex items-center justify-between gap-4 border-t border-slate-50">
+              <p className="text-[11px] font-bold text-slate-400">
+                Menampilkan {filtered.length} dari {transactions.length} transaksi
+              </p>
+            </div>
+          </>
+        )}
       </div>
 
+      {/* Modal Tambah Transaksi */}
+      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Tambah Transaksi Baru" maxWidth="max-w-lg">
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe Transaksi</label>
+            <div className="grid grid-cols-2 gap-3">
+              {(['pemasukan', 'pengeluaran'] as const).map(type => (
+                <button
+                  key={type}
+                  onClick={() => setFormData(p => ({...p, type}))}
+                  className={`py-3 rounded-xl text-sm font-black capitalize transition-all ${
+                    formData.type === type
+                      ? type === 'pemasukan' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-100' : 'bg-rose-500 text-white shadow-lg shadow-rose-100'
+                      : 'bg-slate-50 text-slate-500'
+                  }`}
+                >{type}</button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
+            <div className="relative">
+              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
+              <input type="number" value={formData.amount} onChange={e => setFormData(p => ({...p, amount: e.target.value}))}
+                placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 pl-12 pr-5 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Kategori</label>
+            <input type="text" value={formData.category} onChange={e => setFormData(p => ({...p, category: e.target.value}))}
+              placeholder="Makanan, Transport, Gaji..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
+            <input type="date" value={formData.date} onChange={e => setFormData(p => ({...p, date: e.target.value}))}
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Catatan (Opsional)</label>
+            <input type="text" value={formData.note} onChange={e => setFormData(p => ({...p, note: e.target.value}))}
+              placeholder="Deskripsi singkat..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+          </div>
+
+          <button onClick={handleCreate} disabled={!formData.amount || !formData.category}
+            className="w-full bg-black disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-6 shadow-xl shadow-slate-200">
+            Simpan Transaksi
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

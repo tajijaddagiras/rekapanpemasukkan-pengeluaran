@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   TrendingUp, 
   WalletCards, 
@@ -8,9 +8,129 @@ import {
   Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { transactionService, Transaction } from '@/lib/services/transactionService';
+import { investmentService, Investment } from '@/lib/services/investmentService';
+import { budgetService, Budget } from '@/lib/services/budgetService';
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 export default function AnnualDashboard() {
-  const [selectedYear, setSelectedYear] = useState('2026');
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    let unsubTrx: (() => void) | null = null;
+    let unsubInv: (() => void) | null = null;
+    let unsubBdg: (() => void) | null = null;
+
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (u) {
+        const qTrx = query(collection(db, 'transactions'), where('userId', '==', u.uid));
+        unsubTrx = onSnapshot(qTrx, (snap) => {
+          setTransactions(snap.docs.map(doc => {
+            const d = doc.data();
+            return { ...d, id: doc.id, amount: Number(d.amount) || 0, date: d.date?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date() } as Transaction;
+          }));
+        });
+
+        const qInv = query(collection(db, 'investments'), where('userId', '==', u.uid));
+        unsubInv = onSnapshot(qInv, (snap) => {
+          setInvestments(snap.docs.map(doc => {
+            const d = doc.data();
+            return { ...d, id: doc.id, dateInvested: d.dateInvested?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date() } as Investment;
+          }));
+        });
+
+        const qBdg = query(collection(db, 'budgets'), where('userId', '==', u.uid));
+        unsubBdg = onSnapshot(qBdg, (snap) => {
+          setBudgets(snap.docs.map(doc => {
+            const d = doc.data();
+            return { ...d, id: doc.id, amount: Number(d.amount) || 0, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Budget;
+          }));
+        });
+      } else {
+        setTransactions([]);
+        setInvestments([]);
+        setBudgets([]);
+      }
+    });
+    return () => { 
+      unsub(); 
+      if (unsubTrx) unsubTrx();
+      if (unsubInv) unsubInv();
+      if (unsubBdg) unsubBdg();
+    };
+  }, []);
+
+  const yearTransactions = useMemo(() =>
+    transactions.filter(t => t.date.getFullYear().toString() === selectedYear),
+    [transactions, selectedYear]
+  );
+
+  const totalPemasukan = useMemo(() => yearTransactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0), [yearTransactions]);
+  const totalPengeluaran = useMemo(() => yearTransactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0), [yearTransactions]);
+  const totalInvestasi = useMemo(() => investments.reduce((s, i) => s + i.amountInvested, 0), [investments]);
+  const netSavings = totalPemasukan - totalPengeluaran;
+
+  // Monthly Aggregation for the Chart
+  const monthlyData = useMemo(() => {
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const data = months.map(m => ({ m, pemasukan: 0, pengeluaran: 0 }));
+    yearTransactions.forEach(t => {
+      const monthIdx = t.date.getMonth();
+      if (t.type === 'pemasukan') data[monthIdx].pemasukan += t.amount;
+      if (t.type === 'pengeluaran') data[monthIdx].pengeluaran += t.amount;
+    });
+    // Convert to percentages relative to max value for chart heights
+    const maxVal = Math.max(...data.map(d => Math.max(d.pemasukan, d.pengeluaran, 1)));
+    return data.map(d => ({
+      m: d.m,
+      b1: (d.pemasukan / maxVal) * 100,
+      b2: (d.pengeluaran / maxVal) * 100,
+    }));
+  }, [yearTransactions]);
+
+  // Top Transactions
+  const topTransactionsList = useMemo(() => {
+    return [...yearTransactions].sort((a, b) => b.amount - a.amount).slice(0, 4);
+  }, [yearTransactions]);
+
+  // Budget vs Actual for the Year Table
+  const budgetRincian = useMemo(() => {
+    return budgets.map(b => {
+      // actual sum across the selected year for this category
+      const actual = yearTransactions
+        .filter(t => t.type === 'pengeluaran' && t.category === b.category)
+        .reduce((sum, t) => sum + t.amount, 0);
+      const limitTahunan = b.period === 'yearly' ? b.amount : b.amount * 12; // Handle period
+      const isOver = actual > limitTahunan;
+      return {
+        item: b.category,
+        budgetStr: 'Rp ' + new Intl.NumberFormat('id-ID').format(limitTahunan),
+        actualStr: 'Rp ' + new Intl.NumberFormat('id-ID').format(actual),
+        diffStr: (isOver ? '-Rp ' : 'Rp ') + new Intl.NumberFormat('id-ID').format(Math.abs(limitTahunan - actual)),
+        diffColor: isOver ? 'text-rose-500' : 'text-sky-500',
+        status: isOver ? 'OVER' : 'HEMAT',
+        statusStyle: isOver ? 'text-rose-500 border-rose-100 bg-white' : 'text-sky-500 border-sky-100 bg-white'
+      };
+    });
+  }, [budgets, yearTransactions]);
+
+  const formatRpShort = (n: number) => {
+    if (n >= 1_000_000_000) return `${(n/1_000_000_000).toFixed(1)}M`;
+    if (n >= 1_000_000) return `${(n/1_000_000).toFixed(1)}Jt`;
+    return new Intl.NumberFormat('id-ID').format(n);
+  };
+  const pemasPerc = Math.min(Math.round((yearTransactions.filter(t=>t.type==='pemasukan').length / Math.max(yearTransactions.length,1)) * 100), 100) || 0;
+  const keluarPerc = totalPemasukan > 0 ? Math.min(Math.round((totalPengeluaran / totalPemasukan) * 100), 100) : 0;
+  const tabunganPerc = totalPemasukan > 0 ? Math.min(Math.round((Math.max(netSavings,0) / totalPemasukan) * 100), 100) : 0;
+  const invPerc = totalPemasukan > 0 ? Math.min(Math.round((totalInvestasi / totalPemasukan) * 100), 100) : 0;
+
 
   // Circular Progress Helper Component
   const CircularProgress = ({ value, colorClass, strokeClass }: {value: number, colorClass: string, strokeClass: string}) => {
@@ -84,19 +204,19 @@ export default function AnnualDashboard() {
         <div className="bg-white rounded-[20px] p-4 md:p-6 border border-slate-100 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-3">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pemasukan</p>
-            <CircularProgress value={75} colorClass="text-slate-700" strokeClass="stroke-sky-500" />
+            <CircularProgress value={pemasPerc} colorClass="text-sky-600" strokeClass="stroke-sky-500" />
           </div>
           <div>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-xs md:text-lg font-bold text-slate-900">Rp</span>
-              <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">450.000.000</h3>
+              <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">{formatRpShort(totalPemasukan)}</h3>
             </div>
             <div className="flex justify-between items-center mt-3 md:mt-5">
               <div>
-                <p className="text-[9px] text-slate-400 font-medium leading-none mb-1">Target/Budget</p>
-                <p className="text-[10px] font-bold text-slate-600 leading-none">Rp500.000.000</p>
+                <p className="text-[9px] text-slate-400 font-medium leading-none mb-1">Thn {selectedYear}</p>
+                <p className="text-[10px] font-bold text-slate-600 leading-none">{yearTransactions.filter(t=>t.type==='pemasukan').length} transaksi</p>
               </div>
-              <span className="px-2 py-0.5 md:px-3 md:py-1 bg-sky-50 text-sky-500 text-[9px] md:text-[10px] font-bold rounded-full">On Track</span>
+              <span className="px-2 py-0.5 md:px-3 md:py-1 bg-sky-50 text-sky-500 text-[9px] md:text-[10px] font-bold rounded-full">{pemasPerc}% dari total</span>
             </div>
           </div>
         </div>
@@ -105,19 +225,19 @@ export default function AnnualDashboard() {
         <div className="bg-white rounded-[20px] p-4 md:p-6 border border-slate-100 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-3">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pengeluaran</p>
-            <CircularProgress value={50} colorClass="text-slate-700" strokeClass="stroke-rose-500" />
+            <CircularProgress value={keluarPerc} colorClass="text-rose-600" strokeClass="stroke-rose-500" />
           </div>
           <div>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-xs md:text-lg font-bold text-slate-900">Rp</span>
-              <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">210.000.000</h3>
+              <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">{formatRpShort(totalPengeluaran)}</h3>
             </div>
             <div className="flex justify-between items-center mt-3 md:mt-5">
               <div>
-                <p className="text-[9px] text-slate-400 font-medium leading-none mb-1">Target/Budget</p>
-                <p className="text-[10px] font-bold text-slate-600 leading-none">Rp420.000.000</p>
+                <p className="text-[9px] text-slate-400 font-medium leading-none mb-1">Thn {selectedYear}</p>
+                <p className="text-[10px] font-bold text-slate-600 leading-none">{yearTransactions.filter(t=>t.type==='pengeluaran').length} transaksi</p>
               </div>
-              <span className="px-2 py-0.5 md:px-3 md:py-1 bg-rose-50 text-rose-500 text-[9px] md:text-[10px] font-bold rounded-full">Caution</span>
+              <span className={`px-2 py-0.5 md:px-3 md:py-1 text-[9px] md:text-[10px] font-bold rounded-full ${keluarPerc > 80 ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-600'}`}>{keluarPerc > 80 ? 'Caution' : 'Normal'}</span>
             </div>
           </div>
         </div>
@@ -126,19 +246,19 @@ export default function AnnualDashboard() {
         <div className="bg-white rounded-[20px] p-4 md:p-6 border border-slate-100 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-3">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tabungan</p>
-            <CircularProgress value={90} colorClass="text-slate-700" strokeClass="stroke-slate-600" />
+            <CircularProgress value={tabunganPerc} colorClass="text-slate-700" strokeClass="stroke-slate-600" />
           </div>
           <div>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-xs md:text-lg font-bold text-slate-900">Rp</span>
-              <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">120.000.000</h3>
+              <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">{formatRpShort(Math.max(netSavings, 0))}</h3>
             </div>
             <div className="flex justify-between items-center mt-3 md:mt-5">
               <div>
-                <p className="text-[9px] text-slate-400 font-medium leading-none mb-1">Target/Budget</p>
-                <p className="text-[10px] font-bold text-slate-600 leading-none">Rp133.000.000</p>
+                <p className="text-[9px] text-slate-400 font-medium leading-none mb-1">Thn {selectedYear}</p>
+                <p className="text-[10px] font-bold text-slate-600 leading-none">{tabunganPerc}% dari pemasukan</p>
               </div>
-              <span className="px-2 py-0.5 md:px-3 md:py-1 bg-indigo-50 text-indigo-500 text-[9px] md:text-[10px] font-bold rounded-full">Goal Near</span>
+              <span className={`px-2 py-0.5 md:px-3 md:py-1 text-[9px] md:text-[10px] font-bold rounded-full ${tabunganPerc > 20 ? 'bg-indigo-50 text-indigo-500' : 'bg-slate-100 text-slate-400'}`}>{tabunganPerc > 20 ? 'Goal Near' : 'Growing'}</span>
             </div>
           </div>
         </div>
@@ -147,17 +267,17 @@ export default function AnnualDashboard() {
         <div className="bg-white rounded-[20px] p-4 md:p-6 border border-slate-100 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-3">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Investasi</p>
-            <CircularProgress value={40} colorClass="text-slate-700" strokeClass="stroke-teal-600" />
+            <CircularProgress value={invPerc} colorClass="text-teal-600" strokeClass="stroke-teal-600" />
           </div>
           <div>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-xs md:text-lg font-bold text-slate-900">Rp</span>
-              <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">100.000.000</h3>
+              <h3 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">{formatRpShort(totalInvestasi)}</h3>
             </div>
             <div className="flex justify-between items-center mt-3 md:mt-5">
               <div>
-                <p className="text-[9px] text-slate-400 font-medium leading-none mb-1">Target/Budget</p>
-                <p className="text-[10px] font-bold text-slate-600 leading-none">Rp250.000.000</p>
+                <p className="text-[9px] text-slate-400 font-medium leading-none mb-1">Semua waktu</p>
+                <p className="text-[10px] font-bold text-slate-600 leading-none">{investments.length} posisi aktif</p>
               </div>
               <span className="px-2 py-0.5 md:px-3 md:py-1 bg-slate-100 text-slate-500 text-[9px] md:text-[10px] font-bold rounded-full">Growing</span>
             </div>
@@ -186,28 +306,17 @@ export default function AnnualDashboard() {
 
           {/* Simulated Bar Chart Layout */}
           <div className="bg-slate-50/50 rounded-xl p-3 md:p-4 h-[180px] md:h-[280px] flex items-end justify-between gap-1.5 md:gap-4 relative px-2 md:px-8 border border-slate-50 overflow-x-auto custom-scrollbar">
-            {/* Example 12 Months mock bars */}
-            {[
-              { m: 'JAN', b1: 45, b2: 60 },
-              { m: 'FEB', b1: 65, b2: 40 },
-              { m: 'MAR', b1: 90, b2: 50 },
-              { m: 'APR', b1: 40, b2: 70 },
-              { m: 'MAY', b1: 55, b2: 25 },
-              { m: 'JUN', b1: 35, b2: 85 },
-              { m: 'JUL', b1: 100, b2: 20 },
-              { m: 'AUG', b1: 65, b2: 55 },
-              { m: 'SEP', b1: 80, b2: 60 },
-              { m: 'OCT', b1: 30, b2: 75 },
-              { m: 'NOV', b1: 65, b2: 50 },
-              { m: 'DEC', b1: 70, b2: 85 },
-            ].map((col) => (
+            {/* Dynamic 12 Months bars */}
+            {monthlyData.map((col) => (
               <div key={col.m} className="flex flex-col items-center gap-3 w-full h-full justify-end group">
                 <div className="flex items-end gap-1 w-full justify-center h-[200px]">
                   <div 
+                    title="Pemasukan"
                     className="w-1/2 max-w-[12px] bg-slate-200 rounded-t-sm group-hover:bg-slate-300 transition-colors" 
                     style={{ height: `${col.b1}%` }}
                   />
                   <div 
+                    title="Pengeluaran"
                     className="w-1/2 max-w-[12px] bg-slate-600 rounded-t-sm group-hover:bg-slate-700 transition-colors" 
                     style={{ height: `${col.b2}%` }}
                   />
@@ -223,61 +332,28 @@ export default function AnnualDashboard() {
           <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-2 px-1">Transaksi Tertinggi</h3>
           
           <div className="flex-1 flex flex-col gap-4">
-            {/* Transaksi 1 */}
-            <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-sky-100 flex items-center justify-center text-sky-500">
-                  <TrendingUp size={16} />
+            {topTransactionsList.length === 0 ? (
+               <p className="text-xs text-slate-400 text-center py-10 font-bold">Belum ada transaksi</p>
+            ) : topTransactionsList.map((trx, idx) => (
+              <div key={idx} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", 
+                    trx.type === 'pemasukan' ? 'bg-sky-100 text-sky-500' :
+                    trx.type === 'pengeluaran' ? 'bg-rose-100 text-rose-500' : 
+                    'bg-slate-100 text-slate-500'
+                  )}>
+                    {trx.type === 'pemasukan' ? <TrendingUp size={16} /> : <WalletCards size={16} />}
+                  </div>
+                  <div>
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{trx.type}</p>
+                    <p className="text-xs font-bold text-slate-900">{trx.category || 'Transaksi'}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Pemasukan</p>
-                  <p className="text-xs font-bold text-slate-900">Proyek Korporasi X</p>
-                </div>
+                <span className={cn("text-xs font-black", trx.type === 'pemasukan' ? 'text-sky-500' : 'text-rose-500')}>
+                  {trx.type === 'pemasukan' ? '+' : '-'}Rp {formatRpShort(trx.amount)}
+                </span>
               </div>
-              <span className="text-xs font-black text-sky-500">+Rp 85jt</span>
-            </div>
-
-            {/* Transaksi 2 */}
-            <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-rose-100 flex items-center justify-center text-rose-500">
-                  <WalletCards size={16} />
-                </div>
-                <div>
-                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Pengeluaran</p>
-                  <p className="text-xs font-bold text-slate-900">Sewa Kantor Tahunan</p>
-                </div>
-              </div>
-              <span className="text-xs font-black text-rose-500">-Rp 120jt</span>
-            </div>
-
-            {/* Transaksi 3 */}
-            <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
-                  <Landmark size={16} />
-                </div>
-                <div>
-                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Tabungan</p>
-                  <p className="text-xs font-bold text-slate-900">Dana Darurat</p>
-                </div>
-              </div>
-              <span className="text-xs font-black text-slate-900">Rp 40jt</span>
-            </div>
-
-            {/* Transaksi 4 */}
-            <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-                  <Activity size={16} />
-                </div>
-                <div>
-                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Investasi</p>
-                  <p className="text-xs font-bold text-slate-900">Saham Blue Chip</p>
-                </div>
-              </div>
-              <span className="text-xs font-black text-slate-900">Rp 65jt</span>
-            </div>
+            ))}
           </div>
         </div>
       </div>
@@ -304,55 +380,21 @@ export default function AnnualDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {[
-                { 
-                  item: 'Operasional Bisnis', 
-                  budget: 'Rp 150.000.000', 
-                  actual: 'Rp 142.500.000', 
-                  diff: 'Rp 7.500.000', 
-                  diffColor: 'text-sky-500',
-                  status: 'HEMAT', 
-                  statusStyle: 'text-sky-500 border-sky-100 bg-white'
-                },
-                { 
-                  item: 'Marketing & Ads', 
-                  budget: 'Rp 45.000.000', 
-                  actual: 'Rp 48.200.000', 
-                  diff: '-Rp 3.200.000', 
-                  diffColor: 'text-rose-500',
-                  status: 'OVER', 
-                  statusStyle: 'text-rose-500 border-rose-100 bg-white'
-                },
-                { 
-                  item: 'Pengembangan SDM', 
-                  budget: 'Rp 30.000.000', 
-                  actual: 'Rp 25.000.000', 
-                  diff: 'Rp 5.000.000', 
-                  diffColor: 'text-sky-500',
-                  status: 'HEMAT', 
-                  statusStyle: 'text-sky-500 border-sky-100 bg-white'
-                },
-                { 
-                  item: 'Infrastruktur IT', 
-                  budget: 'Rp 80.000.000', 
-                  actual: 'Rp 80.000.000', 
-                  diff: 'Rp 0', 
-                  diffColor: 'text-slate-400',
-                  status: 'SESUAI', 
-                  statusStyle: 'text-slate-400 border-slate-200 bg-white'
-                },
-              ].map((row, i) => (
+              {budgetRincian.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-5 py-8 text-center text-slate-400 font-bold text-[11px]">
+                    Belum ada anggaran yang diatur
+                  </td>
+                </tr>
+              ) : budgetRincian.map((b, i) => (
                 <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-5 md:px-8 py-4 md:py-6 font-bold text-slate-800">{row.item}</td>
-                  <td className="px-5 md:px-6 py-4 md:py-6 font-bold text-slate-400 tracking-tight">{row.budget}</td>
-                  <td className="px-5 md:px-6 py-4 md:py-6 font-black text-slate-800 tracking-tight">{row.actual}</td>
-                  <td className={cn("px-5 md:px-6 py-4 md:py-6 font-black tracking-tight", row.diffColor)}>{row.diff}</td>
-                  <td className="px-5 md:px-8 py-4 md:py-6 text-right">
-                    <span className={cn(
-                      "inline-block px-3 md:px-4 py-1 md:py-1.5 rounded-full text-[7px] md:text-[8px] font-black uppercase tracking-widest border",
-                      row.statusStyle
-                    )}>
-                      {row.status}
+                  <td className="px-5 md:px-8 py-4 md:py-5 font-black text-slate-900 text-[10px] md:text-xs tracking-tight">{b.item}</td>
+                  <td className="px-5 md:px-6 py-4 md:py-5 font-bold text-slate-500 text-[10px] md:text-[11px]">{b.budgetStr}</td>
+                  <td className="px-5 md:px-6 py-4 md:py-5 font-bold text-slate-900 text-[10px] md:text-[11px]">{b.actualStr}</td>
+                  <td className={`px-5 md:px-6 py-4 md:py-5 font-black text-[10px] md:text-[11px] tracking-tight ${b.diffColor}`}>{b.diffStr}</td>
+                  <td className="px-5 md:px-8 py-4 md:py-5 text-right w-28">
+                    <span className={`inline-block px-3 py-1 text-[8px] md:text-[9px] font-black rounded border tracking-widest ${b.statusStyle}`}>
+                      {b.status}
                     </span>
                   </td>
                 </tr>

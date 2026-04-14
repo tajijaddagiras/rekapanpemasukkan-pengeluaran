@@ -1,25 +1,104 @@
 "use client";
 
-import { useState } from 'react';
-import {
-  PlusCircle,
+import { useState, useEffect, useMemo } from 'react';
+import { 
+  PlusCircle, 
   Search,
-  ChevronDown,
-  SlidersHorizontal,
-  ArrowUpDown,
-  CreditCard,
-  Minus,
-  Copy,
+  ArrowUpDown, 
+  CreditCard, 
   Trash2,
   Send,
   Download
 } from 'lucide-react';
+import { Modal } from '@/components/ui/Modal';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { transactionService, Transaction } from '@/lib/services/transactionService';
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { useRef } from 'react';
 
 export default function TopUpPage() {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const [formData, setFormData] = useState({
+    type: 'topup' as 'topup' | 'transfer',
+    amount: '',
+    accountId: '',
+    targetAccountId: '',
+    note: '',
+    date: new Date().toISOString().split('T')[0]
+  });
+
+  const unsubRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (u) {
+        const q = query(
+          collection(db, 'transactions'),
+          where('userId', '==', u.uid),
+          where('type', 'in', ['topup', 'transfer'])
+        );
+        if (unsubRef.current) unsubRef.current();
+        unsubRef.current = onSnapshot(q, (snap) => {
+          const list = snap.docs.map(doc => {
+            const d = doc.data();
+            return {
+              ...d, id: doc.id, amount: Number(d.amount) || 0,
+              date: d.date?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date()
+            } as Transaction;
+          });
+          setTransactions(list.sort((a,b) => b.date.getTime() - a.date.getTime()));
+          setLoading(false);
+        }, (err) => { console.error(err); setLoading(false); });
+      } else { setTransactions([]); setLoading(false); }
+    });
+    return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
+  }, []);
+
+  const handleCreate = async () => {
+    if (!user || !formData.amount) return;
+    try {
+      await transactionService.createTransaction({
+        userId: user.uid,
+        type: formData.type,
+        amount: parseFloat(formData.amount),
+        category: formData.type === 'topup' ? 'Top Up' : 'Transfer',
+        accountId: formData.accountId || 'General',
+        targetAccountId: formData.targetAccountId,
+        date: new Date(formData.date),
+        note: formData.note,
+        status: 'VERIFIED'
+      });
+      setIsAddModalOpen(false);
+      setFormData({ type: 'topup', amount: '', accountId: '', targetAccountId: '', note: '', date: new Date().toISOString().split('T')[0] });
+      // onSnapshot update otomatis
+    } catch (e) { console.error(e); }
+  };
+
+  const filtered = useMemo(() => {
+    if (!searchQuery) return transactions;
+    return transactions.filter(t =>
+      (t.note || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.category.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [transactions, searchQuery]);
+
+  const totalAmount = useMemo(() => transactions.reduce((s, t) => s + t.amount, 0), [transactions]);
+
+  const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n).replace('Rp', '').trim();
+  const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
 
-      {/* 1. Header Section */}
+      {/* 1. Header */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
         <div>
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Top Up & Transfer</h1>
@@ -27,19 +106,18 @@ export default function TopUpPage() {
             Riwayat lengkap pemindahan dana antar rekening, e-wallet, dan pengisian saldo.
           </p>
         </div>
-
-        <div className="flex flex-col md:items-end w-full md:w-auto mt-4 md:mt-0">
-          <button className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2.5 md:px-6 md:py-3 rounded-xl md:rounded-2xl text-[12px] md:text-[11px] font-black shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all w-full md:w-auto">
-            <PlusCircle size={16} />
-            Transfer Baru
-          </button>
-        </div>
+        <button 
+          onClick={() => setIsAddModalOpen(true)}
+          className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2.5 md:px-6 md:py-3 rounded-xl md:rounded-2xl text-[12px] font-black shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all w-full md:w-auto mt-4 md:mt-0"
+        >
+          <PlusCircle size={16} />
+          Transfer Baru
+        </button>
       </div>
 
-      {/* 2. Top Status Cards (Only 2 Cards) */}
+      {/* 2. Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-        {/* Total Transaksi */}
-        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 md:gap-6 relative overflow-hidden group">
+        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 relative overflow-hidden group">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
               <ArrowUpDown size={20} />
@@ -47,14 +125,15 @@ export default function TopUpPage() {
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Transaksi</p>
           </div>
           <div>
-            <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight">Rp 8.420.000</h3>
-            <p className="text-[9px] md:text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Across 12 transfers this month</p>
+            <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight">
+              Rp {formatRp(totalAmount)}
+            </h3>
+            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{transactions.length} transfer tercatat</p>
           </div>
           <Send size={48} className="absolute -right-2 -bottom-2 text-blue-50/50 group-hover:scale-110 transition-transform -rotate-12" />
         </div>
 
-        {/* Biaya Admin */}
-        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 md:gap-6 relative overflow-hidden group">
+        <div className="bg-white p-5 md:p-8 rounded-[20px] md:rounded-[28px] border border-slate-50 shadow-sm flex flex-col gap-4 relative overflow-hidden group">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600">
               <CreditCard size={20} />
@@ -62,121 +141,125 @@ export default function TopUpPage() {
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Biaya Admin</p>
           </div>
           <div>
-            <h3 className="text-3xl font-black text-rose-600 leading-tight">Rp 24.500</h3>
-            <p className="text-[10px] font-bold text-rose-400 mt-1 uppercase tracking-widest">Accumulated Transaction Fees</p>
-          </div>
-          <div className="absolute right-8 top-1/2 -translate-y-1/2 w-16 h-16 rounded-full border-4 border-slate-50 flex items-center justify-center">
-            <div className="w-10 h-10 rounded-full border-4 border-rose-600 border-t-transparent animate-spin-slow" />
+            <h3 className="text-2xl md:text-3xl font-black text-rose-500 leading-tight">Rp 0</h3>
+            <p className="text-[10px] font-bold text-slate-400 mt-1">Kalkulasi otomatis kedepannya</p>
           </div>
         </div>
       </div>
 
-      {/* 3. Filter Bar */}
-      <div className="flex flex-wrap items-center gap-4 bg-white p-3 md:p-2 rounded-[24px] md:rounded-3xl border border-slate-50 shadow-sm">
-        <div className="w-full md:flex-1 md:w-auto md:min-w-[280px] relative group">
-          <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
-          <input
-            type="text"
-            placeholder="Cari berita transfer atau nomor..."
-            className="w-full bg-slate-50/50 border-transparent focus:border-blue-100 focus:bg-white rounded-[16px] md:rounded-2xl py-3.5 md:py-4 pl-12 md:pl-14 pr-6 text-sm font-medium transition-all"
-          />
-        </div>
-
-        <div className="h-10 w-[1px] bg-slate-100 hidden md:block" />
-
-        <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
-          <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white border border-slate-100 rounded-[14px] md:rounded-2xl px-4 py-3 text-[11px] md:text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
-            Februari <ChevronDown size={14} />
-          </button>
-          <button className="w-[42px] h-[42px] md:w-12 md:h-12 rounded-[14px] md:rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all shrink-0">
-            <SlidersHorizontal size={16} />
-          </button>
+      {/* 3. Filter */}
+      <div className="bg-white p-3 rounded-[24px] border border-slate-50 shadow-sm">
+        <div className="relative group">
+          <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" />
+          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Cari catatan transfer..."
+            className="w-full bg-slate-50/50 border-transparent rounded-[16px] py-3.5 pl-12 pr-6 text-sm font-medium transition-all" />
         </div>
       </div>
 
-      {/* 4. Data Table Section */}
+      {/* 4. Table */}
       <div className="bg-white rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse min-w-[900px] xl:min-w-0">
-            <thead>
-              <tr className="border-b border-slate-50">
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal Display</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Deskripsi</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Mata Uang</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Nominal</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Dari</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Ke</th>
-                <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Row 1 */}
-              <tr className="group hover:bg-slate-50/50 transition-colors">
-                <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
-                  <p className="text-sm font-black text-slate-900">14 Feb 2024</p>
-                </td>
-                <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
-                  <p className="text-sm font-bold text-slate-600">14/02/2024</p>
-                </td>
-                <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap font-bold text-slate-900 text-sm">Top Up OVO dari Rekening BCA</td>
-                <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap font-bold text-slate-600 text-sm uppercase text-center">IDR</td>
-                <td className="px-5 md:px-8 py-4 md:py-6 text-right whitespace-nowrap">
-                  <p className="text-sm font-black text-slate-900">500.000</p>
-                </td>
-                <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap font-bold text-slate-600 text-sm">BCA - 098...</td>
-                <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap font-bold text-slate-600 text-sm">OVO - 081...</td>
-                <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
-                  <div className="flex items-center justify-center gap-2">
-                    <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all">
-                      <Copy size={14} />
-                    </button>
-                    <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-              {/* Row 2 */}
-              <tr className="group hover:bg-slate-50/50 transition-colors">
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <p className="text-sm font-black text-slate-900">12 Feb 2024</p>
-                </td>
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <p className="text-sm font-bold text-slate-600">12/02/2024</p>
-                </td>
-                <td className="px-8 py-6 whitespace-nowrap font-bold text-slate-900 text-sm">Transfer Antar Bank Mandiri</td>
-                <td className="px-8 py-6 whitespace-nowrap font-bold text-slate-600 text-sm uppercase text-center">IDR</td>
-                <td className="px-8 py-6 text-right whitespace-nowrap">
-                  <p className="text-sm font-black text-slate-900">2.000.000</p>
-                </td>
-                <td className="px-8 py-6 whitespace-nowrap font-bold text-slate-600 text-sm">BCA - 098...</td>
-                <td className="px-8 py-6 whitespace-nowrap font-bold text-slate-600 text-sm">BNI - 122...</td>
-                <td className="px-8 py-6 whitespace-nowrap">
-                  <div className="flex items-center justify-center gap-2">
-                    <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all">
-                      <Copy size={14} />
-                    </button>
-                    <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* 5. Footer Table */}
-        <div className="px-5 md:px-8 py-5 md:py-6 bg-slate-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4 border-t border-slate-50">
-          <p className="text-[10px] md:text-[11px] font-bold text-slate-400 text-center md:text-left">Total 12 transaksi transfer terdeteksi bulan ini</p>
-          <div className="grid grid-cols-2 gap-2 w-full md:w-auto">
-            <button className="px-4 md:px-5 py-2.5 bg-white border border-slate-100 rounded-xl text-[10px] font-black text-slate-300 uppercase tracking-widest cursor-not-allowed w-full">Sebelumnya</button>
-            <button className="px-4 md:px-5 py-2.5 bg-white border border-slate-100 rounded-xl text-[10px] font-black text-slate-300 uppercase tracking-widest cursor-not-allowed w-full">Berikutnya</button>
+        {loading ? (
+          <div className="p-12 text-center text-sm font-medium text-slate-400">Memuat data transfer...</div>
+        ) : filtered.length === 0 ? (
+          <div className="p-10">
+            <EmptyState 
+              title="Belum ada riwayat transfer"
+              description="Catat top up atau transfer antar rekening Anda di sini."
+              icon={<Send size={24} />}
+            />
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left border-collapse min-w-[700px] xl:min-w-0">
+                <thead>
+                  <tr className="border-b border-slate-50">
+                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tanggal</th>
+                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Catatan</th>
+                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Tipe</th>
+                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Nominal</th>
+                    <th className="px-5 md:px-8 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((trx) => (
+                    <tr key={trx.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
+                      <td className="px-5 md:px-8 py-4 md:py-6 whitespace-nowrap">
+                        <p className="text-sm font-black text-slate-900">{formatDate(trx.date)}</p>
+                      </td>
+                      <td className="px-5 md:px-8 py-4 md:py-6">
+                        <p className="text-sm font-bold text-slate-700">{trx.note || '—'}</p>
+                      </td>
+                      <td className="px-5 md:px-8 py-4 md:py-6 text-center whitespace-nowrap">
+                        <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[9px] font-black rounded-lg uppercase tracking-widest">
+                          {trx.type === 'topup' ? 'Top Up' : 'Transfer'}
+                        </span>
+                      </td>
+                      <td className="px-5 md:px-8 py-4 md:py-6 text-right whitespace-nowrap">
+                        <p className="text-sm font-black text-slate-900">Rp {formatRp(trx.amount)}</p>
+                      </td>
+                      <td className="px-5 md:px-8 py-4 md:py-6 text-center">
+                        <button onClick={async () => { if (trx.id) { await transactionService.deleteTransaction(trx.id); } }}
+                          className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-8 py-5 bg-slate-50/30 border-t border-slate-50">
+              <p className="text-[11px] font-bold text-slate-400">Menampilkan {filtered.length} dari {transactions.length} transaksi</p>
+            </div>
+          </>
+        )}
       </div>
 
+      {/* Modal */}
+      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Transfer / Top Up Baru" maxWidth="max-w-lg">
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis</label>
+            <div className="grid grid-cols-2 gap-3">
+              {(['topup', 'transfer'] as const).map(type => (
+                <button key={type} onClick={() => setFormData(p => ({...p, type}))}
+                  className={`py-3 rounded-xl text-sm font-black capitalize transition-all ${
+                    formData.type === type ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-slate-50 text-slate-500'
+                  }`}
+                >{type === 'topup' ? 'Top Up' : 'Transfer'}</button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nominal</label>
+            <div className="relative">
+              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">Rp</span>
+              <input type="number" value={formData.amount} onChange={e => setFormData(p => ({...p, amount: e.target.value}))}
+                placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 pl-12 pr-5 text-sm font-bold text-slate-700 transition-all" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Catatan (Opsional)</label>
+            <input type="text" value={formData.note} onChange={e => setFormData(p => ({...p, note: e.target.value}))}
+              placeholder="Tujuan transfer..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
+            <input type="date" value={formData.date} onChange={e => setFormData(p => ({...p, date: e.target.value}))}
+              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-4 px-5 text-sm font-bold text-slate-700 transition-all" />
+          </div>
+
+          <button onClick={handleCreate} disabled={!formData.amount}
+            className="w-full bg-blue-600 disabled:bg-slate-300 text-white py-4 rounded-xl text-sm font-black transition-all mt-6 shadow-xl shadow-blue-100">
+            Simpan Transfer
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
