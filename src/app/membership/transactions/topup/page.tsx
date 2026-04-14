@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
+import { accountService, Account } from '@/lib/services/accountService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
@@ -25,6 +26,7 @@ import { MonthPicker } from '@/components/ui/MonthPicker';
 
 export default function TopUpPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,6 +40,12 @@ export default function TopUpPage() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
+        // Fetch accounts for lookup
+        const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
+        onSnapshot(qAcc, (snap) => {
+          setAccounts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account)));
+        });
+
         const startOfMonth = new Date(selectedYear, selectedMonth, 1);
         const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
 
@@ -65,6 +73,11 @@ export default function TopUpPage() {
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
   }, [selectedMonth, selectedYear]);
+
+  const getAccountName = (id: string) => {
+    const acc = accounts.find(a => a.id === id);
+    return acc ? acc.name : id || '—';
+  };
 
   const filtered = useMemo(() => {
     if (!searchQuery) return transactions;
@@ -191,10 +204,10 @@ export default function TopUpPage() {
                         <p className="text-sm font-black text-slate-900"> {formatRp(trx.amount)}</p>
                       </td>
                       <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
-                        <p className="text-sm font-bold text-slate-600">{trx.accountId || '—'}</p>
+                        <p className="text-sm font-bold text-slate-600">{getAccountName(trx.accountId || '')}</p>
                       </td>
                       <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap">
-                        <p className="text-sm font-bold text-slate-600">{trx.targetAccountId || '—'}</p>
+                        <p className="text-sm font-bold text-slate-600">{getAccountName(trx.targetAccountId || '')}</p>
                       </td>
                       <td className="px-5 md:px-8 py-4 md:py-6 text-center">
                         <button onClick={async () => { if (trx.id) { await transactionService.deleteTransaction(trx.id); } }}

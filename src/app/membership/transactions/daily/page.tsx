@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
+import { accountService, Account } from '@/lib/services/accountService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
@@ -24,6 +25,7 @@ import { MonthPicker } from '@/components/ui/MonthPicker';
 
 export default function DailyTransactionLogPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,6 +38,12 @@ export default function DailyTransactionLogPage() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
+        // Fetch accounts for lookup
+        const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
+        onSnapshot(qAcc, (snap) => {
+          setAccounts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account)));
+        });
+
         const startOfMonth = new Date(selectedYear, selectedMonth, 1);
         const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
 
@@ -61,6 +69,11 @@ export default function DailyTransactionLogPage() {
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
   }, [selectedMonth, selectedYear]);
+
+  const getAccountName = (id: string) => {
+    const acc = accounts.find(a => a.id === id);
+    return acc ? acc.name : id || '—';
+  };
 
   const filtered = useMemo(() => {
     if (!searchQuery) return transactions;
@@ -200,7 +213,7 @@ export default function DailyTransactionLogPage() {
                         <span className="text-xs font-bold text-slate-600">{trx.subCategory || trx.category || '—'}</span>
                       </td>
                       <td className="px-4 md:px-6 py-4 whitespace-nowrap">
-                        <span className="text-xs font-bold text-slate-600">{trx.accountId || '—'}</span>
+                        <span className="text-xs font-bold text-slate-600">{getAccountName(trx.accountId || '')}</span>
                       </td>
                       <td className="px-4 md:px-6 py-4 text-right whitespace-nowrap">
                         <span className="text-xs font-bold text-slate-600">{trx.installmentTenor ? `${trx.installmentTenor} bln` : '—'}</span>
