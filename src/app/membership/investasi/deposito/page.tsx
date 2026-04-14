@@ -16,11 +16,14 @@ import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useRef } from 'react';
+import { MonthPicker } from '@/components/ui/MonthPicker';
 
 export default function DepositoPage() {
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const unsubRef = useRef<(() => void) | null>(null);
 
@@ -52,8 +55,15 @@ export default function DepositoPage() {
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
   }, []);
 
-  const totalDeposited = useMemo(() => investments.reduce((s, i) => s + i.amountInvested, 0), [investments]);
-  const avgRate = investments.length > 0 ? investments.reduce((s, i) => s + i.returnPercentage, 0) / investments.length : 0;
+  const filteredInvestments = useMemo(() => {
+    return investments.filter(inv => {
+      const d = inv.dateInvested;
+      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+    });
+  }, [investments, selectedMonth, selectedYear]);
+
+  const totalDeposited = useMemo(() => filteredInvestments.reduce((s, i) => s + i.amountInvested, 0), [filteredInvestments]);
+  const avgRate = filteredInvestments.length > 0 ? filteredInvestments.reduce((s, i) => s + i.returnPercentage, 0) / filteredInvestments.length : 0;
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n).replace('Rp', '').trim();
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
@@ -62,12 +72,21 @@ export default function DepositoPage() {
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] mb-12">
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
         <div>
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Deposito</h1>
-          <p className="text-[12px] md:text-sm font-medium text-slate-400 mt-2 max-w-xl leading-relaxed">
-            Kelola penempatan dana deposito Anda dan pantau estimasi bunga yang akan diterima.
+          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Deposito</h1>
+          <p className="text-[10px] md:text-sm font-medium text-slate-400 mt-1 max-w-xl">
+            Kelola penempatan dana deposito Anda untuk periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}.
           </p>
+        </div>
+        <div className="w-full md:w-auto">
+          <MonthPicker 
+            value={{ month: selectedMonth, year: selectedYear }}
+            onChange={({ month, year }) => {
+              setSelectedMonth(month);
+              setSelectedYear(year);
+            }}
+          />
         </div>
       </div>
 
@@ -82,7 +101,7 @@ export default function DepositoPage() {
           </div>
           <div>
             <h3 className="text-3xl font-black text-slate-900 leading-tight">Rp {formatRp(totalDeposited)}</h3>
-            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{investments.length} penempatan aktif</p>
+            <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{filteredInvestments.length} penempatan di periode ini</p>
           </div>
           <Banknote size={48} className="absolute -right-2 -bottom-2 text-orange-50/50 group-hover:scale-110 transition-transform -rotate-12" />
         </div>
@@ -106,9 +125,9 @@ export default function DepositoPage() {
       <div className="bg-white rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-sm font-medium text-slate-400">Memuat data deposito...</div>
-        ) : investments.length === 0 ? (
+        ) : filteredInvestments.length === 0 ? (
           <div className="p-10">
-            <EmptyState title="Belum ada deposito" description="Buka rekening deposito baru untuk mulai mengelola penempatan dana Anda." icon={<Banknote size={24} />} />
+            <EmptyState title="Belum ada deposito" description="Belum ada penempatan deposito pada periode ini." icon={<Banknote size={24} />} />
           </div>
         ) : (
           <div className="overflow-x-auto custom-scrollbar">
@@ -129,7 +148,7 @@ export default function DepositoPage() {
                 </tr>
               </thead>
               <tbody>
-                {investments.map((inv) => (
+                {filteredInvestments.map((inv) => (
                   <tr key={inv.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatDate(inv.dateInvested)}</td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><p className="text-sm font-black text-slate-900">{inv.name}</p></td>

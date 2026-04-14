@@ -78,7 +78,7 @@ export default function AILeosiqraPage() {
 
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
       
       // Build chat history
       const history = messages.map(m => ({
@@ -226,7 +226,7 @@ export default function AILeosiqraPage() {
               <h2 className="text-sm font-black text-slate-900">Leosiqra</h2>
               <div className="flex items-center gap-1.5">
                 <span className={`w-1.5 h-1.5 rounded-full ${apiKeyMissing ? 'bg-amber-400' : 'bg-emerald-500 animate-pulse'}`} />
-                <span className="text-[10px] font-bold text-slate-400">{apiKeyMissing ? 'API key belum diatur' : 'Online • Gemini 1.5 Flash'}</span>
+                <span className="text-[10px] font-bold text-slate-400">{apiKeyMissing ? 'API key belum diatur' : 'Online • Gemini Flash'}</span>
               </div>
             </div>
           </div>

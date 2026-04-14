@@ -18,14 +18,17 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { useRef } from 'react';
+import { MonthPicker } from '@/components/ui/MonthPicker';
 
 export default function DailyTransactionLogPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const unsubRef = useRef<(() => void) | null>(null);
 
@@ -33,7 +36,16 @@ export default function DailyTransactionLogPage() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
-        const q = query(collection(db, 'transactions'), where('userId', '==', u.uid));
+        const startOfMonth = new Date(selectedYear, selectedMonth, 1);
+        const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
+
+        const q = query(
+          collection(db, 'transactions'), 
+          where('userId', '==', u.uid),
+          where('date', '>=', startOfMonth),
+          where('date', '<=', endOfMonth),
+          orderBy('date', 'desc')
+        );
         if (unsubRef.current) unsubRef.current();
         unsubRef.current = onSnapshot(q, (snap) => {
           setTransactions(snap.docs.map(doc => {
@@ -48,7 +60,7 @@ export default function DailyTransactionLogPage() {
       } else { setTransactions([]); setLoading(false); }
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
   const filtered = useMemo(() => {
     if (!searchQuery) return transactions;
@@ -72,7 +84,7 @@ export default function DailyTransactionLogPage() {
         <div>
           <h1 className="text-2xl md:text-4xl font-black text-slate-900 tracking-tight">Transaksi Harian</h1>
           <p className="text-[12px] md:text-sm font-medium text-slate-400 mt-2 max-w-xl">
-            Lacak dan kelola aliran keuangan Anda dengan presisi editorial dan kejelasan mutlak.
+            Lacak dan kelola aliran keuangan Anda pada periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}.
           </p>
         </div>
       </div>
@@ -115,7 +127,7 @@ export default function DailyTransactionLogPage() {
       </div>
 
       {/* 3. Filter Bar */}
-      <div className="flex flex-wrap items-center gap-4 bg-white p-3 rounded-[24px] md:rounded-3xl border border-slate-50 shadow-sm">
+      <div className="flex flex-col md:flex-row items-center gap-4 bg-white p-3 rounded-[24px] md:rounded-3xl border border-slate-50 shadow-sm">
         <div className="w-full md:flex-1 relative group">
           <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
           <input 
@@ -124,6 +136,15 @@ export default function DailyTransactionLogPage() {
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Cari kategori atau catatan..." 
             className="w-full bg-slate-50/50 border-transparent focus:border-blue-100 focus:bg-white rounded-[16px] md:rounded-2xl py-3.5 pl-12 pr-6 text-sm font-medium transition-all"
+          />
+        </div>
+        <div className="w-full md:w-auto">
+          <MonthPicker 
+            value={{ month: selectedMonth, year: selectedYear }}
+            onChange={({ month, year }) => {
+              setSelectedMonth(month);
+              setSelectedYear(year);
+            }}
           />
         </div>
       </div>

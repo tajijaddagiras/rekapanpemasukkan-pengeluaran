@@ -10,6 +10,7 @@ import {
   Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { YearPicker } from '@/components/ui/YearPicker';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { budgetService, Budget } from '@/lib/services/budgetService';
@@ -18,12 +19,11 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 
 export default function AnnualDashboard() {
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [user, setUser] = useState<User | null>(null);
-  const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
 
   useEffect(() => {
     let unsubTrx: (() => void) | null = null;
@@ -34,8 +34,8 @@ export default function AnnualDashboard() {
       setUser(u);
       if (u) {
         // Calculate year range
-        const startOfYear = new Date(parseInt(selectedYear), 0, 1);
-        const endOfYear = new Date(parseInt(selectedYear), 11, 31, 23, 59, 59);
+        const startOfYear = new Date(selectedYear, 0, 1);
+        const endOfYear = new Date(selectedYear, 11, 31, 23, 59, 59);
 
         const qTrx = query(
           collection(db, 'transactions'),
@@ -192,26 +192,11 @@ export default function AnnualDashboard() {
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
-          {/* Year Selector Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => { setIsYearDropdownOpen(!isYearDropdownOpen); }}
-              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black text-slate-700 flex items-center gap-2 transition-all border border-slate-100"
-            >
-              Tahun {selectedYear}
-              <ChevronDown size={14} className={cn("transition-transform", isYearDropdownOpen && "rotate-180")} />
-            </button>
-            {isYearDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-32 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2">
-                {['2024', '2025', '2026'].map(year => (
-                  <button key={year} onClick={() => { setSelectedYear(year); setIsYearDropdownOpen(false); }}
-                    className={cn("w-full text-left px-4 py-2 text-xs font-bold transition-colors", selectedYear === year ? "text-indigo-600 bg-indigo-50" : "text-slate-600 hover:bg-slate-50")}>
-                    {year}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Year Picker */}
+          <YearPicker 
+            value={selectedYear}
+            onChange={(y) => setSelectedYear(y)}
+          />
         </div>
       </div>
 

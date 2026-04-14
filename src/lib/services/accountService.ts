@@ -15,7 +15,7 @@ export interface Account {
   id?: string;
   userId: string;
   name: string;
-  type: 'Bank Account' | 'E-Wallet' | 'Cash' | 'Investment Account' | 'Credit Card';
+  type: 'Bank Account' | 'E-Wallet' | 'Cash' | 'Investment Account' | 'Credit Card' | string;
   currency: string;
   balance: number;
   initialBalance: number;

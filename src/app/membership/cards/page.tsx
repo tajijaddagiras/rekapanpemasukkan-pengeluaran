@@ -63,8 +63,20 @@ export default function MyCardsPage() {
   }, []);
 
   const totalBalance = useMemo(() => accounts.reduce((s, a) => s + a.balance, 0), [accounts]);
-  const totalIn = useMemo(() => transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0), [transactions]);
-  const totalOut = useMemo(() => transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0), [transactions]);
+  
+  const totalIn = useMemo(() => {
+    const trxIn = transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0);
+    const accIn = accounts.reduce((s, a) => s + (a.initialBalance || 0), 0);
+    return trxIn + accIn;
+  }, [transactions, accounts]);
+
+  const totalOut = useMemo(() => {
+    const trxOut = transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0);
+    const accOut = accounts.filter(a => a.type === 'Credit Card').reduce((s, a) => s + (a.balance || 0), 0);
+    // For normal accounts, we don't necessarily count balance as 'Out' unless it's a debt.
+    // In the user's CardModal, 'Uang Keluar' is saved to 'balance' for a card.
+    return trxOut + accOut;
+  }, [transactions, accounts]);
 
   const creditCardStats = useMemo(() => {
     const ccAccounts = accounts.filter(a => a.type === 'Credit Card');

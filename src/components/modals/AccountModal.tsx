@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, Save } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { accountService, Account } from '@/lib/services/accountService';
@@ -9,18 +9,29 @@ interface AccountModalProps {
   isOpen: boolean;
   onClose: () => void;
   userId: string;
+  initialType?: Account['type'];
+  title?: string;
 }
 
-export const AccountModal = ({ isOpen, onClose, userId }: AccountModalProps) => {
+export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Account', title = 'Tambah Rekening Baru' }: AccountModalProps) => {
   const [formData, setFormData] = useState({
     name: '',
     logoUrl: '',
-    type: 'Bank Account' as Account['type'],
+    type: initialType,
     currency: 'IDR',
     balance: '',
     initialBalance: '',
     baseValue: ''
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(prev => ({
+        ...prev,
+        type: initialType
+      }));
+    }
+  }, [isOpen, initialType]);
 
   const handleCreate = async () => {
     if (!userId || !formData.name || !formData.initialBalance) return;
@@ -36,7 +47,7 @@ export const AccountModal = ({ isOpen, onClose, userId }: AccountModalProps) => 
         baseValue: parseFloat(formData.baseValue) || 0
       });
       onClose();
-      setFormData({ name: '', logoUrl: '', type: 'Bank Account', currency: 'IDR', balance: '', initialBalance: '', baseValue: '' });
+      setFormData({ name: '', logoUrl: '', type: initialType, currency: 'IDR', balance: '', initialBalance: '', baseValue: '' });
     } catch (error) {
       console.error("Error creating account:", error);
     }
@@ -46,7 +57,7 @@ export const AccountModal = ({ isOpen, onClose, userId }: AccountModalProps) => 
     <Modal 
       isOpen={isOpen} 
       onClose={onClose} 
-      title="Tambah Rekening Baru"
+      title={title}
       maxWidth="max-w-xl"
     >
       <div className="space-y-6">
@@ -144,7 +155,7 @@ export const AccountModal = ({ isOpen, onClose, userId }: AccountModalProps) => 
           disabled={!formData.name || !formData.initialBalance}
           className="w-full bg-blue-600 disabled:bg-slate-300 text-white px-6 py-4 rounded-xl text-xs font-black shadow-lg shadow-blue-100 disabled:shadow-none transition-all mt-6"
         >
-          Simpan Rekening Baru
+          {title === 'Tambah Kartu Baru' ? 'Simpan Kartu Baru' : 'Simpan Rekening Baru'}
         </button>
       </div>
     </Modal>

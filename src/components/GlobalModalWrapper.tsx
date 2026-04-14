@@ -17,6 +17,7 @@ import { RecurringModal } from '@/components/modals/RecurringModal';
 import { BudgetModal } from '@/components/modals/BudgetModal';
 import { LedgerModal } from '@/components/modals/LedgerModal';
 import { AccountModal } from '@/components/modals/AccountModal';
+import { CardModal } from '@/components/modals/CardModal';
 
 export const GlobalModalWrapper = () => {
   const { activeModal, closeModal } = useModal();
@@ -93,6 +94,12 @@ export const GlobalModalWrapper = () => {
 
       <AccountModal 
         isOpen={activeModal === 'rekening'} 
+        onClose={closeModal} 
+        userId={user.uid} 
+      />
+
+      <CardModal 
+        isOpen={activeModal === 'kartu'} 
         onClose={closeModal} 
         userId={user.uid} 
       />

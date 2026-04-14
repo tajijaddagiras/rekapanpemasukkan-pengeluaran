@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { MonthPicker } from '@/components/ui/MonthPicker';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { auth, db } from '@/lib/firebase';
@@ -40,8 +41,6 @@ export default function MonthlyDashboard() {
   const [marketLoading, setMarketLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
-  const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
 
   const unsubTrxRef = useRef<(() => void) | null>(null);
 
@@ -153,49 +152,13 @@ export default function MonthlyDashboard() {
           <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Laporan Periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Month Selector */}
-          <div className="relative">
-            <button
-              onClick={() => { setIsMonthDropdownOpen(!isMonthDropdownOpen); setIsYearDropdownOpen(false); }}
-              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black text-slate-700 flex items-center gap-2 transition-all"
-            >
-              {new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2024, selectedMonth))}
-              <ChevronDown size={14} className={cn("transition-transform", isMonthDropdownOpen && "rotate-180")} />
-            </button>
-            {isMonthDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-40 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2 max-h-60 overflow-y-auto custom-scrollbar">
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <button key={i} onClick={() => { setSelectedMonth(i); setIsMonthDropdownOpen(false); }}
-                    className={cn("w-full text-left px-4 py-2 text-xs font-bold transition-colors", selectedMonth === i ? "text-indigo-600 bg-indigo-50" : "text-slate-600 hover:bg-slate-50")}>
-                    {new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2024, i))}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Year Selector */}
-          <div className="relative">
-            <button
-              onClick={() => { setIsYearDropdownOpen(!isYearDropdownOpen); setIsMonthDropdownOpen(false); }}
-              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black text-slate-700 flex items-center gap-2 transition-all"
-            >
-              {selectedYear}
-              <ChevronDown size={14} className={cn("transition-transform", isYearDropdownOpen && "rotate-180")} />
-            </button>
-            {isYearDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-32 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2">
-                {[2023, 2024, 2025, 2026].map(year => (
-                  <button key={year} onClick={() => { setSelectedYear(year); setIsYearDropdownOpen(false); }}
-                    className={cn("w-full text-left px-4 py-2 text-xs font-bold transition-colors", selectedYear === year ? "text-indigo-600 bg-indigo-50" : "text-slate-600 hover:bg-slate-50")}>
-                    {year}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+          <MonthPicker 
+            value={{ month: selectedMonth, year: selectedYear }}
+            onChange={({ month, year }) => {
+              setSelectedMonth(month);
+              setSelectedYear(year);
+            }}
+          />
       </div>
 
       {/* Top Cards (3 Cols) */}

@@ -21,6 +21,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { useRef } from 'react';
 import { AddTransactionModal } from '@/components/AddTransactionModal';
+import { MonthPicker } from '@/components/ui/MonthPicker';
 
 export default function DebtPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -29,14 +30,7 @@ export default function DebtPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
-  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
-  const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
-
-  const months = [
-    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-  ];
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const unsubRef = useRef<(() => void) | null>(null);
 
@@ -44,8 +38,8 @@ export default function DebtPage() {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
-        const startOfMonth = new Date(parseInt(selectedYear), selectedMonth, 1);
-        const endOfMonth = new Date(parseInt(selectedYear), selectedMonth + 1, 0, 23, 59, 59);
+        const startOfMonth = new Date(selectedYear, selectedMonth, 1);
+        const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
 
         const q = query(
           collection(db, 'transactions'), 
@@ -92,51 +86,19 @@ export default function DebtPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
         <div className="flex flex-col">
           <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Hutang & Piutang</h1>
-          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Periode {months[selectedMonth]} {selectedYear}</p>
+          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+            Periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}
+          </p>
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
-          {/* Month Selector */}
-          <div className="relative">
-            <button
-              onClick={() => { setIsMonthDropdownOpen(!isMonthDropdownOpen); setIsYearDropdownOpen(false); }}
-              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black text-slate-700 flex items-center gap-2 transition-all border border-slate-100 min-w-[120px]"
-            >
-              {months[selectedMonth]}
-              <ChevronDown size={14} className={cn("transition-transform", isMonthDropdownOpen && "rotate-180")} />
-            </button>
-            {isMonthDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-40 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2 max-h-60 overflow-y-auto custom-scrollbar">
-                {months.map((month, idx) => (
-                  <button key={month} onClick={() => { setSelectedMonth(idx); setIsMonthDropdownOpen(false); }}
-                    className={cn("w-full text-left px-4 py-2 text-xs font-bold transition-colors", selectedMonth === idx ? "text-indigo-600 bg-indigo-50" : "text-slate-600 hover:bg-slate-50")}>
-                    {month}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Year Selector */}
-          <div className="relative">
-            <button
-              onClick={() => { setIsYearDropdownOpen(!isYearDropdownOpen); setIsMonthDropdownOpen(false); }}
-              className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-black text-slate-700 flex items-center gap-2 transition-all border border-slate-100"
-            >
-              {selectedYear}
-              <ChevronDown size={14} className={cn("transition-transform", isYearDropdownOpen && "rotate-180")} />
-            </button>
-            {isYearDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-32 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-2">
-                {['2024', '2025', '2026'].map(year => (
-                  <button key={year} onClick={() => { setSelectedYear(year); setIsYearDropdownOpen(false); }}
-                    className={cn("w-full text-left px-4 py-2 text-xs font-bold transition-colors", selectedYear === year ? "text-indigo-600 bg-indigo-50" : "text-slate-600 hover:bg-slate-50")}>
-                    {year}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <MonthPicker 
+            value={{ month: selectedMonth, year: selectedYear }}
+            onChange={({ month, year }) => {
+              setSelectedMonth(month);
+              setSelectedYear(year);
+            }}
+          />
         </div>
       </div>
 

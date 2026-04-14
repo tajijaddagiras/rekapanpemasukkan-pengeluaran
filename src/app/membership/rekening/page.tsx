@@ -13,6 +13,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { LogoImage } from '@/components/ui/LogoImage';
 import { accountService, Account } from '@/lib/services/accountService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -153,14 +154,18 @@ export default function RekeningPage() {
                   {accounts.map((acc) => (
                     <tr key={acc.id} className="group hover:bg-slate-50/50 transition-all border-b border-slate-50 last:border-b-0">
                       <td className="px-5 md:px-10 py-5 md:py-8">
-                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-md overflow-hidden bg-slate-50`}>
-                           {acc.logoUrl ? (
-                             <img src={acc.logoUrl} alt={acc.name} className="w-full h-full object-cover" />
-                           ) : (
-                             <div className={`w-full h-full flex items-center justify-center ${getBgForType(acc.type)} text-white`}>
-                               {getIconForType(acc.type)}
-                             </div>
-                           )}
+                        <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center overflow-hidden bg-white border border-slate-50">
+                          <LogoImage 
+                            src={acc.logoUrl} 
+                            alt={acc.name} 
+                            fallbackText={acc.name.substring(0, 3).toUpperCase()}
+                            fallbackIcon={(
+                              <div className={`w-full h-full flex items-center justify-center ${getBgForType(acc.type)} text-white`}>
+                                {getIconForType(acc.type)}
+                              </div>
+                            )}
+                            className="w-full h-full object-cover"
+                          />
                         </div>
                       </td>
                       <td className="px-5 md:px-10 py-5 md:py-8">
