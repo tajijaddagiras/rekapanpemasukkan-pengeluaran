@@ -218,7 +218,7 @@ export default function AdminPembayaranPage() {
               <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Ticket Performance</p>
               <h3 className="text-xl font-serif font-black text-slate-900 tracking-tight">Total Tiket Pembayaran</h3>
             </div>
-            <p className="text-[12px] font-black text-slate-900 uppercase tracking-widest">Total Tiket: 2</p>
+            <p className="text-[12px] font-black text-slate-900 uppercase tracking-widest">Total Tiket: {stats.total}</p>
           </div>
           
           <div className="h-6 w-full rounded-full bg-slate-50 flex overflow-hidden border border-slate-100/50">
@@ -250,7 +250,7 @@ export default function AdminPembayaranPage() {
               <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Revenue Volume</p>
               <h3 className="text-xl font-serif font-black text-slate-900 tracking-tight">Nominal Pembayaran</h3>
             </div>
-            <p className="text-[12px] font-black text-slate-900 uppercase tracking-widest">Total: Rp 120.000</p>
+            <p className="text-[12px] font-black text-slate-900 uppercase tracking-widest">Total: Rp {(stats.revenueTotal + stats.revenuePending).toLocaleString()}</p>
           </div>
           
           <div className="h-6 w-full rounded-full bg-slate-50 flex overflow-hidden border border-slate-100/50">
