@@ -52,6 +52,19 @@ export const currencyService = {
     await deleteDoc(docRef);
   },
 
+  // Get all unique currencies across all users (for admin use)
+  getAllUniqueCurrencies: async (): Promise<Currency[]> => {
+    const snap = await getDocs(collection(db, 'currencies'));
+    const all = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Currency[];
+    // Deduplicate by code, keeping first occurrence
+    const seen = new Set<string>();
+    return all.filter(c => {
+      if (seen.has(c.code)) return false;
+      seen.add(c.code);
+      return true;
+    });
+  },
+
   // Initialize defaults if empty
   initializeDefaults: async (userId: string) => {
     const curRef = collection(db, 'currencies');

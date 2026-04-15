@@ -35,25 +35,51 @@ import {
   updateAdminProfile
 } from '@/lib/services/adminService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
+import { exchangeRateService } from '@/lib/services/exchangeRateService';
+import { currencyService, Currency } from '@/lib/services/currencyService';
 
 export default function AdminPengaturanPage() {
   const [userEmail, setUserEmail] = useState('admin@leosiqra.com');
   const [activeTab, setActiveTab] = useState('billing');
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [isRefreshingMarket, setIsRefreshingMarket] = useState(false);
+  const [liveFxRates, setLiveFxRates] = useState<Record<string, number>>({});
+  const [liveCrypto, setLiveCrypto] = useState<Record<string, any>>({});
+  const [liveTimestamp, setLiveTimestamp] = useState<string>('-');
+  const [allCurrencies, setAllCurrencies] = useState<Currency[]>([]);
 
   // FETCH MARKET DATA
   const fetchMarketData = useCallback(async () => {
     setIsRefreshingMarket(true);
     try {
-      const [cryptoRes, fxRes, usersSnap] = await Promise.all([
-        fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,binancecoin,solana&vs_currencies=idr&include_24hr_change=true'),
-        fetch('https://open.er-api.com/v6/latest/IDR'),
+      // Ambil semua mata uang dari Firestore (semua user, deduplicated) — sama seperti halaman member
+      const currencies = await currencyService.getAllUniqueCurrencies();
+      setAllCurrencies(currencies);
+
+      const cryptoKeywords = ['BTC', 'ETH', 'SOL', 'BNB', 'ADA', 'XRP', 'DOT', 'DOGE'];
+      const userCryptos = currencies.filter(c => cryptoKeywords.includes(c.code.toUpperCase()));
+      const targetIds = userCryptos.length > 0
+        ? userCryptos.map(c => {
+            if (c.code === 'BTC') return 'bitcoin';
+            if (c.code === 'ETH') return 'ethereum';
+            if (c.code === 'SOL') return 'solana';
+            if (c.code === 'BNB') return 'binancecoin';
+            if (c.code === 'ADA') return 'cardano';
+            return '';
+          }).filter(id => id !== '')
+        : ['bitcoin', 'ethereum', 'solana', 'binancecoin', 'cardano'];
+
+      const [cryptoRes, usersSnap] = await Promise.all([
+        fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${targetIds.join(',')}&vs_currencies=idr,usd&include_24hr_change=true`),
         getDocs(collection(db, 'users'))
       ]);
 
-      const crypto = cryptoRes.ok ? await cryptoRes.json() : null;
-      const fx = fxRes.ok ? await fxRes.json() : null;
+      const crypto = cryptoRes.ok ? await cryptoRes.json() : {};
+      setLiveCrypto(crypto);
+      
+      // Gunakan exchangeRateService — sama persis dengan halaman member
+      const rates = await exchangeRateService.getLatestRates();
+      setLiveFxRates(rates);
       
       // Filter: Hanya hitung role 'user' dan status bukan 'GUEST'
       const filteredUsers = usersSnap.docs.filter(doc => {
@@ -67,6 +93,7 @@ export default function AdminPengaturanPage() {
         day: '2-digit', month: '2-digit', year: 'numeric', 
         hour: '2-digit', minute: '2-digit', second: '2-digit' 
       });
+      setLiveTimestamp(timestamp);
 
       setSettings(prev => {
         if (!prev) return prev;
@@ -74,17 +101,13 @@ export default function AdminPengaturanPage() {
           ...prev,
           marketData: {
             userCovered: totalUsers,
-            fxUpdate: 5, // Misal kita track 5 pairs
-            cryptoUpdate: 4,
+            fxUpdate: currencies.filter(c => c.code !== 'IDR').length,
+            cryptoUpdate: Object.keys(crypto).length,
             stockUpdate: 3,
             lastUpdate: timestamp
           }
         };
       });
-
-      // Simpan data mentah ini untuk pamer di tabel dummy (agar terlihat live)
-      // Di masa depan bisa disimpan ke koleksi 'market_rates'
-      (window as any).liveMarket = { crypto, fx, totalUsers, timestamp };
 
     } catch (err) {
       console.error("Gagal refresh market data:", err);
@@ -905,23 +928,34 @@ export default function AdminPengaturanPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {(() => {
-                    const fx = (window as any).liveMarket?.fx?.rates;
-                    const timestamp = (window as any).liveMarket?.timestamp || '-';
-                    const data = [
-                      { pair: 'USD_IDR', rate: fx ? (1 / fx.USD).toLocaleString('id-ID') : '15.700', user: settings?.marketData?.userCovered || 0 },
-                      { pair: 'SGD_IDR', rate: fx ? (1 / fx.SGD).toLocaleString('id-ID') : '13.513', user: settings?.marketData?.userCovered || 0 },
-                      { pair: 'EUR_IDR', rate: fx ? (1 / fx.EUR).toLocaleString('id-ID') : '20.408', user: settings?.marketData?.userCovered || 0 },
-                      { pair: 'JPY_IDR', rate: fx ? (1 / fx.JPY).toLocaleString('id-ID') : '107,8', user: settings?.marketData?.userCovered || 0 },
-                      { pair: 'MYR_IDR', rate: fx ? (1 / fx.MYR).toLocaleString('id-ID') : '4.347', user: settings?.marketData?.userCovered || 0 },
-                    ];
-                    return data.map((row, idx) => (
-                      <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
-                        <td className="py-4 text-[11px] font-black text-slate-500">{row.pair}</td>
-                        <td className="py-4 text-[11px] font-bold text-slate-900">{row.rate}</td>
-                        <td className="py-4 text-[11px] font-medium text-slate-400">{row.user}</td>
-                        <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{timestamp}</td>
-                      </tr>
-                    ));
+                    const idrRate = liveFxRates.IDR || 0;
+                    // Ambil dari Firestore (sama seperti halaman member), filter IDR
+                    const fxCurrencies = allCurrencies.filter(c => c.code !== 'IDR');
+                    if (fxCurrencies.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={4} className="py-8 text-center text-[11px] text-slate-400 italic">
+                            Klik "Refresh Semua User" untuk memuat data kurs.
+                          </td>
+                        </tr>
+                      );
+                    }
+                    return fxCurrencies.map((c, idx) => {
+                      const rate = liveFxRates[c.code] ? (idrRate / liveFxRates[c.code]) : null;
+                      return (
+                        <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
+                          <td className="py-4">
+                            <p className="text-[11px] font-black text-slate-500">{c.code}_IDR</p>
+                            <p className="text-[9px] font-medium text-slate-400">{c.name}</p>
+                          </td>
+                          <td className="py-4 text-[11px] font-bold text-slate-900">
+                            {rate ? `Rp ${rate.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : <span className="text-slate-300 italic">—</span>}
+                          </td>
+                          <td className="py-4 text-[11px] font-medium text-slate-400">{settings?.marketData?.userCovered || 0}</td>
+                          <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{liveTimestamp}</td>
+                        </tr>
+                      );
+                    });
                   })()}
                 </tbody>
               </table>
@@ -939,29 +973,47 @@ export default function AdminPengaturanPage() {
                 <thead>
                   <tr className="border-b border-slate-100">
                     <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Crypto</th>
-                    <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Price</th>
+                    <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Price (IDR)</th>
+                    <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">24h Change</th>
                     <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">User</th>
                     <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Updated</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {(() => {
-                    const crypto = (window as any).liveMarket?.crypto;
-                    const timestamp = (window as any).liveMarket?.timestamp || '-';
-                    const data = [
-                      { asset: 'BTC', price: crypto?.bitcoin?.idr ? `Rp ${crypto.bitcoin.idr.toLocaleString('id-ID')}` : '—' },
-                      { asset: 'ETH', price: crypto?.ethereum?.idr ? `Rp ${crypto.ethereum.idr.toLocaleString('id-ID')}` : '—' },
-                      { asset: 'BNB', price: crypto?.binancecoin?.idr ? `Rp ${crypto.binancecoin.idr.toLocaleString('id-ID')}` : '—' },
-                      { asset: 'SOL', price: crypto?.solana?.idr ? `Rp ${crypto.solana.idr.toLocaleString('id-ID')}` : '—' },
+                    const pairs = [
+                      { asset: 'BTC', name: 'Bitcoin', id: 'bitcoin' },
+                      { asset: 'ETH', name: 'Ethereum', id: 'ethereum' },
+                      { asset: 'BNB', name: 'BNB', id: 'binancecoin' },
+                      { asset: 'SOL', name: 'Solana', id: 'solana' },
+                      { asset: 'ADA', name: 'Cardano', id: 'cardano' },
                     ];
-                    return data.map((row, idx) => (
-                      <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
-                        <td className="py-4 text-[11px] font-black text-slate-500">{row.asset}</td>
-                        <td className="py-4 text-[11px] font-bold text-slate-900">{row.price}</td>
-                        <td className="py-4 text-[11px] font-medium text-slate-400">{settings?.marketData?.userCovered || 0}</td>
-                        <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{timestamp}</td>
-                      </tr>
-                    ));
+                    return pairs.map((p, idx) => {
+                      const priceIDR = liveCrypto[p.id]?.idr;
+                      const priceUSD = liveCrypto[p.id]?.usd;
+                      const change = liveCrypto[p.id]?.usd_24h_change;
+                      return (
+                        <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
+                          <td className="py-4">
+                            <p className="text-[11px] font-black text-slate-900">{p.asset}</p>
+                            <p className="text-[9px] font-medium text-slate-400">{p.name}</p>
+                          </td>
+                          <td className="py-4">
+                            {priceIDR ? (
+                              <>
+                                <p className="text-[11px] font-bold text-slate-900">Rp {priceIDR.toLocaleString('id-ID')}</p>
+                                <p className="text-[9px] font-medium text-slate-400">${priceUSD?.toLocaleString('en-US')}</p>
+                              </>
+                            ) : <span className="text-[11px] text-slate-300 italic">Belum direfresh</span>}
+                          </td>
+                          <td className={`py-4 text-[11px] font-bold ${change >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            {change != null ? `${change >= 0 ? '+' : ''}${change.toFixed(2)}%` : `—`}
+                          </td>
+                          <td className="py-4 text-[11px] font-medium text-slate-400">{settings?.marketData?.userCovered || 0}</td>
+                          <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{liveTimestamp}</td>
+                        </tr>
+                      );
+                    });
                   })()}
                 </tbody>
               </table>

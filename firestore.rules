@@ -97,7 +97,8 @@ service cloud.firestore {
 
     // CURRENCIES - manajemen mata uang dinamis per user
     match /currencies/{docId} {
-      allow read, delete: if isOwner(resource.data.userId);
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
       allow create: if isOwner(request.resource.data.userId);
       allow update: if isOwner(resource.data.userId);
     }
