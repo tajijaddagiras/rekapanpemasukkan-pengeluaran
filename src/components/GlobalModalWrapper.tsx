@@ -18,6 +18,7 @@ import { BudgetModal } from '@/components/modals/BudgetModal';
 import { LedgerModal } from '@/components/modals/LedgerModal';
 import { AccountModal } from '@/components/modals/AccountModal';
 import { CardModal } from '@/components/modals/CardModal';
+import { CurrencyModal } from '@/components/modals/CurrencyModal';
 
 export const GlobalModalWrapper = () => {
   const { activeModal, modalData, closeModal } = useModal();
@@ -103,6 +104,11 @@ export const GlobalModalWrapper = () => {
         isOpen={activeModal === 'kartu'} 
         onClose={closeModal} 
         userId={user.uid} 
+      />
+      
+      <CurrencyModal 
+        isOpen={activeModal === 'currency'} 
+        onClose={closeModal} 
       />
     </>
   );

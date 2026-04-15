@@ -9,6 +9,7 @@ import { CategorySelect } from '@/components/CategorySelect';
 import { updateMemberTotals } from '@/lib/services/userService';
 import { addTransaction } from '@/lib/services/transactionService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
+import { CurrencySelect } from '@/components/CurrencySelect';
 
 interface OtherInvestmentModalProps {
   userId: string;
@@ -209,11 +210,11 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: Othe
             <input type="number" value={formData.pricePerUnit} onChange={e => setFormData(p => ({...p, pricePerUnit: e.target.value}))}
               placeholder="Rp" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mata Uang</label>
-            <input type="text" value={formData.currency} onChange={e => setFormData(p => ({...p, currency: e.target.value.toUpperCase()}))}
-              placeholder="IDR" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
-          </div>
+          <CurrencySelect 
+            value={formData.currency}
+            onChange={(val) => setFormData({...formData, currency: val})}
+            label="Mata Uang"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-4">

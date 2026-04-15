@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from './Button';
 import { Input } from './Input';
 import { CategorySelect } from './CategorySelect';
+import { CurrencySelect } from './CurrencySelect';
 import { transactionService, TransactionType } from '@/lib/services/transactionService';
 import { updateMemberTotals } from '@/lib/services/userService';
 import { accountService, Account } from '@/lib/services/accountService';
@@ -155,21 +156,11 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mata Uang</label>
-              <div className="relative mt-1">
-                <select 
-                  value={formData.currency}
-                  onChange={(e) => setFormData({...formData, currency: e.target.value})}
-                  className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 cursor-pointer transition-all"
-                >
-                  <option value="IDR">IDR - Rupiah</option>
-                  <option value="USD">USD - US Dollar</option>
-                  <option value="EUR">EUR - Euro</option>
-                </select>
-                <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-              </div>
-            </div>
+            <CurrencySelect 
+              label="Mata Uang"
+              value={formData.currency}
+              onChange={(val) => setFormData({...formData, currency: val})}
+            />
             <Input 
               label="Nominal" 
               placeholder="0" 

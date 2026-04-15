@@ -10,6 +10,7 @@ service cloud.firestore {
     // Helper: cek apakah user adalah admin
     function isAdmin() {
       return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
@@ -89,6 +90,13 @@ service cloud.firestore {
 
     // SAVINGS - catatan setoran tabungan dan goal keuangan
     match /savings/{docId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId);
+    }
+
+    // CURRENCIES - manajemen mata uang dinamis per user
+    match /currencies/{docId} {
       allow read, delete: if isOwner(resource.data.userId);
       allow create: if isOwner(request.resource.data.userId);
       allow update: if isOwner(resource.data.userId);

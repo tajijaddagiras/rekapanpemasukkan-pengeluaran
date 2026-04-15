@@ -6,6 +6,7 @@ import { Modal } from '@/components/ui/Modal';
 import { transactionService } from '@/lib/services/transactionService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { updateMemberTotals } from '@/lib/services/userService';
+import { CurrencySelect } from '@/components/CurrencySelect';
 
 interface TopUpModalProps {
   userId: string;
@@ -120,11 +121,12 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
                 placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 pl-11 pr-4 text-sm font-bold text-slate-700 transition-all" />
             </div>
           </div>
-          <div className="space-y-2 w-1/3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mata Uang</label>
-             <input type="text" value={formData.currency} onChange={e => setFormData(p => ({...p, currency: e.target.value.toUpperCase()}))}
-              placeholder="IDR" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-4 text-sm font-bold text-slate-700 transition-all" />
-          </div>
+          <CurrencySelect 
+            value={formData.currency}
+            onChange={(val) => setFormData({...formData, currency: val})}
+            label="Mata Uang"
+            className="w-1/3"
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

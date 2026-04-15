@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from 'next/navigation';
-import { Menu, PlusCircle, ChevronDown, TrendingUp, Briefcase, PiggyBank, CreditCard, Banknote, Target, RefreshCw, ArrowUpDown } from 'lucide-react';
+import { Menu, PlusCircle, ChevronDown, TrendingUp, Briefcase, PiggyBank, CreditCard, Banknote, Target, RefreshCw, ArrowUpDown, Globe } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useModal, ModalType } from '@/context/ModalContext';
 import { cn } from '@/lib/utils';
@@ -37,11 +37,12 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
     { id: 'budget_target', label: 'Budget dan Target', icon: Target, color: 'text-teal-600' },
     { id: 'recurring', label: 'Recurring', icon: RefreshCw, color: 'text-slate-600' },
     { id: 'ledger', label: 'Kategori Ledger', icon: Target, color: 'text-blue-900' },
+    { id: 'currency', label: 'Mata Uang Dunia', icon: Globe, color: 'text-emerald-500' },
     { id: 'kartu', label: 'Kartu Baru', icon: CreditCard, color: 'text-rose-600' },
   ];
 
   return (
-    <header className="fixed top-0 right-0 left-0 lg:left-72 h-20 border-b border-slate-200 flex items-center justify-between px-4 md:px-8 bg-white/80 backdrop-blur-md z-30">
+    <header className="fixed top-0 right-0 left-0 lg:left-72 h-20 border-b border-slate-200 flex items-center justify-between px-4 md:px-8 bg-white/80 backdrop-blur-md z-30 print:hidden">
       <div className="flex items-center gap-3">
         {/* Mobile Menu Toggle */}
         <button 

@@ -15,7 +15,8 @@ export type ModalType =
   | 'recurring'
   | 'ledger'
   | 'rekening'
-  | 'kartu';
+  | 'kartu'
+  | 'currency';
 
 interface ModalContextType {
   activeModal: ModalType;

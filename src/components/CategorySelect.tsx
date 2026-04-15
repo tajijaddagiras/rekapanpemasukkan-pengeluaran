@@ -31,12 +31,19 @@ export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChan
     if (!user) return;
 
     const q = query(collection(db, 'categories'), where('userId', '==', user.uid));
-    const unsub = onSnapshot(q, (snap) => {
-      setCategories(snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as CategoryData)));
-    });
+    const unsub = onSnapshot(q, 
+      (snap) => {
+        setCategories(snap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as CategoryData)));
+      },
+      (err) => {
+        if (err.code !== 'permission-denied') {
+          console.warn("[CategorySelect] Error listening to categories:", err);
+        }
+      }
+    );
 
     return () => unsub();
   }, []);

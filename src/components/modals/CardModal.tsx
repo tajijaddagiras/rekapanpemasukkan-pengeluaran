@@ -5,6 +5,7 @@ import { ChevronDown, Save, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { accountService } from '@/lib/services/accountService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
+import { CurrencySelect } from '@/components/CurrencySelect';
 import { useRef } from 'react';
 
 interface CardModalProps {
@@ -19,6 +20,7 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
     name: '',
     type: 'Credit Card',
     logoUrl: '',
+    currency: 'IDR',
     initialBalance: '', 
     baseValue: ''
   });
@@ -52,12 +54,12 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
         name: formData.name,
         type: formData.type,
         logoUrl: formData.logoUrl,
-        currency: 'IDR',
+        currency: formData.currency,
         initialBalance: initialBal,
         balance: isCard ? 0 : initialBal, // Cards start with 0 bill/balance, others start with initialBal
         baseValue: parseFloat(formData.baseValue) || 0
       });
-      setFormData({ name: '', type: 'Credit Card', logoUrl: '', initialBalance: '', baseValue: '' });
+      setFormData({ name: '', type: 'Credit Card', logoUrl: '', currency: 'IDR', initialBalance: '', baseValue: '' });
       onClose();
     } catch (error) {
       console.error("Error creating card/account:", error);
@@ -143,6 +145,12 @@ export const CardModal = ({ isOpen, onClose, userId }: CardModalProps) => {
               </button>
             </div>
           </div>
+
+          <CurrencySelect 
+            label="Mata Uang"
+            value={formData.currency}
+            onChange={(val) => setFormData({...formData, currency: val})}
+          />
 
           {/* Saldo Sekarang / Awal */}
           <div className="space-y-3">

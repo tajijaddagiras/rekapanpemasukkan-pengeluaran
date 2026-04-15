@@ -25,6 +25,7 @@ export interface UserProfile {
   totalInvestment: number;
   creditCardBills: number;
   otherDebts: number;
+  currencyInitialized?: boolean;
 }
 
 const COLLECTION_NAME = 'users';

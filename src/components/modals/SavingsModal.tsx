@@ -5,6 +5,7 @@ import { ChevronDown, Save } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { savingsService } from '@/lib/services/savingsService';
 import { accountService, Account } from '@/lib/services/accountService';
+import { CurrencySelect } from '@/components/CurrencySelect';
 
 interface SavingsModalProps {
   userId: string;
@@ -104,11 +105,11 @@ export const SavingsModal = ({ userId, isOpen, onClose }: SavingsModalProps) => 
                 placeholder="0" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 pl-11 pr-5 text-sm font-bold text-slate-700 transition-all" />
             </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Mata Uang</label>
-            <input type="text" value={formData.currency} onChange={e => setFormData(p => ({...p, currency: e.target.value.toUpperCase()}))}
-              placeholder="IDR" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all" />
-          </div>
+          <CurrencySelect 
+            value={formData.currency}
+            onChange={(val) => setFormData({...formData, currency: val})}
+            label="Mata Uang"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-4">

@@ -13,37 +13,118 @@ import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useRef } from 'react';
+import { currencyService, Currency } from '@/lib/services/currencyService';
+import { subscribeUserProfile, updateUserProfile, UserProfile } from '@/lib/services/userService';
+import { 
+  Globe, 
+  Plus, 
+  Trash2, 
+  FileUp, 
+  X,
+  CreditCard,
+  Coins
+} from 'lucide-react';
+import { Modal } from '@/components/ui/Modal';
+import { useModal } from '@/context/ModalContext';
 
 export default function NamaAkunPage() {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
+  const { openModal } = useModal();
+  
+  // Modal states (keep only what's necessary, move currency to global)
 
   const unsubRef = useRef<(() => void) | null>(null);
+  const unsubCurRef = useRef<(() => void) | null>(null);
+  const unsubProfRef = useRef<(() => void) | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
-        const q = query(collection(db, 'categories'), where('userId', '==', u.uid));
+        // Ledger Categories Listener
+        const qCat = query(collection(db, 'categories'), where('userId', '==', u.uid));
         if (unsubRef.current) unsubRef.current();
-        unsubRef.current = onSnapshot(q, (snap) => {
-          setCategories(snap.docs.map(doc => {
-            const d = doc.data();
-            return {
-              ...d, id: doc.id,
-              createdAt: d.createdAt?.toDate?.() ?? new Date()
-            } as Category;
-          }));
+        unsubRef.current = onSnapshot(qCat, (snap) => {
+          setCategories(snap.docs.map(doc => ({
+            ...doc.data(), id: doc.id
+          } as Category)));
           setLoading(false);
-        }, (err) => { 
-          if (err.code !== 'permission-denied') console.error('Ledger listener error:', err);
-          setLoading(false); 
         });
-      } else { setCategories([]); setLoading(false); }
+
+        // User Profile Listener
+        if (unsubProfRef.current) unsubProfRef.current();
+        unsubProfRef.current = subscribeUserProfile(u.uid, (prof) => {
+          setProfile(prof);
+        });
+
+        // Currencies Listener
+        if (unsubCurRef.current) unsubCurRef.current();
+        unsubCurRef.current = currencyService.getUserCurrencies(u.uid, (data) => {
+          setCurrencies(data);
+        });
+
+      } else { 
+        setCategories([]); 
+        setCurrencies([]);
+        setLoading(false); 
+      }
     });
-    return () => { unsub(); if (unsubRef.current) unsubRef.current(); };
+    return () => { 
+      unsub(); 
+      if (unsubRef.current) unsubRef.current(); 
+      if (unsubCurRef.current) unsubCurRef.current();
+      if (unsubProfRef.current) unsubProfRef.current();
+    };
   }, []);
+
+  // Separate Effect for Initialization to avoid race conditions
+  useEffect(() => {
+    if (user && currencies.length === 0 && profile && !profile.currencyInitialized && !loading) {
+      currencyService.initializeDefaults(user.uid).then(() => {
+        updateUserProfile(user.uid, { currencyInitialized: true });
+      });
+    }
+    if (user && profile && loading) {
+        setLoading(false);
+    }
+  }, [currencies, profile, user, loading]);
+
+  // handleAddCurrency moved to CurrencyModal.tsx
+
+  const handleDeleteCurrency = async (id: string) => {
+    if (confirm("Hapus mata uang ini?")) {
+      await currencyService.deleteCurrency(id);
+    }
+  };
+
+  const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const csv = event.target?.result as string;
+      const lines = csv.split('\n');
+      
+      for (const line of lines) {
+        const [code, name, symbol] = line.split(',').map(s => s.trim());
+        if (code && name) {
+          await currencyService.addCurrency({
+            userId: user.uid,
+            code: code.toUpperCase(),
+            name,
+            symbol: symbol || '$'
+          });
+        }
+      }
+      alert("Impor berhasil!");
+    };
+    reader.readAsText(file);
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 max-w-[1400px] mb-12">
@@ -78,64 +159,118 @@ export default function NamaAkunPage() {
         </div>
 
         {/* RIGHT COLUMN (3/4) */}
-        <div className="lg:col-span-3">
-          <div className="bg-white rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm overflow-hidden h-full flex flex-col">
-            <div className="p-6 md:p-8 flex items-center justify-between border-b border-slate-50">
+        <div className="lg:col-span-3 space-y-8">
+          
+          {/* 1. Ledger Categories */}
+          <div className="bg-white rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm overflow-hidden flex flex-col">
+            <div className="p-6 md:p-8 flex items-center justify-between border-b border-slate-50 bg-slate-50/30">
               <div className="flex items-center gap-3">
                 <div className="w-1 h-6 bg-indigo-600 rounded-full" />
                 <h2 className="text-lg font-black text-slate-900 tracking-tight">Daftar Kategori / Subkategori Ledger</h2>
               </div>
             </div>
 
-            <div className="flex-1">
-              {loading ? (
-                <div className="p-10 text-center text-sm font-medium text-slate-400">Memuat data ledger...</div>
-              ) : categories.length === 0 ? (
-                <div className="p-6">
-                  <EmptyState 
-                    title="Ledger masih kosong" 
-                    description="Anda belum memiliki kategori khusus. Klik 'Tambah Cepat' di header dan pilih 'Kategori Ledger' untuk membuatnya."
-                    icon={<FolderOpen size={24} />}
-                  />
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left min-w-[600px] md:min-w-0">
+                <thead className="bg-[#e9eff2]">
+                  <tr>
+                    <th className="px-5 md:px-10 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Kategori</th>
+                    <th className="px-5 md:px-10 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Subkategori</th>
+                    <th className="px-5 md:px-10 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {categories.length === 0 ? (
+                    <tr><td colSpan={3} className="p-10 text-center text-sm text-slate-400 font-bold">Data ledger kosong</td></tr>
+                  ) : categories.map((row) => (
+                    <tr key={row.id} className="group hover:bg-slate-50/50 transition-colors">
+                      <td className="px-5 md:px-10 py-5">
+                        <p className="text-sm font-black text-slate-900">{row.category}</p>
+                      </td>
+                      <td className="px-5 md:px-10 py-5">
+                        <p className="text-sm font-bold text-slate-500 italic font-serif tracking-tight">{row.subCategory}</p>
+                      </td>
+                      <td className="px-5 md:px-10 py-5 text-right">
+                        <span className={`px-4 py-1.5 rounded-full text-[8px] font-black tracking-widest uppercase ${
+                          row.status === 'VERIFIED' ? 'bg-blue-50 text-blue-500' : 'bg-amber-100 text-amber-600'
+                        }`}>
+                          {row.status === 'VERIFIED' ? 'Terverifikasi' : 'Tertunda'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 2. Currency Categories Card */}
+          <div className="bg-white rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm overflow-hidden flex flex-col">
+            <div className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-50 bg-indigo-50/20">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                <div>
+                  <h2 className="text-lg font-black text-slate-900 tracking-tight">Kategori Mata Uang Dunia</h2>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sistem Dinamis Terintegrasi</p>
                 </div>
-              ) : (
-                <div className="overflow-x-auto custom-scrollbar">
-                  <table className="w-full text-left min-w-[600px] md:min-w-0">
-                    <thead className="bg-[#e9eff2]">
-                      <tr>
-                        <th className="px-5 md:px-10 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Kategori</th>
-                        <th className="px-5 md:px-10 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Subkategori</th>
-                        <th className="px-5 md:px-10 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {categories.map((row) => (
-                        <tr key={row.id} className="group hover:bg-slate-50/50 transition-colors">
-                          <td className="px-5 md:px-10 py-5">
-                            <p className="text-sm font-black text-slate-900">{row.category}</p>
-                          </td>
-                          <td className="px-5 md:px-10 py-5">
-                            <p className="text-sm font-bold text-slate-500 italic font-serif tracking-tight">{row.subCategory}</p>
-                          </td>
-                          <td className="px-5 md:px-10 py-5 text-right">
-                            <span className={`px-4 py-1.5 rounded-full text-[8px] font-black tracking-widest uppercase ${
-                              row.status === 'VERIFIED' 
-                                ? 'bg-blue-50 text-blue-500' 
-                                : 'bg-amber-100 text-amber-600'
-                            }`}>
-                              {row.status === 'VERIFIED' ? 'Terverifikasi' : 'Tertunda'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              </div>
+              <div className="flex items-center gap-3">
+                <input 
+                  type="file" 
+                  id="csv-import" 
+                  className="hidden" 
+                  accept=".csv"
+                  onChange={handleCSVImport}
+                />
+                <label 
+                  htmlFor="csv-import"
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all cursor-pointer"
+                >
+                  <FileUp size={14} /> Import CSV
+                </label>
+              </div>
             </div>
 
+            <div className="p-6 md:p-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {currencies.map((curr) => (
+                  <div key={curr.id} className="relative group p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all flex flex-col gap-3">
+                    <div className="flex justify-between items-start">
+                      <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-emerald-500 font-bold text-lg">
+                        {curr.symbol}
+                      </div>
+                      <button 
+                        onClick={() => curr.id && handleDeleteCurrency(curr.id)}
+                        className="p-2 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{curr.name}</p>
+                      <h4 className="text-xl font-black text-slate-900">{curr.code}</h4>
+                    </div>
+                    {curr.isDefault && (
+                      <span className="absolute bottom-4 right-4 text-[7px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">Default</span>
+                    )}
+                  </div>
+                ))}
+
+                {currencies.length === 0 && (
+                  <div className="col-span-full py-12 text-center">
+                    <EmptyState 
+                      title="Mata uang belum diatur"
+                      description="Simpan daftar mata uang Anda untuk digunakan di seluruh aplikasi."
+                      icon={<Globe size={24} />}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Local modal removed - now using global CurrencyModal via openModal('currency') */}
 
       </div>
 

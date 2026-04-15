@@ -7,13 +7,20 @@ import {
   TrendingUp, 
   WalletCards, 
   Landmark, 
-  Activity
+  Activity,
+  ShieldCheck,
+  FileSpreadsheet,
+  Printer,
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { YearPicker } from '@/components/ui/YearPicker';
+import { CategorySelect } from '@/components/CategorySelect';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { budgetService, Budget } from '@/lib/services/budgetService';
+import { accountService, Account } from '@/lib/services/accountService';
+import { categoryService, Category } from '@/lib/services/categoryService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
@@ -23,12 +30,26 @@ export default function AnnualDashboard() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [user, setUser] = useState<User | null>(null);
+
+  // States for Category Comparison
+  const [cat1Id, setCat1Id] = useState<string>(''); // Default to 'All Income' logic if empty?
+  const [cat2Id, setCat2Id] = useState<string>('');
+  
+  // Helper for Category Name from ID
+  const getCatName = (id: string) => {
+    const cat = categories.find(c => c.id === id || c.category === id);
+    return cat?.category || id || 'Pilih Kategori';
+  };
 
   useEffect(() => {
     let unsubTrx: (() => void) | null = null;
     let unsubInv: (() => void) | null = null;
     let unsubBdg: (() => void) | null = null;
+    let unsubAcc: (() => void) | null = null;
+    let unsubCat: (() => void) | null = null;
 
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -49,7 +70,7 @@ export default function AnnualDashboard() {
             const d = doc.data();
             return { ...d, id: doc.id, amount: Number(d.amount) || 0, date: d.date?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date() } as Transaction;
           }));
-        });
+        }, (err) => console.error("Annual TRX error:", err));
 
         const qInv = query(collection(db, 'investments'), where('userId', '==', u.uid));
         unsubInv = onSnapshot(qInv, (snap) => {
@@ -57,7 +78,7 @@ export default function AnnualDashboard() {
             const d = doc.data();
             return { ...d, id: doc.id, dateInvested: d.dateInvested?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date() } as Investment;
           }));
-        });
+        }, (err) => console.error("Annual INV error:", err));
 
         const qBdg = query(collection(db, 'budgets'), where('userId', '==', u.uid));
         unsubBdg = onSnapshot(qBdg, (snap) => {
@@ -65,11 +86,31 @@ export default function AnnualDashboard() {
             const d = doc.data();
             return { ...d, id: doc.id, amount: Number(d.amount) || 0, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Budget;
           }));
+        }, (err) => console.error("Annual BDG error:", err));
+
+        // Add accounts subscription
+        const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
+        unsubAcc = onSnapshot(qAcc, (snap) => {
+          setAccounts(snap.docs.map(doc => ({ ...doc.data(), id: doc.id }) as Account));
+        }, (err) => console.error("Annual ACC error:", err));
+
+        // Add categories subscription
+        const qCat = query(collection(db, 'categories'), where('userId', '==', u.uid));
+        unsubCat = onSnapshot(qCat, (snap) => {
+          setCategories(snap.docs.map(doc => ({ ...doc.data(), id: doc.id }) as Category));
+        }, (err) => {
+          if (err.code !== 'permission-denied') console.error("Annual CAT error:", err);
         });
       } else {
         setTransactions([]);
         setInvestments([]);
         setBudgets([]);
+        setAccounts([]);
+        if (unsubTrx) unsubTrx();
+        if (unsubInv) unsubInv();
+        if (unsubBdg) unsubBdg();
+        if (unsubAcc) unsubAcc();
+        if (unsubCat) unsubCat();
       }
     });
     return () => { 
@@ -77,6 +118,8 @@ export default function AnnualDashboard() {
       if (unsubTrx) unsubTrx();
       if (unsubInv) unsubInv();
       if (unsubBdg) unsubBdg();
+      if (unsubAcc) unsubAcc();
+      if (unsubCat) unsubCat();
     };
   }, [selectedYear]);
 
@@ -87,26 +130,85 @@ export default function AnnualDashboard() {
 
   const totalPemasukan = useMemo(() => yearTransactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0), [yearTransactions]);
   const totalPengeluaran = useMemo(() => yearTransactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0), [yearTransactions]);
-  const totalInvestasi = useMemo(() => investments.reduce((s, i) => s + i.amountInvested, 0), [investments]);
+  const totalInvestasi = useMemo(() => investments.reduce((s, i) => s + (Number(i.amountInvested) || 0), 0), [investments]);
   const netSavings = totalPemasukan - totalPengeluaran;
+
+  // Export Funcs
+  const handleExportExcel = () => {
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    
+    // Create an HTML table string that Excel can parse perfectly
+    let tableHtml = `
+      <table border="1">
+        <tr style="background-color: #f1f5f9;">
+          <th style="padding: 10px;">Bulan</th>
+          <th style="padding: 10px;">Pemasukan</th>
+          <th style="padding: 10px;">Pengeluaran</th>
+          <th style="padding: 10px;">Net Arus Kas</th>
+        </tr>
+    `;
+
+    months.forEach((m, idx) => {
+      const monthTrx = yearTransactions.filter(t => t.date.getMonth() === idx);
+      const inc = monthTrx.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0);
+      const exp = monthTrx.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0);
+      tableHtml += `
+        <tr>
+          <td style="padding: 8px;">${m}</td>
+          <td style="padding: 8px; text-align: right;">${inc.toLocaleString()}</td>
+          <td style="padding: 8px; text-align: right;">${exp.toLocaleString()}</td>
+          <td style="padding: 8px; text-align: right; font-weight: bold;">${(inc - exp).toLocaleString()}</td>
+        </tr>
+      `;
+    });
+
+    tableHtml += `</table>`;
+
+    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Laporan_Tahunan_${selectedYear}.xls`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    window.print();
+  };
 
   // Monthly Aggregation for the Chart
   const monthlyData = useMemo(() => {
     const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-    const data = months.map(m => ({ m, pemasukan: 0, pengeluaran: 0 }));
+    const data = months.map(m => ({ m, v1: 0, v2: 0 }));
+    
     yearTransactions.forEach(t => {
       const monthIdx = t.date.getMonth();
-      if (t.type === 'pemasukan') data[monthIdx].pemasukan += t.amount;
-      if (t.type === 'pengeluaran') data[monthIdx].pengeluaran += t.amount;
+      
+      // If we have specific categories selected
+      if (cat1Id && cat2Id) {
+        // Compare by category name or ID (we normalize to name for comparison in charts usually)
+        if (t.category === cat1Id || t.category === getCatName(cat1Id)) data[monthIdx].v1 += t.amount;
+        if (t.category === cat2Id || t.category === getCatName(cat2Id)) data[monthIdx].v2 += t.amount;
+      } else {
+        // Default: Income vs Expense
+        if (t.type === 'pemasukan') data[monthIdx].v1 += t.amount;
+        if (t.type === 'pengeluaran') data[monthIdx].v2 += t.amount;
+      }
     });
+
     // Convert to percentages relative to max value for chart heights
-    const maxVal = Math.max(...data.map(d => Math.max(d.pemasukan, d.pengeluaran, 1)));
+    const maxVal = Math.max(...data.map(d => Math.max(d.v1, d.v2, 1)));
     return data.map(d => ({
       m: d.m,
-      b1: (d.pemasukan / maxVal) * 100,
-      b2: (d.pengeluaran / maxVal) * 100,
+      b1: (d.v1 / maxVal) * 100,
+      b2: (d.v2 / maxVal) * 100,
+      v1: d.v1,
+      v2: d.v2
     }));
-  }, [yearTransactions]);
+  }, [yearTransactions, cat1Id, cat2Id]);
 
   // Top Transactions
   const topTransactionsList = useMemo(() => {
@@ -143,6 +245,25 @@ export default function AnnualDashboard() {
   const keluarPerc = totalPemasukan > 0 ? Math.min(Math.round((totalPengeluaran / totalPemasukan) * 100), 100) : 0;
   const tabunganPerc = totalPemasukan > 0 ? Math.min(Math.round((Math.max(netSavings,0) / totalPemasukan) * 100), 100) : 0;
   const invPerc = totalPemasukan > 0 ? Math.min(Math.round((totalInvestasi / totalPemasukan) * 100), 100) : 0;
+
+  // SPT Specific Aggregations
+  const daftarHarta = useMemo(() => {
+    return [
+      ...accounts.map(acc => ({ name: acc.name, type: acc.type, value: acc.balance })),
+      ...investments.map(inv => ({ name: inv.name, type: 'Investasi', value: inv.amountInvested }))
+    ];
+  }, [accounts, investments]);
+
+  const daftarUtang = useMemo(() => {
+    // Collect debts from accounts (credit card bills) or other sources if added later
+    return accounts.filter(acc => acc.type === 'Kartu Kredit' && acc.balance < 0).map(acc => ({
+      name: acc.name,
+      value: Math.abs(acc.balance)
+    }));
+  }, [accounts]);
+
+  const totalHarta = daftarHarta.reduce((s, h) => s + h.value, 0);
+  const totalUtang = daftarUtang.reduce((s, u) => s + u.value, 0);
 
 
   // Circular Progress Helper Component
@@ -182,8 +303,23 @@ export default function AnnualDashboard() {
   };
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1400px]">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1400px] print:p-0 print:m-0 print:bg-white print:max-w-none">
       
+      {/* 0. Print-Only Header */}
+      <div className="hidden print:flex items-center justify-between border-b-2 border-slate-900 pb-6 mb-8">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-white font-black text-xl">L</div>
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Leosiqra Report</h1>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Laporan Keuangan Tahunan Resmi</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dibuat Pada</p>
+          <p className="text-sm font-bold text-slate-900">{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+        </div>
+      </div>
+
       {/* 1. Header (Top Bar) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm">
         <div>
@@ -191,7 +327,25 @@ export default function AnnualDashboard() {
           <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Laporan Fiskal Tahun {selectedYear}</p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 print:hidden">
+          {/* Export Buttons */}
+          <button 
+            onClick={handleExportExcel}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 hover:bg-emerald-100 transition-all"
+          >
+            <FileSpreadsheet size={14} />
+            Excel
+          </button>
+          <button 
+            onClick={handleExportPDF}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:bg-slate-200 transition-all"
+          >
+            <Printer size={14} />
+            PDF / Print
+          </button>
+
+          <div className="w-px h-6 bg-slate-100 mx-1" />
+
           {/* Year Picker */}
           <YearPicker 
             value={selectedYear}
@@ -287,6 +441,92 @@ export default function AnnualDashboard() {
           </div>
         </div>
       </div>
+      
+      {/* 2.5 SPT Assistant Section */}
+      <div className="p-8 md:p-10 rounded-[40px] bg-slate-900 text-white relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-12 text-white/5 group-hover:text-white/10 transition-colors">
+          <ShieldCheck size={180} />
+        </div>
+        
+        <div className="relative z-10 space-y-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-black uppercase tracking-widest border border-indigo-500/30">
+                SPT Tax Assistant
+              </div>
+              <h3 className="text-3xl font-serif font-black tracking-tight">Kesiapan Laporan Pajak</h3>
+              <p className="text-slate-400 font-medium text-sm max-w-md">Data di bawah ini dirangkum untuk membantu Anda mengisi daftar harta dan kewajiban pada SPT Tahunan.</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Status Ketersediaan Data</p>
+              <div className="flex items-center gap-2 justify-end">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-sm font-bold text-emerald-400">Siap Dilaporkan</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+            {/* Daftar Harta */}
+            <div className="lg:col-span-8 space-y-4">
+              <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                <TrendingUp size={14} className="text-emerald-500" />
+                Daftar Harta (Aset)
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {daftarHarta.length === 0 ? (
+                  <div className="col-span-2 p-6 rounded-2xl bg-white/5 border border-white/10 text-center text-slate-500 italic text-sm">Belum ada aset terdaftar.</div>
+                ) : (
+                  daftarHarta.map((harta, i) => (
+                    <div key={i} className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all flex items-center justify-between group">
+                      <div className="min-w-0">
+                        <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1 truncate">{harta.type}</p>
+                        <p className="text-sm font-bold text-white truncate">{harta.name}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-black text-white">Rp {harta.value.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Daftar Utang & Kewajiban */}
+            <div className="lg:col-span-4 space-y-4">
+              <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                <TrendingDown size={14} className="text-rose-500" />
+                Daftar Utang
+              </h4>
+              <div className="space-y-3">
+                {daftarUtang.length === 0 ? (
+                  <div className="p-6 rounded-2xl bg-white/5 border border-white/10 text-center text-slate-500 italic text-sm">Tidak ada kewajiban tercatat.</div>
+                ) : (
+                  daftarUtang.map((utang, i) => (
+                    <div key={i} className="p-5 rounded-2xl bg-rose-500/5 border border-rose-500/10 hover:bg-rose-500/10 transition-all flex items-center justify-between">
+                      <div className="min-w-0">
+                        <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest mb-1">KEWAJIBAN</p>
+                        <p className="text-sm font-bold text-white truncate">{utang.name}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-black text-rose-400">Rp {utang.value.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              
+              <div className="pt-4 border-t border-white/5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-slate-400">Total Harta Bersih</span>
+                  <span className="text-lg font-serif font-black text-indigo-400">Rp {(totalHarta - totalUtang).toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
 
       {/* 3. Middle Area (2/3 Graph + 1/3 Sidebar List) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
@@ -295,14 +535,40 @@ export default function AnnualDashboard() {
         <div className="lg:col-span-2 bg-white rounded-[20px] md:rounded-[24px] p-5 md:p-8 border border-slate-100 shadow-sm overflow-hidden">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-8 md:mb-10">
             <div>
-              <h3 className="text-[14px] md:text-[18px] font-bold text-slate-900 leading-tight">Perbandingan Kategori Tahunan</h3>
-              <p className="text-[11px] md:text-xs font-medium text-slate-400 mt-1 max-w-sm">Visual comparison of selected financial metrics across 12 months.</p>
+              <h3 className="text-[14px] md:text-[18px] font-bold text-slate-900 leading-tight">Perbandingan Tahunan</h3>
+              <p className="text-[9px] md:text-xs font-medium text-slate-400 mt-1 max-w-sm">Visual comparison of selected financial metrics.</p>
             </div>
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-2 bg-slate-50 p-1 md:p-1.5 rounded-lg border border-slate-100 text-[9px] md:text-xs font-bold text-slate-400 w-full md:w-fit overflow-x-auto custom-scrollbar">
-              <div className="flex items-center">
-                <span className="px-3 py-1.5 bg-white text-slate-700 rounded shadow-sm whitespace-nowrap">Category 1: Salary</span>
-                <span className="px-2 italic text-[10px]">VS</span>
-                <span className="px-3 py-1.5 text-slate-500 whitespace-nowrap">Category 2: Rent</span>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-50/50 p-2 rounded-xl border border-slate-100/50 w-full md:w-fit">
+              <div className="flex flex-1 items-center gap-2">
+                <div className="flex flex-1 items-center gap-2 min-w-0">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest bg-white h-7 px-2 flex items-center rounded-lg border border-slate-100 shrink-0">1</span>
+                  <select 
+                    value={cat1Id} 
+                    onChange={(e) => setCat1Id(e.target.value)}
+                    className="flex-1 min-w-[100px] bg-white text-[11px] font-bold px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer truncate"
+                  >
+                    <option value="">+ Pemasukan (Total)</option>
+                    {[...new Map(categories.map(c => [c.category, c])).values()].map(c => (
+                      <option key={c.id} value={c.category}>{c.category}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <span className="text-[9px] font-black text-indigo-300 italic px-1 shrink-0">VS</span>
+                
+                <div className="flex flex-1 items-center gap-2 min-w-0">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest bg-white h-7 px-2 flex items-center rounded-lg border border-slate-100 shrink-0">2</span>
+                  <select 
+                    value={cat2Id} 
+                    onChange={(e) => setCat2Id(e.target.value)}
+                    className="flex-1 min-w-[100px] bg-white text-[11px] font-bold px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer truncate"
+                  >
+                    <option value="">- Pengeluaran (Total)</option>
+                    {[...new Map(categories.map(c => [c.category, c])).values()].map(c => (
+                      <option key={c.id} value={c.category}>{c.category}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -314,17 +580,17 @@ export default function AnnualDashboard() {
               <div key={col.m} className="flex flex-col items-center gap-3 w-full h-full justify-end group">
                 <div className="flex items-end gap-1 w-full justify-center h-[200px]">
                   <div 
-                    title="Pemasukan"
-                    className="w-1/2 max-w-[12px] bg-slate-200 rounded-t-sm group-hover:bg-slate-300 transition-colors" 
+                    title={`${cat1Id || 'Pemasukan'}: Rp ${col.v1.toLocaleString()}`}
+                    className="w-1/2 max-w-[12px] bg-indigo-500/40 rounded-t-sm group-hover:bg-indigo-600 transition-colors cursor-help" 
                     style={{ height: `${col.b1}%` }}
                   />
                   <div 
-                    title="Pengeluaran"
-                    className="w-1/2 max-w-[12px] bg-slate-600 rounded-t-sm group-hover:bg-slate-700 transition-colors" 
+                    title={`${cat2Id || 'Pengeluaran'}: Rp ${col.v2.toLocaleString()}`}
+                    className="w-1/2 max-w-[12px] bg-slate-400 rounded-t-sm group-hover:bg-slate-700 transition-colors cursor-help" 
                     style={{ height: `${col.b2}%` }}
                   />
                 </div>
-                <span className="text-[7px] md:text-[8px] font-bold text-slate-400 tracking-tight md:tracking-widest uppercase">{col.m}</span>
+                <span className="text-[7px] md:text-[8px] font-black text-slate-400 tracking-tight md:tracking-widest uppercase">{col.m}</span>
               </div>
             ))}
           </div>
@@ -406,6 +672,54 @@ export default function AnnualDashboard() {
           </table>
         </div>
       </div>
+
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
+          body {
+            background-color: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          /* Hide elements */
+          .print\\:hidden, 
+          header, 
+          aside, 
+          button, 
+          .YearPicker, 
+          .custom-scrollbar::-webkit-scrollbar {
+            display: none !important;
+          }
+          /* Reset layout for print */
+          main {
+            margin-left: 0 !important;
+            padding: 0 !important;
+          }
+          .max-w-[1400px] {
+            max-width: none !important;
+          }
+          /* Cards and content */
+          .bg-white {
+            background-color: white !important;
+            border: 1px solid #e2e8f0 !important;
+            break-inside: avoid;
+            padding: 20px !important;
+          }
+          .grid {
+            gap: 1rem !important;
+          }
+          /* Text colors */
+          .text-slate-400 {
+            color: #94a3b8 !important;
+          }
+          .text-slate-900 {
+            color: #0f172a !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
