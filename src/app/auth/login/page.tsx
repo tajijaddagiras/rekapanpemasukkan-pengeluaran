@@ -24,8 +24,18 @@ export default function LoginPage() {
     setError('');
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push('/membership/dashboard');
+      const { user } = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Fetch user role
+      const { doc, getDoc } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (userDoc.exists() && userDoc.data().role === 'admin') {
+        router.push('/admin');
+      } else {
+        router.push('/membership/dashboard');
+      }
     } catch (err: any) {
       setError('Gagal login. Periksa kembali email dan password Anda.');
     } finally {

@@ -12,7 +12,11 @@ export interface UserProfile {
   uid: string;
   name: string;
   email: string;
-  role: string;
+  photoURL?: string;
+  role: 'admin' | 'user';
+  plan: 'FREE' | 'PRO';
+  status: 'AKTIF' | 'NONAKTIF';
+  expiredAt?: string;
   createdAt: string;
   totalWealth: number;
   totalIncome: number;
