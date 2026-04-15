@@ -9,6 +9,7 @@ export interface Saving {
   userId: string;
   description: string;
   amount: number;
+  amountIDR?: number;
   currency: string;
   category: string;  // 'Dana Darurat', 'Liburan', dll
   subCategory?: string;
@@ -26,6 +27,7 @@ export const savingsService = {
     const ref = collection(db, COLLECTION_NAME);
     const newDoc = await addDoc(ref, {
       ...data,
+      amountIDR: data.amountIDR || data.amount || 0,
       date: Timestamp.fromDate(data.date),
       createdAt: Timestamp.now()
     });

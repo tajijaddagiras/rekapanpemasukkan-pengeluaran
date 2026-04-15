@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Save, ChevronDown, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Save, ChevronDown, Image as ImageIcon, Loader2, RefreshCw } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
@@ -9,6 +9,8 @@ import { updateMemberTotals } from '@/lib/services/userService';
 import { addTransaction } from '@/lib/services/transactionService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { CurrencySelect } from '@/components/CurrencySelect';
+import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
+import { formatCurrency } from '@/lib/utils';
 
 interface StockInvestmentModalProps {
   userId: string;
@@ -21,6 +23,8 @@ interface StockInvestmentModalProps {
 export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initialData }: StockInvestmentModalProps) => {
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [rates, setRates] = useState<ExchangeRates | null>(null);
+  const [convertedAmount, setConvertedAmount] = useState<number>(0);
   
   const [formData, setFormData] = useState({
     stockCode: '',
@@ -58,6 +62,7 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
   useEffect(() => {
     if (isOpen && userId) {
       accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
+      exchangeRateService.getLatestRates().then(setRates).catch(console.error);
       
       if (editData) {
         setFormData({
@@ -99,6 +104,23 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
     }
   }, [isOpen, userId, editData, initialData]);
 
+  useEffect(() => {
+    const shares = parseFloat(formData.sharesCount) || 0;
+    const price = parseFloat(formData.pricePerShare) || 0;
+    const invested = shares * price;
+    
+    if (invested && formData.currency && rates) {
+      if (formData.currency === 'IDR') {
+        setConvertedAmount(invested);
+      } else {
+        const idrValue = exchangeRateService.convert(invested, formData.currency, 'IDR', rates);
+        setConvertedAmount(idrValue);
+      }
+    } else {
+      setConvertedAmount(0);
+    }
+  }, [formData.sharesCount, formData.pricePerShare, formData.currency, rates]);
+
   const handleCreate = async () => {
     if (!userId || !formData.stockCode || !formData.sharesCount || !formData.pricePerShare) return;
     setLoading(true);
@@ -124,7 +146,9 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         accountId: formData.accountId || 'General',
         platform: formData.platform,
         amountInvested: invested, 
+        amountIDR: convertedAmount || invested,
         currentValue: current,
+        currentValueIDR: formData.currency === 'IDR' ? current : (current * (convertedAmount / (invested || 1))),
         returnPercentage: invested > 0 ? ((current - invested) / invested) * 100 : 0,
         currency: formData.currency, 
         dateInvested: new Date(formData.dateInvested), 
@@ -151,6 +175,7 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
       // 3. Create Update-Tracking Transaction
       await addTransaction({
         userId, type: financeType, amount: invested,
+        amountIDR: convertedAmount || invested,
         category: 'Investasi', subCategory: isSell ? `[Update] Jual Saham ${formData.stockCode}` : `[Update] Beli Saham ${formData.stockCode}`,
         accountId: formData.accountId || 'General',
         date: new Date(formData.dateInvested),
@@ -259,6 +284,24 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
             className={initialData ? 'opacity-60 grayscale' : ''}
           />
         </div>
+
+        {/* Conversion Display */}
+        {formData.currency !== 'IDR' && formData.sharesCount && formData.pricePerShare && (
+          <div className="bg-emerald-50/50 border border-emerald-100/50 rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-2">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0">
+                <RefreshCw size={14} />
+              </div>
+              <div>
+                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">Total Terkonversi (IDR)</p>
+                <p className="text-sm font-black text-slate-900 leading-none">
+                  ≈ {formatCurrency(convertedAmount, 'IDR')}
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-medium text-slate-400 italic">Live Rate</span>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">

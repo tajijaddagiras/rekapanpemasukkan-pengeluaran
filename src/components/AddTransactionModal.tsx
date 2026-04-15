@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Save, TrendingUp, TrendingDown, Briefcase, PiggyBank, ChevronDown } from 'lucide-react';
+import { X, Save, TrendingUp, TrendingDown, Briefcase, PiggyBank, ChevronDown, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from './Button';
 import { Input } from './Input';
@@ -12,6 +12,8 @@ import { updateMemberTotals } from '@/lib/services/userService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
+import { formatCurrency } from '@/lib/utils';
 
 interface AddTransactionModalProps {
   userId: string;
@@ -23,6 +25,8 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
   const [type, setType] = useState<TransactionType>('pemasukan');
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [rates, setRates] = useState<ExchangeRates | null>(null);
+  const [convertedAmount, setConvertedAmount] = useState<number>(0);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -41,8 +45,23 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
   useEffect(() => {
     if (isOpen && userId) {
       accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
+      exchangeRateService.getLatestRates().then(setRates).catch(console.error);
     }
   }, [isOpen, userId]);
+
+  useEffect(() => {
+    if (formData.amount && formData.currency && rates) {
+      const amount = parseFloat(formData.amount);
+      if (formData.currency === 'IDR') {
+        setConvertedAmount(amount);
+      } else {
+        const idrValue = exchangeRateService.convert(amount, formData.currency, 'IDR', rates);
+        setConvertedAmount(idrValue);
+      }
+    } else {
+      setConvertedAmount(0);
+    }
+  }, [formData.amount, formData.currency, rates]);
 
   if (!isOpen) return null;
 
@@ -56,6 +75,7 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
         userId,
         type: type === 'pemasukan' || type === 'pengeluaran' ? type : 'pemasukan',
         amount: amountNum,
+        amountIDR: convertedAmount || amountNum,
         category: formData.category,
         subCategory: formData.subCategory,
         currency: formData.currency,
@@ -170,6 +190,24 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
               required
             />
           </div>
+          
+          {/* Conversion Display */}
+          {formData.currency !== 'IDR' && formData.amount && (
+            <div className="bg-emerald-50/50 border border-emerald-100/50 rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-2">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0">
+                  <RefreshCw size={14} />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">Terkonversi ke IDR</p>
+                  <p className="text-sm font-black text-slate-900 leading-none">
+                    ≈ {formatCurrency(convertedAmount, 'IDR')}
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-medium text-slate-400 italic">Live Rate</span>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <CategorySelect 

@@ -40,6 +40,8 @@ export default function NamaAkunPage() {
   const unsubCurRef = useRef<(() => void) | null>(null);
   const unsubProfRef = useRef<(() => void) | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -99,6 +101,39 @@ export default function NamaAkunPage() {
     if (confirm("Hapus mata uang ini?")) {
       await currencyService.deleteCurrency(id);
     }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (confirm(`Hapus ${selectedIds.length} mata uang yang dipilih?`)) {
+      setLoading(true);
+      try {
+        for (const id of selectedIds) {
+          await currencyService.deleteCurrency(id);
+        }
+        setSelectedIds([]);
+        setIsSelectMode(false);
+        alert("Berhasil menghapus mata uang.");
+      } catch (error) {
+        console.error("Bulk delete failed:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === currencies.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(currencies.map(c => c.id || ''));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
   };
 
   const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -214,37 +249,106 @@ export default function NamaAkunPage() {
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sistem Dinamis Terintegrasi</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <input 
-                  type="file" 
-                  id="csv-import" 
-                  className="hidden" 
-                  accept=".csv"
-                  onChange={handleCSVImport}
-                />
-                <label 
-                  htmlFor="csv-import"
-                  className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all cursor-pointer"
-                >
-                  <FileUp size={14} /> Import CSV
-                </label>
+              <div className="flex items-center gap-2">
+                {!isSelectMode ? (
+                  <>
+                    <input 
+                      type="file" 
+                      id="csv-import" 
+                      className="hidden" 
+                      accept=".csv"
+                      onChange={handleCSVImport}
+                    />
+                    <label 
+                      htmlFor="csv-import"
+                      className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all cursor-pointer"
+                    >
+                      <FileUp size={14} /> Import CSV
+                    </label>
+                    <button 
+                      onClick={() => setIsSelectMode(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 border border-indigo-100 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-all"
+                    >
+                      Pilih
+                    </button>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2 animate-in slide-in-from-right-2">
+                    <button 
+                      onClick={toggleSelectAll}
+                      className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
+                    >
+                      <input 
+                        type="checkbox" 
+                        readOnly
+                        checked={selectedIds.length === currencies.length && currencies.length > 0}
+                        className="w-3 h-3 rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      Pilih Semua
+                    </button>
+                    <button 
+                      onClick={handleBulkDelete}
+                      disabled={selectedIds.length === 0}
+                      className="p-2 bg-rose-50 text-rose-500 border border-rose-100 rounded-xl hover:bg-rose-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Hapus Terpilih"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setIsSelectMode(false);
+                        setSelectedIds([]);
+                      }}
+                      className="p-2 bg-slate-50 text-slate-500 border border-slate-200 rounded-xl hover:bg-slate-100 transition-all"
+                      title="Batal"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="p-6 md:p-8">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {currencies.map((curr) => (
-                  <div key={curr.id} className="relative group p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all flex flex-col gap-3">
+                  <div 
+                    key={curr.id} 
+                    onClick={() => isSelectMode && curr.id && toggleSelect(curr.id)}
+                    className={`relative group p-5 rounded-2xl border transition-all flex flex-col gap-3 cursor-pointer ${
+                      isSelectMode 
+                        ? (selectedIds.includes(curr.id || '') 
+                            ? 'bg-indigo-50 border-indigo-200' 
+                            : 'bg-white border-slate-100 hover:border-slate-200 shadow-sm')
+                        : 'bg-slate-50 border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30'
+                    }`}
+                  >
                     <div className="flex justify-between items-start">
                       <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-emerald-500 font-bold text-lg">
                         {curr.symbol}
                       </div>
-                      <button 
-                        onClick={() => curr.id && handleDeleteCurrency(curr.id)}
-                        className="p-2 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+
+                      {isSelectMode ? (
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                          selectedIds.includes(curr.id || '')
+                            ? 'bg-indigo-600 border-indigo-600'
+                            : 'bg-white border-slate-300'
+                        }`}>
+                          {selectedIds.includes(curr.id || '') && (
+                            <div className="w-2 h-2 rounded-full bg-white" />
+                          )}
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            curr.id && handleDeleteCurrency(curr.id);
+                          }}
+                          className="p-2 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                     <div>
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{curr.name}</p>

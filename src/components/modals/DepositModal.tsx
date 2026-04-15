@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Save, ChevronDown } from 'lucide-react';
+import { Save, ChevronDown, RefreshCw } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
@@ -9,6 +9,8 @@ import { updateMemberTotals } from '@/lib/services/userService';
 import { addTransaction } from '@/lib/services/transactionService';
 import { CategorySelect } from '@/components/CategorySelect';
 import { CurrencySelect } from '@/components/CurrencySelect';
+import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
+import { formatCurrency } from '@/lib/utils';
 
 interface DepositModalProps {
   userId: string;
@@ -20,6 +22,8 @@ interface DepositModalProps {
 export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModalProps) => {
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [rates, setRates] = useState<ExchangeRates | null>(null);
+  const [convertedAmount, setConvertedAmount] = useState<number>(0);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -38,6 +42,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
   useEffect(() => {
     if (isOpen && userId) {
       accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
+      exchangeRateService.getLatestRates().then(setRates).catch(console.error);
       
       if (editData) {
         setFormData({
@@ -62,6 +67,20 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
       }
     }
   }, [isOpen, userId, editData]);
+
+  useEffect(() => {
+    if (formData.amountInvested && formData.currency && rates) {
+      const amount = parseFloat(formData.amountInvested);
+      if (formData.currency === 'IDR') {
+        setConvertedAmount(amount);
+      } else {
+        const idrValue = exchangeRateService.convert(amount, formData.currency, 'IDR', rates);
+        setConvertedAmount(idrValue);
+      }
+    } else {
+      setConvertedAmount(0);
+    }
+  }, [formData.amountInvested, formData.currency, rates]);
 
   const calculateDays = (startStr: string, endStr: string) => {
     const start = new Date(startStr);
@@ -158,6 +177,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
         
         await addTransaction({
           userId, type: financeType, amount: amountToSync,
+          amountIDR: formData.currency === 'IDR' ? amountToSync : (amountToSync * (convertedAmount / (parseFloat(formData.amountInvested) || 1))),
           category: 'Investasi', subCategory: `Deposito - ${formData.transactionType}`,
           accountId: formData.accountId || 'General',
           date: new Date(formData.dateInvested),
@@ -212,6 +232,24 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
             label="Mata Uang"
           />
         </div>
+
+        {/* Conversion Display */}
+        {formData.currency !== 'IDR' && formData.amountInvested && (
+          <div className="bg-emerald-50/50 border border-emerald-100/50 rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-2">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0">
+                <RefreshCw size={14} />
+              </div>
+              <div>
+                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">Terkonversi ke IDR</p>
+                <p className="text-sm font-black text-slate-900 leading-none">
+                  ≈ {formatCurrency(convertedAmount, 'IDR')}
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-medium text-slate-400 italic">Live Rate</span>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">

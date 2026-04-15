@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Save, ChevronDown } from 'lucide-react';
+import { Save, ChevronDown, RefreshCw } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { transactionService } from '@/lib/services/transactionService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { updateMemberTotals } from '@/lib/services/userService';
 import { CurrencySelect } from '@/components/CurrencySelect';
+import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
+import { formatCurrency } from '@/lib/utils';
 
 interface TopUpModalProps {
   userId: string;
@@ -17,6 +19,8 @@ interface TopUpModalProps {
 export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [rates, setRates] = useState<ExchangeRates | null>(null);
+  const [convertedAmount, setConvertedAmount] = useState<number>(0);
   
   const [formData, setFormData] = useState({
     type: 'topup' as 'topup' | 'transfer',
@@ -31,8 +35,23 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
   useEffect(() => {
     if (isOpen && userId) {
       accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
+      exchangeRateService.getLatestRates().then(setRates).catch(console.error);
     }
   }, [isOpen, userId]);
+
+  useEffect(() => {
+    if (formData.amount && formData.currency && rates) {
+      const amount = parseFloat(formData.amount);
+      if (formData.currency === 'IDR') {
+        setConvertedAmount(amount);
+      } else {
+        const idrValue = exchangeRateService.convert(amount, formData.currency, 'IDR', rates);
+        setConvertedAmount(idrValue);
+      }
+    } else {
+      setConvertedAmount(0);
+    }
+  }, [formData.amount, formData.currency, rates]);
 
   const handleCreate = async () => {
     if (!userId || !formData.amount) return;
@@ -50,6 +69,7 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
         userId,
         type: 'pengeluaran',
         amount,
+        amountIDR: convertedAmount || amount,
         currency: formData.currency,
         category: label,
         subCategory: `${label} Keluar`,
@@ -67,6 +87,7 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
           userId,
           type: 'pemasukan',
           amount,
+          amountIDR: convertedAmount || amount,
           currency: formData.currency,
           category: label,
           subCategory: `${label} Masuk`,
@@ -79,9 +100,9 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
       }
 
       // 3. Update member totals (net 0 for transfer; net +amount for external top-up)
-      await updateMemberTotals(userId, 'pengeluaran', amount);
+      await updateMemberTotals(userId, 'pengeluaran', convertedAmount || amount);
       if (formData.targetAccountId && formData.targetAccountId !== 'Wallet') {
-        await updateMemberTotals(userId, 'pemasukan', amount);
+        await updateMemberTotals(userId, 'pemasukan', convertedAmount || amount);
       }
 
       onClose();
@@ -128,6 +149,24 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
             className="w-1/3"
           />
         </div>
+
+        {/* Conversion Display */}
+        {formData.currency !== 'IDR' && formData.amount && (
+          <div className="bg-emerald-50/50 border border-emerald-100/50 rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-2">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0">
+                <RefreshCw size={14} />
+              </div>
+              <div>
+                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">Terkonversi ke IDR</p>
+                <p className="text-sm font-black text-slate-900 leading-none">
+                  ≈ {formatCurrency(convertedAmount, 'IDR')}
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-medium text-slate-400 italic">Live Rate</span>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">

@@ -11,6 +11,9 @@ import {
   Coins,
   BarChart3
 } from 'lucide-react';
+import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
+import { currencyService, Currency } from '@/lib/services/currencyService';
+import { auth } from '@/lib/firebase';
 
 interface CryptoData {
   id: string;
@@ -37,6 +40,7 @@ interface ForexRate {
 export default function MarketDataPage() {
   const [cryptoData, setCryptoData] = useState<CryptoData[]>([]);
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([]);
+  const [userCurrencies, setUserCurrencies] = useState<Currency[]>([]);
   const [forexRates, setForexRates] = useState<ForexRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -46,6 +50,19 @@ export default function MarketDataPage() {
     setLoading(true);
     setError(null);
     try {
+      // 0. Get User Currencies
+      const currentUser = auth.currentUser;
+      let currentCurs: Currency[] = [];
+      if (currentUser) {
+        currentCurs = await new Promise<Currency[]>((resolve) => {
+          const unsub = currencyService.getUserCurrencies(currentUser.uid, (data) => {
+            unsub();
+            resolve(data);
+          });
+        });
+        setUserCurrencies(currentCurs);
+      }
+
       // 1. Fetch Crypto dari CoinGecko (gratis, tanpa API key)
       const cryptoRes = await fetch(
         'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,binancecoin,cardano&vs_currencies=usd&include_24hr_change=true'
@@ -60,23 +77,36 @@ export default function MarketDataPage() {
         setCryptoData(mapped);
       }
 
-      // 2. Fetch Exchange Rates dari open.er-api.com (gratis, tanpa API key)
-      const fxRes = await fetch('https://open.er-api.com/v6/latest/USD');
-      if (fxRes.ok) {
-        const fxData = await fxRes.json();
-        const rates = fxData.rates;
-
-        setExchangeRates([
-          { from: 'United States Dollar (USD)', to: 'Indonesian Rupiah (IDR)', rate: rates.IDR || 0 },
-          { from: 'Euro (EUR)', to: 'Indonesian Rupiah (IDR)', rate: rates.IDR / rates.EUR || 0 },
-          { from: 'British Pound (GBP)', to: 'Indonesian Rupiah (IDR)', rate: rates.IDR / rates.GBP || 0 },
-        ]);
+      // 2. Fetch Exchange Rates using our new service
+      const rates = await exchangeRateService.getLatestRates();
+      
+      if (Object.keys(rates).length > 0) {
+        const idrRate = rates.IDR || 1;
+        
+        const mappedExchange: ExchangeRate[] = currentCurs
+          .filter(c => c.code !== 'IDR')
+          .map(c => ({
+            from: `${c.name} (${c.code})`,
+            to: 'Indonesian Rupiah (IDR)',
+            rate: idrRate / (rates[c.code] || 1)
+          }));
+        
+        // Fallback if user has no currencies
+        if (mappedExchange.length === 0) {
+          mappedExchange.push(
+            { from: 'United States Dollar (USD)', to: 'Indonesian Rupiah (IDR)', rate: idrRate },
+            { from: 'Euro (EUR)', to: 'Indonesian Rupiah (IDR)', rate: idrRate / (rates.EUR || 1) },
+            { from: 'Singapore Dollar (SGD)', to: 'Indonesian Rupiah (IDR)', rate: idrRate / (rates.SGD || 1) }
+          );
+        }
+        
+        setExchangeRates(mappedExchange);
 
         setForexRates([
-          { pair: 'EUR/USD', label: 'Euro / US Dollar', rate: 1 / rates.EUR, change: 0 },
-          { pair: 'USD/JPY', label: 'Dollar / Japanese Yen', rate: rates.JPY, change: 0 },
-          { pair: 'GBP/USD', label: 'Pound / US Dollar', rate: 1 / rates.GBP, change: 0 },
-          { pair: 'USD/IDR', label: 'Dollar / Rupiah', rate: rates.IDR, change: 0 },
+          { pair: 'EUR/USD', label: 'Euro / US Dollar', rate: 1 / (rates.EUR || 1), change: 0 },
+          { pair: 'USD/JPY', label: 'Dollar / Japanese Yen', rate: rates.JPY || 0, change: 0 },
+          { pair: 'GBP/USD', label: 'Pound / US Dollar', rate: 1 / (rates.GBP || 1), change: 0 },
+          { pair: 'USD/IDR', label: 'Dollar / Rupiah', rate: idrRate, change: 0 },
         ]);
       }
 

@@ -18,7 +18,9 @@ export interface Investment {
   type: 'Saham' | 'Deposito' | 'Lainnya';
   platform: string;
   amountInvested: number;
+  amountIDR?: number;
   currentValue: number;
+  currentValueIDR?: number;
   returnPercentage: number;
   currency: string;
   durationMonths?: number;
@@ -47,6 +49,8 @@ export const investmentService = {
     const ref = collection(db, COLLECTION_NAME);
     const newDoc = await addDoc(ref, {
       ...data,
+      amountIDR: data.amountIDR || data.amountInvested || 0,
+      currentValueIDR: data.currentValueIDR || data.currentValue || 0,
       durationMonths: Number(data.durationMonths) || 0,
       quantity: Number(data.quantity) || 0,
       pricePerUnit: Number(data.pricePerUnit) || 0,

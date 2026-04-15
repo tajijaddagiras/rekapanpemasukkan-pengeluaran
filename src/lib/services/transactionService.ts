@@ -19,6 +19,7 @@ export interface Transaction {
   userId: string;
   type: 'pemasukan' | 'pengeluaran' | 'transfer' | 'topup' | 'debt';
   amount: number;
+  amountIDR?: number;
   category: string;
   subCategory?: string;
   currency?: string;
@@ -45,7 +46,8 @@ export const transactionService = {
     const transactionsRef = collection(db, COLLECTION_NAME);
     const newDoc = await addDoc(transactionsRef, {
       ...data,
-      amount: Number(data.amount) || 0, // pastikan tersimpan sebagai number
+      amount: Number(data.amount) || 0,
+      amountIDR: Number(data.amountIDR) || Number(data.amount) || 0,
       date: Timestamp.fromDate(data.date),
       createdAt: Timestamp.now()
     });
@@ -114,6 +116,7 @@ export const addTransaction = (data: any) => {
     ...data,
     type: data.type === 'pemasukkan' ? 'pemasukan' : data.type,
     amount: data.amount || data.actual || 0,
+    amountIDR: data.amountIDR || data.amount || data.actual || 0,
     note: data.note || data.item || '',
     status: data.status || 'VERIFIED'
   };

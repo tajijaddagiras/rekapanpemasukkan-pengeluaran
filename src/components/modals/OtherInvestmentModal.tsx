@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Save, ChevronDown, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Save, ChevronDown, Image as ImageIcon, Loader2, RefreshCw } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
@@ -10,6 +10,8 @@ import { updateMemberTotals } from '@/lib/services/userService';
 import { addTransaction } from '@/lib/services/transactionService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { CurrencySelect } from '@/components/CurrencySelect';
+import { exchangeRateService, ExchangeRates } from '@/lib/services/exchangeRateService';
+import { formatCurrency } from '@/lib/utils';
 
 interface OtherInvestmentModalProps {
   userId: string;
@@ -21,6 +23,8 @@ interface OtherInvestmentModalProps {
 export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: OtherInvestmentModalProps) => {
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [rates, setRates] = useState<ExchangeRates | null>(null);
+  const [convertedAmount, setConvertedAmount] = useState<number>(0);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -59,6 +63,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: Othe
   useEffect(() => {
     if (isOpen && userId) {
       accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
+      exchangeRateService.getLatestRates().then(setRates).catch(console.error);
       
       if (editData) {
         setFormData({
@@ -82,6 +87,23 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: Othe
     }
   }, [isOpen, userId, editData]);
 
+  useEffect(() => {
+    const qty = parseFloat(formData.quantity) || 0;
+    const price = parseFloat(formData.pricePerUnit) || 0;
+    const invested = qty * price;
+    
+    if (invested && formData.currency && rates) {
+      if (formData.currency === 'IDR') {
+        setConvertedAmount(invested);
+      } else {
+        const idrValue = exchangeRateService.convert(invested, formData.currency, 'IDR', rates);
+        setConvertedAmount(idrValue);
+      }
+    } else {
+      setConvertedAmount(0);
+    }
+  }, [formData.quantity, formData.pricePerUnit, formData.currency, rates]);
+
   const handleCreate = async () => {
     if (!userId || !formData.name || !formData.quantity || !formData.pricePerUnit) return;
     setLoading(true);
@@ -95,7 +117,10 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: Othe
       const investmentPayload: any = {
         userId, name: formData.name, type: 'Lainnya',
         platform: formData.platform || formData.assetType,
-        amountInvested: invested, currentValue: current,
+        amountInvested: invested, 
+        amountIDR: convertedAmount || invested,
+        currentValue: current,
+        currentValueIDR: formData.currency === 'IDR' ? current : (current * (convertedAmount / (invested || 1))),
         returnPercentage: invested > 0 ? ((current - invested) / invested) * 100 : 0,
         currency: formData.currency, 
         logoUrl: formData.logoUrl,
@@ -137,6 +162,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: Othe
       // 3. Create Update-Tracking Transaction
       await addTransaction({
         userId, type: financeType, amount: currentInvested,
+        amountIDR: convertedAmount || currentInvested,
         category: 'Investasi', subCategory: `Lainnya - ${currentType}`,
         accountId: formData.accountId || 'General',
         date: new Date(formData.dateInvested),
@@ -216,6 +242,24 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: Othe
             label="Mata Uang"
           />
         </div>
+
+        {/* Conversion Display */}
+        {formData.currency !== 'IDR' && formData.quantity && formData.pricePerUnit && (
+          <div className="bg-emerald-50/50 border border-emerald-100/50 rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top-2">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0">
+                <RefreshCw size={14} />
+              </div>
+              <div>
+                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">Total Terkonversi (IDR)</p>
+                <p className="text-sm font-black text-slate-900 leading-none">
+                  ≈ {formatCurrency(convertedAmount, 'IDR')}
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-medium text-slate-400 italic">Live Rate</span>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
