@@ -77,8 +77,10 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
 
   const handleLogout = async () => {
     try {
+      // Navigasi dulu agar listeners di halaman admin unmount 
+      // saat user masih memiliki permission
+      await router.push('/auth/login');
       await signOut(auth);
-      router.push('/auth/login');
     } catch (error) {
       console.error('Error logging out:', error);
     }

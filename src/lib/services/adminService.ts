@@ -127,3 +127,9 @@ export const subscribeAllPayments = (callback: (payments: any[]) => void) => {
     callback(payments);
   });
 };
+
+// 5. ADMIN PROFILE MANAGEMENT
+export const updateAdminProfile = async (uid: string, data: any) => {
+  const docRef = doc(db, USERS_COLLECTION, uid);
+  return await updateDoc(docRef, data);
+};

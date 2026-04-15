@@ -24,14 +24,19 @@ import {
   subscribeAppSettings,
   saveAppSettings,
   addAdminLog,
-  AppSettings
+  AppSettings,
+  updateAdminProfile
 } from '@/lib/services/adminService';
+import { uploadToCloudinary } from '@/lib/cloudinary';
+import { Image as ImageIcon, Upload } from 'lucide-react';
 
 export default function AdminPengaturanPage() {
   const [userEmail, setUserEmail] = useState('admin@leosiqra.com');
   const [activeTab, setActiveTab] = useState('billing');
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isUploadingQRIS, setIsUploadingQRIS] = useState(false);
+  const [isUploadingProfile, setIsUploadingProfile] = useState(false);
   
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (user) => {
@@ -66,6 +71,45 @@ export default function AdminPengaturanPage() {
     } catch (error) {
       console.error(error);
       alert('Gagal menyimpan konfigurasi.');
+    }
+  };
+
+  const handleQRISUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !settings) return;
+
+    try {
+      setIsUploadingQRIS(true);
+      const url = await uploadToCloudinary(file);
+      setSettings({ ...settings, qrisURL: url });
+      alert('QRIS berhasil diunggah! Jangan lupa simpan perubahan.');
+    } catch (error) {
+      console.error(error);
+      alert('Gagal mengunggah QRIS.');
+    } finally {
+      setIsUploadingQRIS(false);
+    }
+  };
+
+  const handleProfileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      setIsUploadingProfile(true);
+      const url = await uploadToCloudinary(file);
+      await updateAdminProfile(user.uid, { photoURL: url });
+      
+      // Update local profile if needed, or wait for refresh
+      alert('Foto profil berhasil diperbarui!');
+    } catch (error) {
+      console.error(error);
+      alert('Gagal mengunggah foto profil.');
+    } finally {
+      setIsUploadingProfile(false);
     }
   };
 
@@ -267,25 +311,79 @@ export default function AdminPengaturanPage() {
           </div>
 
           <div className="space-y-10">
-            <div className="space-y-3">
-              <label className="text-[13px] font-black text-slate-900">QRIS Text</label>
-              <input 
-                type="text" 
-                placeholder="opsional" 
-                value={settings?.qrisText || ''}
-                onChange={(e) => setSettings(prev => ({ ...prev as AppSettings, qrisText: e.target.value }))}
-                className="w-full px-6 py-4 bg-white border border-slate-100 rounded-2xl text-[14px] font-medium" 
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="text-[13px] font-black text-slate-900">QRIS Image URL</label>
-              <input 
-                type="text" 
-                placeholder="https://..." 
-                value={settings?.qrisURL || ''}
-                onChange={(e) => setSettings(prev => ({ ...prev as AppSettings, qrisURL: e.target.value }))}
-                className="w-full px-6 py-4 bg-white border border-slate-100 rounded-2xl text-[14px] font-medium" 
-              />
+            <div className="space-y-6">
+              <label className="text-[13px] font-black text-slate-900">Pembayaran QRIS</label>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                <div className="space-y-4">
+                  <div className="p-8 rounded-[32px] bg-white shadow-sm flex flex-col items-center gap-6">
+                    {settings?.qrisURL ? (
+                      <div className="w-48 h-48 rounded-2xl overflow-hidden">
+                        <img src={settings.qrisURL} alt="QRIS Preview" className="w-full h-full object-contain" />
+                      </div>
+                    ) : (
+                      <div className="w-48 h-48 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-300">
+                        <ImageIcon size={48} strokeWidth={1} />
+                        <span className="text-[10px] font-black uppercase tracking-widest mt-2">No QRIS Image</span>
+                      </div>
+                    )}
+
+                    <div className="w-full">
+                      <input 
+                        type="file" 
+                        id="qris-input" 
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={handleQRISUpload}
+                        disabled={isUploadingQRIS}
+                      />
+                      <label 
+                        htmlFor="qris-input"
+                        className={cn(
+                          "w-full flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-indigo-600 transition-all shadow-lg shadow-slate-900/10",
+                          isUploadingQRIS && "opacity-50 cursor-not-allowed"
+                        )}
+                      >
+                        {isUploadingQRIS ? (
+                          <>
+                            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={14} />
+                            Upload QRIS Baru
+                          </>
+                        )}
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">QRIS Text Label</label>
+                    <input 
+                      type="text" 
+                      placeholder="Contoh: Scan untuk Bayar" 
+                      value={settings?.qrisText || ''}
+                      onChange={(e) => setSettings(prev => ({ ...prev as AppSettings, qrisText: e.target.value }))}
+                      className="w-full px-6 py-4 bg-white border border-slate-100 rounded-2xl text-[14px] font-medium" 
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Direct URL Link (Opsional)</label>
+                    <input 
+                      type="text" 
+                      placeholder="https://..." 
+                      value={settings?.qrisURL || ''}
+                      onChange={(e) => setSettings(prev => ({ ...prev as AppSettings, qrisURL: e.target.value }))}
+                      className="w-full px-6 py-4 bg-white border border-slate-100 rounded-2xl text-[14px] font-medium opacity-50" 
+                    />
+                    <p className="text-[10px] font-bold text-slate-400 ml-1 italic">*URL akan otomatis terisi saat gambar diunggah.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -303,15 +401,35 @@ export default function AdminPengaturanPage() {
               <div className="p-10 rounded-[48px] bg-white border border-slate-100 shadow-sm flex flex-col items-center text-center space-y-6">
                 <div className="relative group">
                   <div className="w-32 h-32 rounded-[40px] bg-slate-100 border-4 border-white shadow-xl flex items-center justify-center overflow-hidden">
-                    <img src={`https://ui-avatars.com/api/?name=${userEmail}&background=6366f1&color=fff&size=128`} alt="Profile" />
+                    {auth.currentUser?.photoURL ? (
+                      <img src={auth.currentUser.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={`https://ui-avatars.com/api/?name=${userEmail}&background=6366f1&color=fff&size=128`} alt="Profile" />
+                    )}
                   </div>
                   <button className="absolute -bottom-2 -right-2 w-10 h-10 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg hover:bg-slate-900 transition-all border-4 border-white">
                     <Settings size={16} />
                   </button>
                 </div>
-                <button className="w-full py-4 bg-slate-50 text-slate-500 border border-slate-100 rounded-3xl text-[11px] font-black uppercase tracking-widest hover:border-indigo-500 transition-all">
-                  Upload Foto Baru
-                </button>
+                <div className="w-full">
+                  <input 
+                    type="file" 
+                    id="admin-photo-input" 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleProfileUpload}
+                    disabled={isUploadingProfile}
+                  />
+                  <label 
+                    htmlFor="admin-photo-input"
+                    className={cn(
+                      "w-full flex items-center justify-center gap-2 py-4 bg-slate-50 text-slate-500 border border-slate-100 rounded-3xl text-[11px] font-black uppercase tracking-widest cursor-pointer hover:border-indigo-500 transition-all",
+                      isUploadingProfile && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    {isUploadingProfile ? "Uploading..." : "Upload Foto Baru"}
+                  </label>
+                </div>
               </div>
             </div>
 

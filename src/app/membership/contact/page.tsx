@@ -14,15 +14,28 @@ import {
   Clock
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { subscribeAppSettings, AppSettings } from '@/lib/services/adminService';
 
 export default function ContactPage() {
   const [copied, setCopied] = useState(false);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsub = subscribeAppSettings((data) => {
+      setSettings(data);
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText("124-00-0987654-1");
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (settings?.bankNumber) {
+      navigator.clipboard.writeText(settings.bankNumber);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
@@ -36,92 +49,105 @@ export default function ContactPage() {
         </p>
       </div>
 
-      {/* 2. Steps Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[
-          { step: 1, title: 'Bayar sesuai paket', desc: 'Transfer dana sesuai dengan nominal paket Pro yang Anda pilih.', active: true },
-          { step: 2, title: 'Isi referensi pembayaran', desc: 'Lengkapi formulir konfirmasi dengan detail bukti transaksi Anda.', active: false },
-          { step: 3, title: 'Tunggu aktivasi admin', desc: 'Tim kami akan memverifikasi dalam waktu maksimal 1x24 jam.', active: false },
-        ].map((item, i) => (
-          <div key={i} className="bg-white p-6 md:p-8 rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm text-center space-y-4">
-            <div className={`w-10 h-10 rounded-full mx-auto flex items-center justify-center text-sm font-black ${item.active ? 'bg-indigo-600 text-white' : 'bg-slate-500 text-white opacity-60'}`}>
-              {item.step}
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-sm font-black text-slate-900 tracking-tight">{item.title}</h3>
-              <p className="text-[10px] font-bold text-slate-400 leading-relaxed px-4">{item.desc}</p>
-            </div>
+      {loading ? (
+        <div className="py-20 flex flex-col items-center justify-center gap-4">
+          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Memuat instruksi pembayaran...</p>
+        </div>
+      ) : (
+        <>
+          {/* 2. Steps Section */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { step: 1, title: 'Bayar sesuai paket', desc: 'Transfer dana sesuai dengan nominal paket Pro yang Anda pilih.', active: true },
+              { step: 2, title: 'Isi referensi pembayaran', desc: 'Lengkapi formulir konfirmasi dengan detail bukti transaksi Anda.', active: false },
+              { step: 3, title: 'Tunggu aktivasi admin', desc: 'Tim kami akan memverifikasi dalam waktu maksimal 1x24 jam.', active: false },
+            ].map((item, i) => (
+              <div key={i} className="bg-white p-6 md:p-8 rounded-[20px] md:rounded-[32px] border border-slate-50 shadow-sm text-center space-y-4">
+                <div className={`w-10 h-10 rounded-full mx-auto flex items-center justify-center text-sm font-black ${item.active ? 'bg-indigo-600 text-white' : 'bg-slate-500 text-white opacity-60'}`}>
+                  {item.step}
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-sm font-black text-slate-900 tracking-tight">{item.title}</h3>
+                  <p className="text-[10px] font-bold text-slate-400 leading-relaxed px-4">{item.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* 3. Main Detail Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        
-        {/* LEFT COLUMN: Informasi Pembayaran */}
-        <div className="lg:col-span-2 space-y-8">
-          <div className="bg-[#f0f5fa] p-6 md:p-8 rounded-[20px] md:rounded-[40px] border border-white shadow-sm space-y-8 relative overflow-hidden">
-            <div className="absolute top-8 right-8 text-slate-200">
-              <CreditCard size={48} />
-            </div>
-
-            <div>
-              <h2 className="text-lg font-black text-indigo-600 tracking-tight mb-6">Informasi Pembayaran</h2>
-              
-              <div className="space-y-6">
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Harga Pro/Bulan</p>
-                  <p className="text-xl font-black text-slate-900 tracking-tight">IDR 149.000</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Bank Tujuan</p>
-                    <p className="text-[13px] font-black text-slate-900 tracking-tight">Bank Mandiri</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nama Rekening</p>
-                    <p className="text-[13px] font-black text-slate-900 tracking-tight leading-snug">PT Ethereal Ledger Indonesia</p>
-                  </div>
+          {/* 3. Main Detail Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            
+            {/* LEFT COLUMN: Informasi Pembayaran */}
+            <div className="lg:col-span-2 space-y-8">
+              <div className="bg-[#f0f5fa] p-6 md:p-8 rounded-[20px] md:rounded-[40px] border border-white shadow-sm space-y-8 relative overflow-hidden">
+                <div className="absolute top-8 right-8 text-slate-200">
+                  <CreditCard size={48} />
                 </div>
 
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nomor Rekening</p>
-                  <div className="flex items-center gap-3">
-                    <p className="text-lg font-black text-indigo-600 tracking-tight">124-00-0987654-1</p>
-                    <button 
-                      onClick={copyToClipboard}
-                      className="text-slate-400 hover:text-indigo-600 transition-colors"
-                    >
-                      {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
-                    </button>
-                  </div>
-                </div>
+                  <h2 className="text-lg font-black text-indigo-600 tracking-tight mb-6">Informasi Pembayaran</h2>
+                  
+                  <div className="space-y-6">
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Harga Pro/Bulan</p>
+                      <p className="text-xl font-black text-slate-900 tracking-tight">IDR {(settings?.proPrice || 0).toLocaleString()}</p>
+                    </div>
 
-                <div className="space-y-4 pt-4 border-t border-slate-200">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pembayaran QRIS</p>
-                  <div className="bg-white p-4 rounded-3xl w-fit shadow-sm border border-indigo-50">
-                    <div className="w-40 h-40 bg-[#1e293b] rounded-2xl flex items-center justify-center">
-                      <QrCode size={120} className="text-white/80" />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Bank Tujuan</p>
+                        <p className="text-[13px] font-black text-slate-900 tracking-tight">{settings?.bankName || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nama Rekening</p>
+                        <p className="text-[13px] font-black text-slate-900 tracking-tight leading-snug">{settings?.bankAccountName || '-'}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nomor Rekening</p>
+                      <div className="flex items-center gap-3">
+                        <p className="text-lg font-black text-indigo-600 tracking-tight">{settings?.bankNumber || '-'}</p>
+                        {settings?.bankNumber && (
+                          <button 
+                            onClick={copyToClipboard}
+                            className="text-slate-400 hover:text-indigo-600 transition-colors"
+                          >
+                            {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t border-slate-200">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{settings?.qrisText || 'Pembayaran QRIS'}</p>
+                      <div className="w-48 h-48 flex items-center justify-center overflow-hidden">
+                        {settings?.qrisURL ? (
+                          <img src={settings.qrisURL} alt="QRIS" className="w-full h-full object-contain" />
+                        ) : (
+                          <div className="w-full h-full bg-slate-50 rounded-3xl flex items-center justify-center border-2 border-dashed border-slate-200">
+                            <QrCode size={80} className="text-slate-300" />
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-[9px] font-bold text-slate-400 italic">Scan QRIS di atas melalui aplikasi bank atau e-wallet Anda.</p>
                     </div>
                   </div>
-                  <p className="text-[9px] font-bold text-slate-400 italic">Scan QRIS di atas melalui aplikasi bank atau e-wallet Anda.</p>
+                </div>
+
+                <div className="pt-8 border-t border-slate-200 space-y-3">
+                  <div className="flex items-center gap-3 text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer">
+                    <Mail size={16} />
+                    <span className="text-[11px] font-bold">{settings?.billingEmail || 'billing@service.com'}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer">
+                    <Phone size={16} />
+                    <span className="text-[11px] font-bold">+{settings?.whatsapp || '62'} (WhatsApp)</span>
+                  </div>
                 </div>
               </div>
             </div>
-
-            <div className="pt-8 border-t border-slate-200 space-y-3">
-              <div className="flex items-center gap-3 text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer">
-                <Mail size={16} />
-                <span className="text-[11px] font-bold">billing@ethereal-ledger.io</span>
-              </div>
-              <div className="flex items-center gap-3 text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer">
-                <Phone size={16} />
-                <span className="text-[11px] font-bold">+62 811 2233 4455 (WhatsApp)</span>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* RIGHT COLUMN: Form Card */}
         <div className="lg:col-span-3">
@@ -210,7 +236,8 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
-
-    </div>
+    </>
+    )}
+  </div>
   );
 }
