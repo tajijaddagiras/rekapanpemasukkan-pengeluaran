@@ -11,7 +11,8 @@ import {
   Building2,
   Smartphone,
   Banknote,
-  Trash2
+  Trash2,
+  ChevronLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -28,6 +29,7 @@ export default function MyCardsPage() {
   const [savings, setSavings] = useState<Saving[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
   const unsubAccRef = useRef<(() => void) | null>(null);
   const unsubTrxRef = useRef<(() => void) | null>(null);
@@ -39,10 +41,15 @@ export default function MyCardsPage() {
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
         if (unsubAccRef.current) unsubAccRef.current();
         unsubAccRef.current = onSnapshot(qAcc, (snap) => {
-          setAccounts(snap.docs.map(doc => {
+          const accs = snap.docs.map(doc => {
             const d = doc.data();
             return { ...d, id: doc.id, balance: Number(d.balance) || 0, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Account;
-          }));
+          });
+          setAccounts(accs);
+          // Auto-select first account
+          if (accs.length > 0 && !selectedAccountId) {
+            setSelectedAccountId(accs[0].id!);
+          }
         }, (err) => console.error(err));
 
         const qTrx = query(collection(db, 'transactions'), where('userId', '==', u.uid));
@@ -73,24 +80,21 @@ export default function MyCardsPage() {
     };
   }, []);
 
+  // === GLOBAL TOTALS ===
   const totalIn = useMemo(() => {
     const dailyIn = transactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0);
-    // Include Debt (received money)
     const debtIn = transactions.filter(t => t.type === 'debt' && t.category === 'Hutang').reduce((s, t) => s + t.amount, 0);
     return dailyIn + debtIn;
   }, [transactions]);
 
   const totalOut = useMemo(() => {
     const dailyOut = transactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0);
-    // Include Piutang (lent money)
     const piutangOut = transactions.filter(t => t.type === 'debt' && t.category === 'Piutang').reduce((s, t) => s + t.amount, 0);
-    // Include Savings (money moved to goals)
     const savingOut = savings.reduce((s, t) => s + t.amount, 0);
     return dailyOut + piutangOut + savingOut;
   }, [transactions, savings]);
 
   const combinedInitial = useMemo(() => {
-    // Exclude Credit Card limit from cash balance
     return accounts
       .filter(a => a.type !== 'Credit Card' && a.type !== 'kartu')
       .reduce((s, a) => s + (a.initialBalance || 0), 0);
@@ -104,19 +108,51 @@ export default function MyCardsPage() {
     return transactions.filter(t => t.type === 'debt' && t.category === 'Hutang').reduce((s, t) => s + t.amount, 0);
   }, [transactions]);
 
-  const creditCardStats = useMemo(() => {
-    const ccAccounts = accounts.filter(a => a.type === 'Credit Card' || a.type === 'kartu');
-    const totalLimit = ccAccounts.reduce((s, a) => s + (a.initialBalance || 0), 0);
-    // Use totalGlobalDebt instead of account balance for the bill percentage
-    const totalBill = totalGlobalDebt;
-    return {
-      totalLimit,
-      totalBill,
-      remainingLimit: Math.max(0, totalLimit - totalBill)
-    };
-  }, [accounts, totalGlobalDebt]);
+  // === PER-ACCOUNT DETAIL ===
+  const selectedAccount = useMemo(() => accounts.find(a => a.id === selectedAccountId), [accounts, selectedAccountId]);
+
+  const accountTransactions = useMemo(() => {
+    if (!selectedAccountId) return [];
+    return transactions
+      .filter(t => t.accountId === selectedAccountId)
+      .sort((a, b) => b.date.getTime() - a.date.getTime())
+      .slice(0, 20);
+  }, [transactions, selectedAccountId]);
+
+  const accountTotalIn = useMemo(() => 
+    accountTransactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0),
+    [accountTransactions]
+  );
+
+  const accountTotalOut = useMemo(() => 
+    accountTransactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0),
+    [accountTransactions]
+  );
+
+  const accountBalance = useMemo(() => {
+    const acc = selectedAccount;
+    if (!acc) return 0;
+    return (acc.initialBalance || 0) + accountTotalIn - accountTotalOut;
+  }, [selectedAccount, accountTotalIn, accountTotalOut]);
+
+  // Outstanding debt (belum lunas) for selected account
+  const accountDebt = useMemo(() => {
+    if (!selectedAccountId) return totalGlobalDebt;
+    return transactions.filter(t =>
+      t.type === 'debt' &&
+      t.accountId === selectedAccountId &&
+      t.paymentStatus !== 'lunas'
+    ).reduce((s, t) => s + t.amount, 0);
+  }, [transactions, selectedAccountId, totalGlobalDebt]);
+
+  const barData = useMemo(() => {
+    const last8 = accountTransactions.slice(0, 8).reverse();
+    const max = Math.max(...last8.map(t => t.amount), 1);
+    return last8.map(t => Math.round((t.amount / max) * 100));
+  }, [accountTransactions]);
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
+  const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -140,11 +176,15 @@ export default function MyCardsPage() {
     }
   };
 
-  const barData = useMemo(() => {
-    const last8 = transactions.slice(0, 8).reverse();
-    const max = Math.max(...last8.map(t => t.amount), 1);
-    return last8.map(t => Math.round((t.amount / max) * 100));
-  }, [transactions]);
+  const getCardGradient = (type: string) => {
+    switch (type) {
+      case 'Bank Account': return 'bg-gradient-to-br from-slate-800 to-slate-900';
+      case 'E-Wallet': return 'bg-gradient-to-br from-indigo-500 to-indigo-700';
+      case 'Cash': return 'bg-gradient-to-br from-emerald-500 to-emerald-700';
+      case 'Credit Card': return 'bg-gradient-to-br from-rose-500 to-rose-700';
+      default: return 'bg-gradient-to-br from-indigo-600 to-indigo-800';
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 max-w-[1400px] mb-12">
@@ -164,39 +204,54 @@ export default function MyCardsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
+        {/* LEFT: Main Card Detail (selected account) */}
         <div className="lg:col-span-2 space-y-6 md:space-y-8">
           
-          <div className="relative overflow-hidden bg-indigo-600 rounded-[20px] md:rounded-[32px] p-6 md:p-10 text-white shadow-2xl shadow-indigo-200">
-            <div className="relative z-10">
-              <div className="flex justify-between items-start mb-10 md:mb-12">
-                <div>
-                  <p className="text-[9px] md:text-[10px] font-black text-indigo-100/60 uppercase tracking-[0.2em] mb-2">Total Saldo Saya</p>
-                  <h2 className="text-2xl md:text-4xl lg:text-5xl font-black tracking-tight">{formatRp(totalBalance)}</h2>
+          {/* Selected card hero */}
+          {selectedAccount ? (
+            <div className={cn("relative overflow-hidden rounded-[20px] md:rounded-[32px] p-6 md:p-10 text-white shadow-2xl", getCardGradient(selectedAccount.type))}>
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-10 md:mb-12">
+                  <div>
+                    <p className="text-[9px] md:text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-2">{selectedAccount.type} • {selectedAccount.currency}</p>
+                    <h2 className="text-xl md:text-3xl lg:text-4xl font-black tracking-tight">{selectedAccount.name}</h2>
+                    <p className="text-[10px] font-medium text-white/60 mt-1">Saldo: {formatRp(accountBalance)}</p>
+                  </div>
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
+                    {getTypeIcon(selectedAccount.type)}
+                  </div>
                 </div>
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
-                  <CreditCard size={20} className="text-white" />
+                <div className="grid grid-cols-2 gap-6 md:gap-8 pt-6 md:pt-8 border-t border-white/10">
+                  <div>
+                    <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-widest mb-1">Masuk</p>
+                    <p className="text-sm md:text-lg font-bold">{formatRp(accountTotalIn)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[8px] md:text-[9px] font-black text-white/60 uppercase tracking-widest mb-1">Keluar</p>
+                    <p className="text-sm md:text-lg font-bold">{formatRp(accountTotalOut)}</p>
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-6 md:gap-8 pt-6 md:pt-8 border-t border-white/10">
-                <div>
-                  <p className="text-[8px] md:text-[9px] font-black text-indigo-200 uppercase tracking-widest mb-1">Total Masuk</p>
-                  <p className="text-sm md:text-lg font-bold">{formatRp(totalIn)}</p>
-                </div>
-                <div>
-                  <p className="text-[8px] md:text-[9px] font-black text-indigo-200 uppercase tracking-widest mb-1">Total Keluar</p>
-                  <p className="text-sm md:text-lg font-bold">{formatRp(totalOut)}</p>
-                </div>
+              <div className="absolute top-[-20%] right-[-10%] w-[400px] h-[400px] bg-white opacity-[0.03] rounded-full pointer-events-none" />
+              <div className="absolute bottom-[-30%] left-[-10%] w-[300px] h-[300px] bg-white opacity-[0.05] rounded-full blur-3xl pointer-events-none" />
+            </div>
+          ) : (
+            <div className="relative overflow-hidden bg-indigo-600 rounded-[20px] md:rounded-[32px] p-6 md:p-10 text-white shadow-2xl shadow-indigo-200">
+              <div className="relative z-10">
+                <p className="text-[10px] font-black text-indigo-100/60 uppercase tracking-[0.2em] mb-2">Pilih Kartu untuk Detail</p>
+                <h2 className="text-2xl md:text-4xl font-black">{formatRp(totalBalance)}</h2>
               </div>
             </div>
-            <div className="absolute top-[-20%] right-[-10%] w-[400px] h-[400px] bg-white opacity-[0.03] rounded-full pointer-events-none" />
-            <div className="absolute bottom-[-30%] left-[-10%] w-[300px] h-[300px] bg-indigo-400 opacity-[0.1] rounded-full blur-3xl pointer-events-none" />
-          </div>
+          )}
 
+          {/* Cash flow chart + transactions */}
           <div className="bg-white rounded-[20px] md:rounded-[32px] p-5 md:p-8 border border-slate-100 shadow-sm">
             <div className="flex items-center justify-between mb-6 md:mb-8">
-              <h3 className="text-lg font-black text-slate-900">Arus Kas (Cash Flow)</h3>
+              <h3 className="text-lg font-black text-slate-900">
+                {selectedAccount ? `Transaksi ${selectedAccount.name}` : 'Arus Kas (Cash Flow)'}
+              </h3>
               <div className="px-4 py-1.5 bg-slate-50 border border-slate-100 rounded-full text-[9px] font-black text-slate-400 tracking-widest uppercase">
-                {transactions.length} transaksi
+                {accountTransactions.length} transaksi
               </div>
             </div>
 
@@ -209,14 +264,15 @@ export default function MyCardsPage() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* In/Out Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="bg-emerald-50/30 rounded-2xl p-6 border border-emerald-50 flex items-center gap-5">
                 <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-emerald-500 shadow-sm border border-emerald-100">
                   <ArrowDownCircle size={24} />
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Uang Masuk</p>
-                  <p className="text-xl font-black text-slate-900 tracking-tight">{formatRp(totalIn)}</p>
+                  <p className="text-xl font-black text-slate-900 tracking-tight">{formatRp(selectedAccount ? accountTotalIn : totalIn)}</p>
                 </div>
               </div>
               <div className="bg-rose-50/30 rounded-2xl p-6 border border-rose-50 flex items-center gap-5">
@@ -225,13 +281,37 @@ export default function MyCardsPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Uang Keluar</p>
-                  <p className="text-xl font-black text-slate-900 tracking-tight">{formatRp(totalOut)}</p>
+                  <p className="text-xl font-black text-slate-900 tracking-tight">{formatRp(selectedAccount ? accountTotalOut : totalOut)}</p>
                 </div>
               </div>
             </div>
+
+            {/* Recent Transactions for this account */}
+            {accountTransactions.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Transaksi Terkini</p>
+                {accountTransactions.slice(0, 8).map(trx => (
+                  <div key={trx.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs", trx.type === 'pemasukan' ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500')}>
+                        {trx.type === 'pemasukan' ? <ArrowDownCircle size={16} /> : <ArrowUpCircle size={16} />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-700 truncate">{trx.note || trx.category}</p>
+                        <p className="text-[9px] text-slate-400">{formatDate(trx.date)}</p>
+                      </div>
+                    </div>
+                    <p className={cn("text-sm font-black shrink-0 ml-2", trx.type === 'pemasukan' ? 'text-emerald-600' : 'text-rose-500')}>
+                      {trx.type === 'pemasukan' ? '+' : '-'}{formatRp(trx.amount)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
+        {/* RIGHT: Account List */}
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between px-2">
             <h3 className="text-lg font-black text-slate-900">Daftar Akun</h3>
@@ -246,7 +326,13 @@ export default function MyCardsPage() {
           ) : (
             <div className="space-y-4">
               {accounts.map((acc) => (
-                <div key={acc.id} className="bg-white rounded-2xl p-4 md:p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between group">
+                <div 
+                  key={acc.id} 
+                  onClick={() => setSelectedAccountId(acc.id!)}
+                  className={cn(
+                    "bg-white rounded-2xl p-4 md:p-5 border shadow-sm hover:shadow-md transition-all flex items-center justify-between group cursor-pointer",
+                    selectedAccountId === acc.id ? "border-indigo-300 ring-2 ring-indigo-100" : "border-slate-100"
+                  )}>
                   <div className="flex items-center gap-3 md:gap-4 min-w-0">
                     <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 ${getTypeBg(acc.type)}`}>
                       {getTypeIcon(acc.type)}
@@ -262,11 +348,13 @@ export default function MyCardsPage() {
                         {acc.type === 'Credit Card' ? '-' : ''}{formatRp(acc.balance)}
                       </p>
                     </div>
-                    <button onClick={async () => {
-                                if (acc.id) {
-                                  await accountService.deleteAccount(acc.id);
-                                }
-                              }}
+                    <button onClick={async (e) => {
+                      e.stopPropagation();
+                      if (acc.id) {
+                        await accountService.deleteAccount(acc.id);
+                        if (selectedAccountId === acc.id) setSelectedAccountId(null);
+                      }
+                    }}
                       className="p-1.5 rounded-lg bg-slate-50 text-slate-300 opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all">
                       <Trash2 size={12} />
                     </button>
@@ -276,38 +364,54 @@ export default function MyCardsPage() {
             </div>
           )}
 
-          {/* Card Statistik Kekayaan (Wealth Summary) */}
+          {/* Wealth Summary */}
           <div className="bg-white rounded-[24px] md:rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-xl shadow-slate-200/50 mt-4 relative overflow-hidden group">
             <div className="relative z-10 flex flex-col h-full">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500">
                   <LineChart size={20} />
                 </div>
-                <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Informasi Saldo & Wealth</h4>
+                <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                  {selectedAccount ? `Detail: ${selectedAccount.name}` : 'Informasi Saldo & Wealth'}
+                </h4>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div className="bg-slate-50/50 rounded-2xl p-5 border border-slate-50 transition-all hover:bg-slate-50">
-                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Saldo Awal (Initial)</p>
-                   <p className="text-xl font-black text-slate-900 leading-tight">{formatRp(combinedInitial)}</p>
+                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Saldo Awal (Initial)</p>
+                   <p className="text-xl font-black text-slate-900 leading-tight">
+                     {formatRp(selectedAccount ? (selectedAccount.initialBalance || 0) : combinedInitial)}
+                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-rose-50/30 rounded-2xl p-5 border border-rose-50 transition-all hover:bg-rose-50">
-                    <p className="text-[9px] font-black text-rose-300 uppercase tracking-widest mb-1">Tagihan Berjalan</p>
-                    <p className="text-base font-black text-rose-500 leading-tight">{formatRp(totalGlobalDebt)}</p>
+                  <div className="bg-emerald-50/30 rounded-2xl p-4 border border-emerald-50 transition-all hover:bg-emerald-50">
+                    <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">Total Masuk</p>
+                    <p className="text-sm font-black text-emerald-600 leading-tight">
+                      {formatRp(selectedAccount ? accountTotalIn : totalIn)}
+                    </p>
                   </div>
-                  <div className="bg-emerald-50/30 rounded-2xl p-5 border border-emerald-50 transition-all hover:bg-emerald-50">
-                    <p className="text-[9px] font-black text-emerald-300 uppercase tracking-widest mb-1">Saldo Saat Ini</p>
-                    <p className="text-base font-black text-emerald-600 leading-tight">{formatRp(totalBalance)}</p>
+                  <div className="bg-rose-50/30 rounded-2xl p-4 border border-rose-50 transition-all hover:bg-rose-50">
+                    <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest mb-1">Tagihan Berjalan</p>
+                    <p className="text-sm font-black text-rose-500 leading-tight">
+                      {formatRp(selectedAccount ? accountDebt : totalGlobalDebt)}
+                    </p>
                   </div>
                 </div>
+
+                <div className="bg-indigo-50/30 rounded-2xl p-5 border border-indigo-50 transition-all hover:bg-indigo-50">
+                  <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-1">Saldo Saat Ini</p>
+                  <p className="text-base font-black text-indigo-600 leading-tight">
+                    {formatRp(selectedAccount ? accountBalance : totalBalance)}
+                  </p>
+                </div>
+
               </div>
 
-              {combinedInitial > 0 && (
-                <div className="mt-8 pt-6 border-t border-slate-50">
+              {!selectedAccount && combinedInitial > 0 && (
+                <div className="mt-6 pt-6 border-t border-slate-50">
                    <div className="flex justify-between items-center mb-2">
-                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest transition-opacity group-hover:opacity-100 opacity-60">Rasio Hutang terhadap Saldo</span>
+                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Rasio Hutang</span>
                      <span className="text-[10px] font-black text-rose-500">{((totalGlobalDebt / combinedInitial) * 100).toFixed(0)}%</span>
                    </div>
                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">

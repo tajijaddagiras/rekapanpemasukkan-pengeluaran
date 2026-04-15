@@ -12,7 +12,16 @@ interface CategoryData {
   subCategory: string;
 }
 
-export const CategorySelect = ({ label, value, type, onChange, showBadge = true }: { label: string, value: string, type: 'income' | 'expense', onChange: (val: string) => void, showBadge?: boolean }) => {
+interface CategorySelectProps {
+  label: string;
+  value: string;
+  type: 'income' | 'expense';
+  onChange: (categoryId: string) => void;
+  onSubCategoryChange?: (subCategory: string) => void;
+  showBadge?: boolean;
+}
+
+export const CategorySelect = ({ label, value, type, onChange, onSubCategoryChange, showBadge = true }: CategorySelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [categories, setCategories] = useState<CategoryData[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -32,12 +41,13 @@ export const CategorySelect = ({ label, value, type, onChange, showBadge = true 
     return () => unsub();
   }, []);
 
-  const options = categories.map(c => ({
-    label: `${c.category} - ${c.subCategory}`,
-    value: c.id
-  }));
+  // Group categories by main category name — show unique main category names
+  const uniqueMainCategories = Array.from(
+    new Map(categories.map(c => [c.category, c])).values()
+  );
 
-  const selectedOption = options.find(opt => opt.value === value);
+  // Find full category data by id
+  const selectedCategory = categories.find(c => c.id === value);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -48,6 +58,14 @@ export const CategorySelect = ({ label, value, type, onChange, showBadge = true 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleSelect = (cat: CategoryData) => {
+    onChange(cat.id);
+    if (onSubCategoryChange) {
+      onSubCategoryChange(cat.subCategory);
+    }
+    setIsOpen(false);
+  };
 
   return (
     <div className="flex-1 space-y-2" ref={containerRef}>
@@ -61,8 +79,8 @@ export const CategorySelect = ({ label, value, type, onChange, showBadge = true 
             isOpen && "border-indigo-600 bg-white ring-4 ring-indigo-500/5 shadow-lg"
           )}
         >
-          <span className={cn("text-sm font-bold", !selectedOption && "text-slate-400")}>
-            {selectedOption ? selectedOption.label : 'Pilih Kategori'}
+          <span className={cn("text-sm font-bold", !selectedCategory && "text-slate-400")}>
+            {selectedCategory ? selectedCategory.category : 'Pilih Kategori'}
           </span>
           <ChevronDown 
             size={18} 
@@ -73,23 +91,25 @@ export const CategorySelect = ({ label, value, type, onChange, showBadge = true 
         {isOpen && (
           <div className="absolute top-full left-0 w-full mt-3 p-2 bg-white border border-slate-100 rounded-2xl shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-200">
             <div className="max-h-60 overflow-y-auto custom-scrollbar">
-              {options.map((opt) => (
+              {uniqueMainCategories.map((cat) => (
                 <button
-                  key={opt.value}
+                  key={cat.id}
                   type="button"
-                  onClick={() => {
-                    onChange(opt.value);
-                    setIsOpen(false);
-                  }}
+                  onClick={() => handleSelect(cat)}
                   className={cn(
                     "w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm transition-all text-left group",
-                    value === opt.value 
+                    value === cat.id 
                       ? "bg-indigo-50 text-indigo-600 font-black" 
                       : "text-slate-600 hover:bg-slate-50 hover:text-indigo-600 font-medium"
                   )}
                 >
-                  {opt.label}
-                  {value === opt.value && <Check size={16} className="text-indigo-600" />}
+                  <div>
+                    <p className="font-bold">{cat.category}</p>
+                    {cat.subCategory && (
+                      <p className="text-[10px] text-slate-400 mt-0.5">{cat.subCategory}</p>
+                    )}
+                  </div>
+                  {value === cat.id && <Check size={16} className="text-indigo-600 shrink-0" />}
                 </button>
               ))}
             </div>

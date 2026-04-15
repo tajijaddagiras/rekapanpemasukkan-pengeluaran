@@ -33,6 +33,7 @@ export interface Transaction {
   displayDate?: string;
   note?: string;
   status: 'PENDING' | 'VERIFIED' | 'FAILED';
+  paymentStatus?: 'lunas' | 'belum';
   createdAt: Date;
 }
 

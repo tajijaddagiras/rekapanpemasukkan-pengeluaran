@@ -17,6 +17,7 @@ import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { accountService, Account } from '@/lib/services/accountService';
+import { updateMemberTotals } from '@/lib/services/userService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
@@ -86,8 +87,39 @@ export default function DebtPage() {
     );
   }, [transactions, searchQuery]);
 
-  const totalHutang = useMemo(() => transactions.filter(t => t.category === 'Hutang').reduce((s, t) => s + t.amount, 0), [transactions]);
-  const totalPiutang = useMemo(() => transactions.filter(t => t.category === 'Piutang').reduce((s, t) => s + t.amount, 0), [transactions]);
+  const totalHutang = useMemo(() => transactions.filter(t => t.category === 'Hutang' && t.paymentStatus !== 'lunas').reduce((s, t) => s + t.amount, 0), [transactions]);
+  const totalPiutang = useMemo(() => transactions.filter(t => t.category === 'Piutang' && t.paymentStatus !== 'lunas').reduce((s, t) => s + t.amount, 0), [transactions]);
+
+  const handleMarkLunas = async (trx: Transaction) => {
+    if (!trx.id || !user) return;
+    try {
+      const isHutang = trx.category === 'Hutang';
+      const financeType = isHutang ? 'pengeluaran' : 'pemasukan';
+
+      // 1. Update debt record to lunas
+      await transactionService.updateTransaction(trx.id, { status: 'VERIFIED', paymentStatus: 'lunas' });
+
+      // 2. Create financial transaction entry
+      await transactionService.createTransaction({
+        userId: trx.userId,
+        type: financeType,
+        amount: trx.amount,
+        currency: trx.currency || 'IDR',
+        category: trx.category,
+        subCategory: `${trx.category} Lunas`,
+        accountId: trx.accountId,
+        date: new Date(),
+        displayDate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }),
+        note: `[Lunas] ${trx.category} ${trx.lenderName ? `ke/dari ${trx.lenderName}` : ''} - ${trx.note || ''}`.trim(),
+        status: 'VERIFIED'
+      });
+
+      // 3. Sync balance
+      await updateMemberTotals(user.uid, financeType, trx.amount);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n).replace('Rp', '').trim();
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
@@ -180,6 +212,7 @@ export default function DebtPage() {
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Mata Uang</th>
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Nominal</th>
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Tipe</th>
+                    <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Status</th>
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Rekening</th>
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Pemberi Hutang</th>
                     <th className="px-4 md:px-6 py-4 md:py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Tenor</th>
@@ -214,6 +247,13 @@ export default function DebtPage() {
                           {trx.category}
                         </span>
                       </td>
+                      <td className="px-4 md:px-6 py-4 md:py-6 text-center whitespace-nowrap">
+                        <span className={`px-3 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest ${
+                          trx.paymentStatus === 'lunas' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                        }`}>
+                          {trx.paymentStatus === 'lunas' ? '✓ Lunas' : '⏳ Belum'}
+                        </span>
+                      </td>
                       <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap text-sm font-bold text-slate-600">{getAccountName(trx.accountId || '')}</td>
                       <td className="px-4 md:px-6 py-4 md:py-6 whitespace-nowrap text-sm font-bold text-slate-600">{trx.lenderName || '—'}</td>
                       <td className="px-4 md:px-6 py-4 md:py-6 text-center whitespace-nowrap text-sm font-bold text-slate-600">{trx.installmentTenor || 0} bln</td>
@@ -222,18 +262,15 @@ export default function DebtPage() {
                       <td className="px-4 md:px-6 py-4 md:py-6 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatRp(trx.totalDebt || 0)}</td>
                       <td className="px-5 md:px-8 py-4 md:py-6 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          <button 
-                            onClick={async () => { 
-                              if (trx.id) { 
-                                await transactionService.updateTransaction(trx.id, { status: 'VERIFIED' }); 
-                                // onSnapshot otomatis update 
-                              }
-                            }}
-                            title="tandai lunas"
-                            className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-emerald-500 hover:text-white transition-all"
-                          >
-                            <CheckCircle2 size={14} />
-                          </button>
+                          {trx.paymentStatus !== 'lunas' && (
+                            <button 
+                              onClick={() => handleMarkLunas(trx)}
+                              title="Tandai Lunas"
+                              className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-emerald-500 hover:text-white transition-all"
+                            >
+                              <CheckCircle2 size={14} />
+                            </button>
+                          )}
                           <button onClick={async () =>{ if (trx.id) { await transactionService.deleteTransaction(trx.id); } }} className="p-2.5 rounded-xl bg-slate-50 text-slate-300 hover:bg-rose-500 hover:text-white transition-all shadow-sm"><Trash2 size={16} /></button>
                         </div>
                       </td>

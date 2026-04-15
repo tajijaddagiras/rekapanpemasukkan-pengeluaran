@@ -15,8 +15,11 @@ import {
   Monitor
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useModal } from '@/context/ModalContext';
 
 export default function InputTransactionPage() {
+  const { openModal } = useModal();
+
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] pb-12">
       
@@ -45,7 +48,10 @@ export default function InputTransactionPage() {
         {/* TOP CARDS GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Card: Transaksi Harian (2/3) */}
-          <div className="lg:col-span-2 bg-white rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden flex flex-col justify-between h-[200px] md:h-[240px]">
+          <div 
+            onClick={() => openModal('harian')}
+            className="lg:col-span-2 bg-white rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden flex flex-col justify-between h-[200px] md:h-[240px] cursor-pointer"
+          >
             <div className="flex justify-between items-start">
               <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100 group-hover:scale-110 transition-transform">
                 <Monitor size={24} />
@@ -67,7 +73,10 @@ export default function InputTransactionPage() {
           </div>
 
           {/* Side Card: Investasi Saham (1/3) */}
-          <div className="bg-white rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between h-[200px] md:h-[240px]">
+          <div 
+            onClick={() => openModal('saham')}
+            className="bg-white rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between h-[200px] md:h-[240px] cursor-pointer"
+          >
             <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 shadow-sm border border-purple-100 group-hover:scale-110 transition-transform">
               <TrendingUp size={24} />
             </div>
@@ -87,7 +96,10 @@ export default function InputTransactionPage() {
         {/* MIDDLE CARDS GRID (3-cols) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Deposito */}
-          <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+          <div 
+            onClick={() => openModal('deposito')}
+            className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group cursor-pointer"
+          >
             <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 mb-6 group-hover:bg-slate-900 group-hover:text-white transition-colors">
               <Building2 size={20} />
             </div>
@@ -98,7 +110,10 @@ export default function InputTransactionPage() {
           </div>
 
           {/* Investasi Lainnya */}
-          <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+          <div 
+            onClick={() => openModal('investasi_lain')}
+            className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group cursor-pointer"
+          >
             <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 mb-6 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
               <Globe size={20} />
             </div>
@@ -109,7 +124,10 @@ export default function InputTransactionPage() {
           </div>
 
           {/* Tabungan */}
-          <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+          <div 
+            onClick={() => openModal('tabungan')}
+            className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group cursor-pointer"
+          >
             <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 mb-6 group-hover:bg-blue-600 group-hover:text-white transition-colors">
               <Wallet size={20} />
             </div>
@@ -123,7 +141,10 @@ export default function InputTransactionPage() {
         {/* BOTTOM CARDS ROW (2-cols) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
           {/* Hutang & Piutang */}
-          <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center gap-6 group">
+          <div 
+            onClick={() => openModal('hutang_piutang')}
+            className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center gap-6 group cursor-pointer"
+          >
             <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-colors">
               <ShieldAlert size={20} />
             </div>
@@ -134,7 +155,10 @@ export default function InputTransactionPage() {
           </div>
 
           {/* Top Up & Transfer */}
-          <div className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center gap-6 group">
+          <div 
+            onClick={() => openModal('topup_transfer')}
+            className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center gap-6 group cursor-pointer"
+          >
             <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
               <ArrowLeftRight size={20} />
             </div>

@@ -8,7 +8,8 @@ import {
   Trash2,
   Gem,
   ChevronDown,
-  TrendingUp
+  TrendingUp,
+  Pencil
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -20,6 +21,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useRef } from 'react';
 import { MonthPicker } from '@/components/ui/MonthPicker';
+import { OtherInvestmentModal } from '@/components/modals/OtherInvestmentModal';
 
 const ASSET_TYPES = ['Emas', 'Kripto', 'Properti', 'P2P Lending', 'Obligasi', 'Reksa Dana', 'Lainnya'];
 
@@ -31,6 +33,8 @@ export default function OtherInvestmentsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [showModal, setShowModal] = useState(false);
+  const [editingInvestment, setEditingInvestment] = useState<Investment | undefined>(undefined);
 
   const unsubRef = useRef<(() => void) | null>(null);
 
@@ -116,7 +120,7 @@ export default function OtherInvestmentsPage() {
             Lacak aset investasi alternatif Anda untuk periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}.
           </p>
         </div>
-        <div className="w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3">
           <MonthPicker 
             value={{ month: selectedMonth, year: selectedYear }}
             onChange={({ month, year }) => {
@@ -124,6 +128,13 @@ export default function OtherInvestmentsPage() {
               setSelectedYear(year);
             }}
           />
+          <button 
+            onClick={() => { setEditingInvestment(undefined); setShowModal(true); }}
+            className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+          >
+            <PlusCircle size={18} />
+            <span className="hidden md:inline">Tambah Investasi</span>
+          </button>
         </div>
       </div>
 
@@ -212,10 +223,17 @@ export default function OtherInvestmentsPage() {
                       </span>
                     </td>
                     <td className="px-4 md:px-6 py-5 text-center">
-                      <button onClick={async () => { if (inv.id) { await investmentService.deleteInvestment(inv.id); } }}
-                        className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="flex items-center justify-center gap-2">
+                        <button 
+                          onClick={() => { setEditingInvestment(inv); setShowModal(true); }}
+                          className="p-2 rounded-lg bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all">
+                          <Pencil size={14} />
+                        </button>
+                        <button onClick={async () => { if (inv.id) { await investmentService.deleteInvestment(inv.id); } }}
+                          className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -224,6 +242,13 @@ export default function OtherInvestmentsPage() {
           </div>
         )}
       </div>
+
+      <OtherInvestmentModal 
+        userId={user?.uid || ''} 
+        isOpen={showModal} 
+        onClose={() => { setShowModal(false); setEditingInvestment(undefined); }} 
+        editData={editingInvestment}
+      />
     </div>
   );
 }

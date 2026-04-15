@@ -52,7 +52,6 @@ export default function TopUpPage() {
         const q = query(
           collection(db, 'transactions'),
           where('userId', '==', u.uid),
-          where('type', 'in', ['topup', 'transfer']),
           where('date', '>=', startOfMonth),
           where('date', '<=', endOfMonth),
           orderBy('date', 'desc')
@@ -65,7 +64,12 @@ export default function TopUpPage() {
               ...d, id: doc.id, amount: Number(d.amount) || 0,
               date: d.date?.toDate?.() ?? new Date(), createdAt: d.createdAt?.toDate?.() ?? new Date()
             } as Transaction;
-          });
+          })
+          // Filter: hanya tampilkan sisi "keluar" dari transfer/topup untuk menghindari duplikasi
+          .filter(t => 
+            (t.category === 'Top Up' || t.category === 'Transfer') &&
+            (t.type === 'pengeluaran' || t.type === 'topup' || t.type === 'transfer')
+          );
           setTransactions(list);
           setLoading(false);
         }, (err) => { console.error(err); setLoading(false); });

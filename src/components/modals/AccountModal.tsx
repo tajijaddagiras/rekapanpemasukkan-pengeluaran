@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ChevronDown, Save } from 'lucide-react';
+import { ChevronDown, Save, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { accountService, Account } from '@/lib/services/accountService';
+import { uploadToCloudinary } from '@/lib/cloudinary';
+import { useRef } from 'react';
 
 interface AccountModalProps {
   isOpen: boolean;
@@ -23,6 +25,24 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
     initialBalance: '',
     baseValue: ''
   });
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const url = await uploadToCloudinary(file);
+      setFormData(prev => ({ ...prev, logoUrl: url }));
+    } catch (error) {
+      console.error("Upload failed:", error);
+      alert("Gagal mengunggah logo.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -73,14 +93,41 @@ export const AccountModal = ({ isOpen, onClose, userId, initialType = 'Bank Acco
             />
           </div>
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Logo URL</label>
-            <input 
-              type="text" 
-              value={formData.logoUrl}
-              onChange={(e) => setFormData({...formData, logoUrl: e.target.value})}
-              placeholder="https://..."
-              className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all"
-            />
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Logo Rekening</label>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
+                {formData.logoUrl ? (
+                  <img src={formData.logoUrl} alt="Logo Preview" className="w-full h-full object-contain" />
+                ) : (
+                  <ImageIcon className="text-slate-300" size={20} />
+                )}
+              </div>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/*" 
+                onChange={handleLogoUpload} 
+              />
+              <button 
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="flex-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl py-3 px-4 text-xs font-bold text-slate-600 transition-all flex items-center justify-center gap-2"
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="animate-spin" size={14} />
+                    Mengunggah...
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon size={14} />
+                    {formData.logoUrl ? 'Ganti Logo' : 'Upload Logo'}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
           <div className="space-y-3">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Jenis Rekening</label>

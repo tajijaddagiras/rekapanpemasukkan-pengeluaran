@@ -5,6 +5,7 @@ import { Save, ChevronDown } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { transactionService } from '@/lib/services/transactionService';
 import { accountService, Account } from '@/lib/services/accountService';
+import { updateMemberTotals } from '@/lib/services/userService';
 
 interface DebtModalProps {
   userId: string;
@@ -18,6 +19,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
   
   const [formData, setFormData] = useState({
     debtType: 'hutang' as 'hutang' | 'piutang',
+    paymentStatus: 'belum' as 'lunas' | 'belum',
     amount: '',
     currency: 'IDR',
     lenderName: '',
@@ -41,16 +43,20 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
     setLoading(true);
     
     try {
+      const amount = parseFloat(formData.amount);
       const selectedDate = new Date(formData.date);
       const displayDate = selectedDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
-      
+      const isLunas = formData.paymentStatus === 'lunas';
+      const isHutang = formData.debtType === 'hutang';
+
+      // Save the debt/piutang record
       await transactionService.createTransaction({
         userId,
         type: 'debt',
-        amount: parseFloat(formData.amount),
+        amount,
         currency: formData.currency,
-        category: formData.debtType === 'hutang' ? 'Hutang' : 'Piutang',
-        subCategory: formData.debtType === 'hutang' ? 'Hutang' : 'Piutang',
+        category: isHutang ? 'Hutang' : 'Piutang',
+        subCategory: isHutang ? 'Hutang' : 'Piutang',
         lenderName: formData.lenderName,
         note: formData.note,
         accountId: formData.accountId || 'General',
@@ -59,12 +65,33 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
         totalInterest: parseFloat(formData.totalInterest) || 0,
         totalDebt: parseFloat(formData.totalDebt) || 0,
         date: selectedDate,
-        displayDate: displayDate,
-        status: 'PENDING'
+        displayDate,
+        status: isLunas ? 'VERIFIED' : 'PENDING',
+        paymentStatus: formData.paymentStatus
       });
+
+      // If Lunas: also record financial impact immediately
+      if (isLunas) {
+        const financeType = isHutang ? 'pengeluaran' : 'pemasukan';
+        await transactionService.createTransaction({
+          userId,
+          type: financeType,
+          amount,
+          currency: formData.currency,
+          category: isHutang ? 'Hutang' : 'Piutang',
+          subCategory: `${isHutang ? 'Hutang' : 'Piutang'} Lunas`,
+          accountId: formData.accountId || 'General',
+          date: selectedDate,
+          displayDate,
+          note: `[Lunas] ${isHutang ? 'Hutang' : 'Piutang'} ${formData.lenderName ? `ke/dari ${formData.lenderName}` : ''} - ${formData.note || ''}`.trim(),
+          status: 'VERIFIED'
+        });
+        await updateMemberTotals(userId, financeType, amount);
+      }
+
       onClose();
       setFormData({ 
-        debtType: 'hutang', amount: '', currency: 'IDR', lenderName: '', note: '', accountId: '', 
+        debtType: 'hutang', paymentStatus: 'belum', amount: '', currency: 'IDR', lenderName: '', note: '', accountId: '', 
         installmentTenor: '', monthlyInterest: '', totalInterest: '', totalDebt: '', 
         date: new Date().toISOString().split('T')[0]
       });
@@ -78,6 +105,7 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Catat Hutang / Piutang" maxWidth="max-w-xl">
       <div className="space-y-4 max-h-[75vh] overflow-y-auto px-1 custom-scrollbar">
+        {/* Tipe */}
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipe</label>
           <div className="grid grid-cols-2 gap-3">
@@ -91,6 +119,29 @@ export const DebtModal = ({ userId, isOpen, onClose }: DebtModalProps) => {
               >{type}</button>
             ))}
           </div>
+        </div>
+
+        {/* Status Pembayaran */}
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Status Pembayaran</label>
+          <div className="grid grid-cols-2 gap-3">
+            {(['belum', 'lunas'] as const).map(s => (
+              <button key={s} type="button" onClick={() => setFormData(p => ({...p, paymentStatus: s}))}
+                className={`py-3.5 rounded-2xl text-sm font-black capitalize transition-all ${
+                  formData.paymentStatus === s
+                    ? s === 'lunas' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100' : 'bg-slate-700 text-white shadow-lg shadow-slate-200'
+                    : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                }`}
+              >
+                {s === 'lunas' ? '✓ Lunas' : '⏳ Belum Lunas'}
+              </button>
+            ))}
+          </div>
+          {formData.paymentStatus === 'lunas' && (
+            <p className="text-[10px] font-bold text-emerald-600 pl-1 mt-1">
+              ✓ {formData.debtType === 'hutang' ? 'Pengeluaran' : 'Pemasukan'} akan otomatis tercatat saat disimpan.
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">

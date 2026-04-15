@@ -15,6 +15,14 @@ import {
   User
 } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { accountService } from '@/lib/services/accountService';
+import { transactionService } from '@/lib/services/transactionService';
+import { investmentService } from '@/lib/services/investmentService';
+import { savingsService } from '@/lib/services/savingsService';
+import { budgetService } from '@/lib/services/budgetService';
+import { formatCurrency } from '@/lib/utils';
 
 interface Message {
   role: 'user' | 'model';
@@ -22,34 +30,97 @@ interface Message {
   timestamp: Date;
 }
 
-const SYSTEM_CONTEXT = `Kamu adalah Leosiqra, asisten keuangan AI yang cerdas dan ramah untuk aplikasi Finlytics. Kamu membantu pengguna dengan:
+const SYSTEM_CONTEXT_BASE = `Kamu adalah Leosiqra, asisten keuangan AI yang cerdas dan ramah untuk aplikasi Finlytics. Kamu membantu pengguna dengan:
 - Analisis keuangan pribadi (pemasukan, pengeluaran, tabungan)
 - Strategi investasi (saham, deposito, emas, kripto)
 - Perencanaan anggaran dan penghematan
 - Tips manajemen hutang dan piutang
 - Perencanaan keuangan jangka panjang (dana darurat, pensiun)
-Berikan jawaban yang jelas, praktis, dan dalam Bahasa Indonesia. Gunakan angka dan contoh konkret bila perlu. Jangan memberikan saran investasi yang menjanjikan keuntungan pasti.`;
+
+Konteks Keuangan Pengguna Saat Ini:
+{FINANCE_CONTEXT}
+
+Berikan jawaban yang jelas, praktis, dan dalam Bahasa Indonesia. Gunakan angka dan contoh konkret berdasarkan data di atas bila perlu. Jika pengguna bertanya tentang data yang tidak ada di konteks, sampaikan dengan jujur. Jangan memberikan saran investasi yang menjanjikan keuntungan pasti.`;
 
 const QUICK_PROMPTS = [
-  "Bagaimana cara membuat dana darurat yang ideal?",
-  "Analisis strategi investasi untuk pemula",
-  "Tips menghemat pengeluaran bulanan",
-  "Bagaimana cara membagi gaji 50-30-20?",
+  "Berapa total saldo saya di semua rekening?",
+  "Bagaimana perkembangan investasi saham saya?",
+  "Apakah pengeluaran saya bulan ini sudah aman?",
+  "Berapa sisa target tabungan Dana Darurat saya?",
 ];
 
 export default function AILeosiqraPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'model',
-      text: 'Halo! Saya **Leosiqra**, asisten keuangan AI Anda 👋\n\nSaya siap membantu Anda dengan analisis keuangan, strategi investasi, perencanaan anggaran, dan banyak lagi. Apa yang ingin Anda tanyakan?',
+      text: 'Halo! Saya **Leosiqra**, asisten keuangan AI Anda 👋\n\nSaya sedang menganalisis data keuangan Anda agar dapat memberikan bantuan yang lebih akurat...',
       timestamp: new Date()
     }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const [copied, setCopied] = useState<number | null>(null);
   const [apiKeyMissing, setApiKeyMissing] = useState(false);
+  const [financeContext, setFinanceContext] = useState('');
+  const [userId, setUserId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUserId(user.uid);
+      } else {
+        setUserId(null);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const loadFinancialData = async () => {
+      try {
+        const [accounts, transactions, investments, savings, budgets] = await Promise.all([
+          accountService.getUserAccounts(userId),
+          transactionService.getUserTransactions(userId),
+          investmentService.getUserInvestments(userId),
+          savingsService.getUserSavings(userId),
+          budgetService.getUserBudgets(userId)
+        ]);
+
+        const totalBalance = accounts.reduce((acc, curr) => acc + curr.balance, 0);
+        
+        const context = `
+DATA KEUANGAN REAL-TIME PENGGUNA:
+1. Rekening:
+${accounts.map(a => `- ${a.name}: ${formatCurrency(a.balance)} (${a.type})`).join('\n')}
+Total Saldo: ${formatCurrency(totalBalance)}
+
+2. Transaksi Terakhir (10 Terakhir):
+${transactions.slice(0, 10).map(t => `- [${t.type}] ${t.category}: ${formatCurrency(t.amount)} (${t.note || '-'})`).join('\n')}
+
+3. Investasi:
+${investments.map(i => `- ${i.name} (${i.type}): Invested ${formatCurrency(i.amountInvested)}, Current ${formatCurrency(i.currentValue)}`).join('\n')}
+
+4. Tabungan & Goals:
+${savings.map(s => `- ${s.description}: ${formatCurrency(s.amount)} (Goal: ${s.toGoal})`).join('\n')}
+
+5. Budget Bulan Ini:
+${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type})`).join('\n')}
+        `;
+
+        setFinanceContext(context);
+      } catch (error) {
+        console.error("Error loading financial context:", error);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    loadFinancialData();
+  }, [userId]);
 
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
@@ -86,10 +157,12 @@ export default function AILeosiqraPage() {
         parts: [{ text: m.text }]
       }));
 
+      const systemPrompt = SYSTEM_CONTEXT_BASE.replace('{FINANCE_CONTEXT}', financeContext);
+
       const chat = model.startChat({
         history: [
-          { role: 'user', parts: [{ text: SYSTEM_CONTEXT }] },
-          { role: 'model', parts: [{ text: 'Siap! Saya Leosiqra, asisten keuangan AI Anda. Bagaimana saya bisa membantu?' }] },
+          { role: 'user', parts: [{ text: systemPrompt }] },
+          { role: 'model', parts: [{ text: 'Siap! Saya Leosiqra, asisten keuangan AI Anda. Saya sudah menganalisis data keuangan Anda dan siap membantu.' }] },
           ...history
         ]
       });
@@ -113,6 +186,21 @@ export default function AILeosiqraPage() {
       setLoading(false);
     }
   };
+
+  // Update initial message after data is loaded
+  useEffect(() => {
+    if (!dataLoading && financeContext) {
+      setMessages(prev => {
+        if (prev.length === 1 && prev[0].role === 'model') {
+          return [{
+            ...prev[0],
+            text: 'Halo! Saya **Leosiqra**, asisten keuangan AI Anda 👋\n\nSaya sudah selesai menganalisis data keuangan Anda. Anda bisa bertanya tentang saldo rekening, performa investasi, atau pengeluaran bulan ini. Apa yang ingin Anda ketahui?'
+          }];
+        }
+        return prev;
+      });
+    }
+  }, [dataLoading, financeContext]);
 
   const handleCopy = (text: string, idx: number) => {
     navigator.clipboard.writeText(text);
@@ -158,13 +246,19 @@ export default function AILeosiqraPage() {
 
           <div className="flex flex-col gap-2 shrink-0">
             {[
-              { icon: TrendingUp, label: 'Analisis Investasi', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-              { icon: Target, label: 'Perencanaan Anggaran', color: 'text-indigo-600', bg: 'bg-indigo-50' },
-              { icon: LineChart, label: 'Strategi Keuangan', color: 'text-blue-600', bg: 'bg-blue-50' },
+              { 
+                icon: dataLoading ? RefreshCw : Check, 
+                label: dataLoading ? 'Menyinkronkan Data...' : 'Finansial Terhubung', 
+                color: dataLoading ? 'text-blue-600' : 'text-emerald-600', 
+                bg: dataLoading ? 'bg-blue-50' : 'bg-emerald-50',
+                animate: dataLoading ? 'animate-spin' : ''
+              },
+              { icon: TrendingUp, label: 'Analisis Investasi', color: 'text-indigo-600', bg: 'bg-indigo-50' },
+              { icon: Target, label: 'Strategi Anggaran', color: 'text-violet-600', bg: 'bg-violet-50' },
             ].map((item) => (
-              <div key={item.label} className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-2xl border border-slate-100">
+              <div key={item.label} className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-2xl border border-slate-100 min-w-[200px]">
                 <div className={`w-8 h-8 rounded-xl ${item.bg} flex items-center justify-center ${item.color}`}>
-                  <item.icon size={14} />
+                  <item.icon size={14} className={item.animate} />
                 </div>
                 <span className="text-[11px] font-bold text-slate-700">{item.label}</span>
               </div>

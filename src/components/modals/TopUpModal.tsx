@@ -5,6 +5,7 @@ import { Save, ChevronDown } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { transactionService } from '@/lib/services/transactionService';
 import { accountService, Account } from '@/lib/services/accountService';
+import { updateMemberTotals } from '@/lib/services/userService';
 
 interface TopUpModalProps {
   userId: string;
@@ -37,22 +38,51 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
     setLoading(true);
     
     try {
+      const amount = parseFloat(formData.amount);
       const selectedDate = new Date(formData.date);
       const displayDate = selectedDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
-      
+      const label = formData.type === 'topup' ? 'Top Up' : 'Transfer';
+      const note = formData.note || `${label} ke ${accounts.find(a => a.id === formData.targetAccountId)?.name || formData.targetAccountId}`;
+
+      // 1. Pengeluaran dari rekening sumber
       await transactionService.createTransaction({
         userId,
-        type: formData.type,
-        amount: parseFloat(formData.amount),
+        type: 'pengeluaran',
+        amount,
         currency: formData.currency,
-        category: formData.type === 'topup' ? 'Top Up' : 'Transfer',
+        category: label,
+        subCategory: `${label} Keluar`,
         accountId: formData.accountId || 'General',
         targetAccountId: formData.targetAccountId,
         date: selectedDate,
-        displayDate: displayDate,
-        note: formData.note,
+        displayDate,
+        note: `[${label} Keluar] ${note}`,
         status: 'VERIFIED'
       });
+
+      // 2. Pemasukan ke rekening tujuan
+      if (formData.targetAccountId && formData.targetAccountId !== 'Wallet') {
+        await transactionService.createTransaction({
+          userId,
+          type: 'pemasukan',
+          amount,
+          currency: formData.currency,
+          category: label,
+          subCategory: `${label} Masuk`,
+          accountId: formData.targetAccountId,
+          date: selectedDate,
+          displayDate,
+          note: `[${label} Masuk] ${note}`,
+          status: 'VERIFIED'
+        });
+      }
+
+      // 3. Update member totals (net 0 for transfer; net +amount for external top-up)
+      await updateMemberTotals(userId, 'pengeluaran', amount);
+      if (formData.targetAccountId && formData.targetAccountId !== 'Wallet') {
+        await updateMemberTotals(userId, 'pemasukan', amount);
+      }
+
       onClose();
       setFormData({ 
         type: 'topup', amount: '', currency: 'IDR', accountId: '', targetAccountId: '', note: '', 

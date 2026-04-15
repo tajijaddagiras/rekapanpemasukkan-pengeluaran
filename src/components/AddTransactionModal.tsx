@@ -185,14 +185,19 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
               label="Kategori Utama" 
               value={formData.category} 
               type={type === 'pemasukan' ? 'income' : 'expense'} 
-              onChange={(val) => setFormData({...formData, category: val})} 
+              onChange={(val) => setFormData(prev => ({...prev, category: val}))}
+              onSubCategoryChange={(sub) => setFormData(prev => ({...prev, subCategory: sub}))}
             />
-            <Input 
-              label="Sub Kategori" 
-              placeholder="Contoh: Makan & Minum" 
-              value={formData.subCategory}
-              onChange={(e) => setFormData({...formData, subCategory: e.target.value})}
-            />
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Sub Kategori</label>
+              <input
+                type="text"
+                placeholder="Otomatis dari kategori..."
+                value={formData.subCategory}
+                onChange={(e) => setFormData(prev => ({...prev, subCategory: e.target.value}))}
+                className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3.5 px-5 text-sm font-bold text-slate-700 transition-all"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

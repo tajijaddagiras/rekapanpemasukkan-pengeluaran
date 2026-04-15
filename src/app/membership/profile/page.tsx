@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { 
   User, 
   Mail, 
@@ -17,7 +17,8 @@ import {
   AtSign,
   Save,
   Building2,
-  Wallet
+  Wallet,
+  Loader2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { auth, db } from '@/lib/firebase';
@@ -25,6 +26,7 @@ import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { accountService, Account } from '@/lib/services/accountService';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
+import { uploadToCloudinary } from '@/lib/cloudinary';
 
 interface UserProfile {
   displayName: string;
@@ -32,6 +34,7 @@ interface UserProfile {
   username: string;
   phone: string;
   address: string;
+  photoURL?: string;
 }
 
 export default function ProfilePage() {
@@ -43,8 +46,9 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile>({
-    displayName: '', email: '', username: '', phone: '', address: ''
+    displayName: '', email: '', username: '', phone: '', address: '', photoURL: ''
   });
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -60,7 +64,8 @@ export default function ProfilePage() {
             email: data.email || u.email || '',
             username: data.username || '',
             phone: data.phone || '',
-            address: data.address || ''
+            address: data.address || '',
+            photoURL: data.photoURL || u.photoURL || ''
           });
         } else {
           setProfile({
@@ -82,6 +87,28 @@ export default function ProfilePage() {
     });
     return () => unsub();
   }, []);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploading(true);
+    try {
+      const url = await uploadToCloudinary(file);
+      setProfile(prev => ({ ...prev, photoURL: url }));
+      await setDoc(doc(db, 'users', user.uid), {
+        photoURL: url,
+        updatedAt: new Date()
+      }, { merge: true });
+    } catch (error) {
+      console.error("Upload failed:", error);
+      alert("Gagal mengunggah foto. Pastikan konfigurasi Cloudinary benar.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -118,12 +145,32 @@ export default function ProfilePage() {
       <div className="bg-white rounded-[20px] md:rounded-[40px] border border-slate-50 shadow-sm p-5 md:p-10 lg:p-12">
         <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10">
           <div className="relative group shrink-0">
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*" 
+              onChange={handlePhotoUpload} 
+            />
             <div className="w-24 h-24 md:w-32 lg:w-40 md:h-32 lg:h-40 rounded-[28px] md:rounded-[48px] bg-gradient-to-tr from-indigo-600 to-blue-500 p-1 md:p-1.5 shadow-xl shadow-indigo-100 flex items-center justify-center overflow-hidden">
-              <div className="w-full h-full rounded-[24px] md:rounded-[42px] bg-white flex items-center justify-center text-2xl md:text-4xl font-black text-indigo-600">
-                {initials}
+              <div className="w-full h-full rounded-[24px] md:rounded-[42px] bg-white flex items-center justify-center text-2xl md:text-4xl font-black text-indigo-600 overflow-hidden relative">
+                {profile.photoURL ? (
+                  <img src={profile.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  initials
+                )}
+                {uploading && (
+                  <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
+                    <Loader2 className="animate-spin text-indigo-600" size={24} />
+                  </div>
+                )}
               </div>
             </div>
-            <button className="absolute -bottom-1 -right-1 md:bottom-2 md:right-2 w-10 h-10 md:w-11 md:h-11 rounded-xl md:rounded-2xl bg-white shadow-lg border border-slate-100 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-all hover:scale-110">
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="absolute -bottom-1 -right-1 md:bottom-2 md:right-2 w-10 h-10 md:w-11 md:h-11 rounded-xl md:rounded-2xl bg-white shadow-lg border border-slate-100 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-all hover:scale-110 disabled:opacity-50"
+            >
               <Camera size={18} />
             </button>
           </div>

@@ -14,6 +14,7 @@ import { db } from '../firebase';
 export interface Budget {
   id?: string;
   userId: string;
+  type: 'pemasukan' | 'pengeluaran';
   category: string;
   amount: number;
   period: 'monthly' | 'yearly';

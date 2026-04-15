@@ -20,7 +20,7 @@ import { AccountModal } from '@/components/modals/AccountModal';
 import { CardModal } from '@/components/modals/CardModal';
 
 export const GlobalModalWrapper = () => {
-  const { activeModal, closeModal } = useModal();
+  const { activeModal, modalData, closeModal } = useModal();
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -42,6 +42,7 @@ export const GlobalModalWrapper = () => {
         isOpen={activeModal === 'saham'} 
         onClose={closeModal} 
         userId={user.uid} 
+        initialData={modalData}
       />
 
       <DepositModal 

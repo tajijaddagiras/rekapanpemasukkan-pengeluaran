@@ -34,7 +34,9 @@ export interface Investment {
   sharesCount?: number;
   pricePerShare?: number;
   dateInvested: Date;
-  status: 'Active' | 'Closed';
+  targetDate?: Date;
+  durationDays?: number;
+  status: 'Active' | 'Closed' | 'Planned';
   createdAt: Date;
 }
 
@@ -51,6 +53,7 @@ export const investmentService = {
       sharesCount: Number(data.sharesCount) || 0,
       pricePerShare: Number(data.pricePerShare) || 0,
       dateInvested: Timestamp.fromDate(data.dateInvested),
+      targetDate: data.targetDate ? Timestamp.fromDate(data.targetDate) : null,
       createdAt: Timestamp.now()
     });
     return newDoc.id;
@@ -68,6 +71,7 @@ export const investmentService = {
         ...data,
         id: doc.id,
         dateInvested: data.dateInvested.toDate(),
+        targetDate: data.targetDate?.toDate?.() || null,
         createdAt: data.createdAt.toDate()
       } as Investment;
     });

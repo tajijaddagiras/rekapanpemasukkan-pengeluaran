@@ -1,19 +1,23 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Save, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Save, ChevronDown, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
-import { investmentService } from '@/lib/services/investmentService';
+import { investmentService, Investment } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
 import { CategorySelect } from '@/components/CategorySelect';
+import { updateMemberTotals } from '@/lib/services/userService';
+import { addTransaction } from '@/lib/services/transactionService';
+import { uploadToCloudinary } from '@/lib/cloudinary';
 
 interface OtherInvestmentModalProps {
   userId: string;
   isOpen: boolean;
   onClose: () => void;
+  editData?: Investment;
 }
 
-export const OtherInvestmentModal = ({ userId, isOpen, onClose }: OtherInvestmentModalProps) => {
+export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: OtherInvestmentModalProps) => {
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   
@@ -32,12 +36,50 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose }: OtherInvestmen
     assetType: 'Emas',
     dateInvested: new Date().toISOString().split('T')[0]
   });
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const url = await uploadToCloudinary(file);
+      setFormData(prev => ({ ...prev, logoUrl: url }));
+    } catch (error) {
+      console.error("Upload failed:", error);
+      alert("Gagal mengunggah logo.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && userId) {
       accountService.getUserAccounts(userId).then(setAccounts).catch(console.error);
+      
+      if (editData) {
+        setFormData({
+          name: editData.name,
+          logoUrl: editData.logoUrl || '',
+          currency: editData.currency || 'IDR',
+          quantity: editData.quantity?.toString() || '',
+          unit: editData.unit || '',
+          pricePerUnit: editData.pricePerUnit?.toString() || '',
+          currentValue: editData.currentValue?.toString() || '',
+          transactionType: editData.transactionType || 'Pembelian',
+          category: editData.category || '',
+          accountId: editData.accountId || '',
+          platform: editData.platform || '',
+          assetType: 'Emas', // default or custom
+          dateInvested: editData.dateInvested.toISOString().split('T')[0]
+        });
+      } else {
+        setFormData({ name: '', logoUrl: '', currency: 'IDR', quantity: '', unit: '', pricePerUnit: '', currentValue: '', transactionType: 'Pembelian', category: '', accountId: '', platform: '', assetType: 'Emas', dateInvested: new Date().toISOString().split('T')[0] });
+      }
     }
-  }, [isOpen, userId]);
+  }, [isOpen, userId, editData]);
 
   const handleCreate = async () => {
     if (!userId || !formData.name || !formData.quantity || !formData.pricePerUnit) return;
@@ -49,7 +91,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose }: OtherInvestmen
     const current = parseFloat(formData.currentValue) || invested;
     
     try {
-      await investmentService.createInvestment({
+      const investmentPayload: any = {
         userId, name: formData.name, type: 'Lainnya',
         platform: formData.platform || formData.assetType,
         amountInvested: invested, currentValue: current,
@@ -63,7 +105,49 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose }: OtherInvestmen
         category: formData.category,
         accountId: formData.accountId || 'General',
         dateInvested: new Date(formData.dateInvested), status: 'Active'
+      };
+
+      // Financial Sync Logic (Handle both New and Edit)
+      const currentInvested = invested;
+      const currentType = formData.transactionType;
+
+      if (editData) {
+        // 1. REVERT OLD IMPACT
+        const oldInvested = editData.amountInvested;
+        const oldType = editData.transactionType || 'Pembelian';
+        
+        // Revert member totals
+        if (oldType === 'Pembelian') {
+          await updateMemberTotals(userId, 'pengeluaran', -oldInvested);
+          await updateMemberTotals(userId, 'investasi', -oldInvested);
+        } else if (oldType === 'Penjualan') {
+          await updateMemberTotals(userId, 'pemasukan', -oldInvested);
+          await updateMemberTotals(userId, 'investasi', oldInvested);
+        }
+      }
+
+      // 2. APPLY NEW IMPACT
+      const financeType = currentType === 'Pembelian' ? 'pengeluaran' : 'pemasukan';
+      await updateMemberTotals(userId, financeType, currentInvested);
+      
+      if (currentType === 'Pembelian') await updateMemberTotals(userId, 'investasi', currentInvested);
+      if (currentType === 'Penjualan') await updateMemberTotals(userId, 'investasi', -currentInvested);
+
+      // 3. Create Update-Tracking Transaction
+      await addTransaction({
+        userId, type: financeType, amount: currentInvested,
+        category: 'Investasi', subCategory: `Lainnya - ${currentType}`,
+        accountId: formData.accountId || 'General',
+        date: new Date(formData.dateInvested),
+        note: `${editData ? '[Update]' : '[Baru]'} ${currentType} ${formData.name}`,
+        status: 'VERIFIED'
       });
+
+      if (editData?.id) {
+        await investmentService.updateInvestment(editData.id, investmentPayload);
+      } else {
+        await investmentService.createInvestment(investmentPayload);
+      }
       onClose();
       setFormData({ name: '', logoUrl: '', currency: 'IDR', quantity: '', unit: '', pricePerUnit: '', currentValue: '', transactionType: 'Pembelian', category: '', accountId: '', platform: '', assetType: 'Emas', dateInvested: new Date().toISOString().split('T')[0] });
     } catch (e) {
@@ -74,7 +158,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose }: OtherInvestmen
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Tambah Aset Investasi" maxWidth="max-w-lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={editData ? "Edit Aset Investasi" : "Tambah Aset Investasi"} maxWidth="max-w-lg">
       <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1 custom-scrollbar">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -83,9 +167,26 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose }: OtherInvestmen
               placeholder="Emas Antam 50gr, BTC..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">URL Logo (Opsional)</label>
-            <input type="url" value={formData.logoUrl} onChange={e => setFormData(p => ({...p, logoUrl: e.target.value}))}
-              placeholder="https://..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Logo Produk (Opsional)</label>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
+                {formData.logoUrl ? (
+                  <img src={formData.logoUrl} alt="Logo Preview" className="w-full h-full object-contain" />
+                ) : (
+                  <ImageIcon className="text-slate-300" size={16} />
+                )}
+              </div>
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+              <button 
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="flex-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl py-3 px-4 text-[10px] font-black text-slate-600 transition-all flex items-center justify-center gap-2"
+              >
+                {uploading ? <Loader2 className="animate-spin" size={12} /> : <ImageIcon size={12} />}
+                {uploading ? '...' : (formData.logoUrl ? 'Ganti' : 'Upload Logo')}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -164,8 +265,6 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose }: OtherInvestmen
               >
                 <option value="Pembelian">Pembelian</option>
                 <option value="Penjualan">Penjualan</option>
-                <option value="Apresiasi">Apresiasi</option>
-                <option value="Dividen">Dividen</option>
               </select>
               <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
@@ -174,7 +273,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose }: OtherInvestmen
             <CategorySelect 
               label="Kategori Investasi"
               value={formData.category}
-              type="expense"
+              type={formData.transactionType === 'Penjualan' ? 'income' : 'expense'}
               onChange={(val: string) => setFormData(p => ({...p, category: val}))}
               showBadge={false}
             />

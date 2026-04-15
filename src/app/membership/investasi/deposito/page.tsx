@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   PlusCircle,
   Banknote,
   Percent,
   Clock,
   Trash2,
-  ChevronDown
+  ChevronDown,
+  Pencil
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -16,8 +17,9 @@ import { accountService, Account } from '@/lib/services/accountService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { useRef } from 'react';
 import { MonthPicker } from '@/components/ui/MonthPicker';
+import { cn } from '@/lib/utils';
+import { DepositModal } from '@/components/modals/DepositModal';
 
 export default function DepositoPage() {
   const [investments, setInvestments] = useState<Investment[]>([]);
@@ -27,6 +29,8 @@ export default function DepositoPage() {
   const [user, setUser] = useState<User | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [showModal, setShowModal] = useState(false);
+  const [editingInvestment, setEditingInvestment] = useState<Investment | undefined>(undefined);
 
   const unsubRef = useRef<(() => void) | null>(null);
 
@@ -60,6 +64,8 @@ export default function DepositoPage() {
               amountInvested: Number(d.amountInvested) || 0,
               currentValue: Number(d.currentValue) || 0,
               dateInvested: d.dateInvested?.toDate?.() ?? new Date(), 
+              targetDate: d.targetDate?.toDate?.() ?? null,
+              durationDays: d.durationDays || 0,
               createdAt: d.createdAt?.toDate?.() ?? new Date()
             } as Investment;
           }));
@@ -104,7 +110,7 @@ export default function DepositoPage() {
             Kelola penempatan dana deposito Anda untuk periode {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth))}.
           </p>
         </div>
-        <div className="w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3">
           <MonthPicker 
             value={{ month: selectedMonth, year: selectedYear }}
             onChange={({ month, year }) => {
@@ -112,6 +118,13 @@ export default function DepositoPage() {
               setSelectedYear(year);
             }}
           />
+          <button 
+            onClick={() => { setEditingInvestment(undefined); setShowModal(true); }}
+            className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+          >
+            <PlusCircle size={18} />
+            <span className="hidden md:inline">Buka Deposito</span>
+          </button>
         </div>
       </div>
 
@@ -159,45 +172,82 @@ export default function DepositoPage() {
             <table className="w-full text-left border-collapse min-w-[800px] xl:min-w-0">
               <thead>
                 <tr className="border-b border-slate-50">
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tgl Penempatan</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-indigo-400 uppercase tracking-widest whitespace-nowrap">Tgl Jatuh Tempo</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Nama Deposito</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Bank/Institusi</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Mata Uang</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Nominal</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Durasi(Bln)</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Bunga Thn</th>
-                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tipe Transaksi</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Durasi</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Bunga %</th>
+                  <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Tipe</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Kategori</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Rekening</th>
                   <th className="px-4 md:px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredInvestments.map((inv) => (
-                  <tr key={inv.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0">
+                {filteredInvestments.map((inv) => {
+                  const isPlanned = inv.status === 'Planned';
+                  return (
+                    <tr key={inv.id} className={cn(
+                      "group hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-b-0",
+                      isPlanned && "bg-slate-50/30 opacity-75"
+                    )}>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-bold text-slate-500">{formatDate(inv.dateInvested)}</td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><p className="text-sm font-black text-slate-900">{inv.name}</p></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-sm font-black text-indigo-600 italic bg-indigo-50/20">{inv.targetDate ? formatDate(inv.targetDate) : '—'}</td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <p className={cn("text-sm font-black", isPlanned ? "text-slate-400" : "text-slate-900")}>{inv.name}</p>
+                        {isPlanned && <span className="text-[8px] font-black text-indigo-400 uppercase tracking-tighter mt-0.5">Automated Projection</span>}
+                      </div>
+                    </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="px-3 py-1 bg-orange-50 text-orange-600 text-[9px] font-black rounded-lg uppercase tracking-widest">{inv.platform || '—'}</span></td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap text-center"><span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded">{inv.currency || 'IDR'}</span></td>
                     <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap font-black text-slate-900 text-sm">{formatRp(inv.amountInvested)}</td>
-                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap"><span className="text-sm font-bold text-slate-600">{inv.durationMonths || '—'}</span></td>
+                    <td className="px-4 md:px-6 py-5 text-right whitespace-nowrap"><span className="text-sm font-bold text-slate-600">{inv.durationDays || 0} Hari</span></td>
                     <td className="px-4 md:px-6 py-5 text-center whitespace-nowrap"><span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-lg">{inv.returnPercentage.toFixed(2)}%</span></td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{inv.transactionType || '—'}</span></td>
-                    <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{getCategoryName(inv.category || '')}</span></td>
+                    <td className="px-4 md:px-6 py-5 whitespace-nowrap">
+                      <span className={cn(
+                        "px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-widest",
+                        isPlanned ? "bg-indigo-50 text-indigo-500" : "bg-slate-100 text-slate-600"
+                      )}>
+                        {isPlanned ? 'Rencana' : getCategoryName(inv.category || '')}
+                      </span>
+                    </td>
                     <td className="px-4 md:px-6 py-5 whitespace-nowrap"><span className="text-xs font-bold text-slate-600">{getAccountName(inv.accountId || '')}</span></td>
                     <td className="px-4 md:px-6 py-5 text-center">
-                      <button onClick={async () => { if (inv.id) { await investmentService.deleteInvestment(inv.id); } }}
-                        className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => { setEditingInvestment(inv); setShowModal(true); }}
+                            className="p-2 rounded-lg bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all">
+                            <Pencil size={14} />
+                          </button>
+                          <button onClick={async () => { if (inv.id) { await investmentService.deleteInvestment(inv.id); } }}
+                            className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                        <span className="text-[9px] font-black text-slate-400 tracking-tighter whitespace-nowrap">
+                          Rp {formatRp(inv.currentValue)}
+                        </span>
+                      </div>
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
         )}
       </div>
+
+
+      <DepositModal 
+        userId={user?.uid || ''} 
+        isOpen={showModal} 
+        onClose={() => { setShowModal(false); setEditingInvestment(undefined); }} 
+        editData={editingInvestment}
+      />
     </div>
   );
 }
