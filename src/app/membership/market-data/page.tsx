@@ -42,6 +42,7 @@ export default function MarketDataPage() {
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([]);
   const [userCurrencies, setUserCurrencies] = useState<Currency[]>([]);
   const [forexRates, setForexRates] = useState<ForexRate[]>([]);
+  const [usdIdrRate, setUsdIdrRate] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +83,9 @@ export default function MarketDataPage() {
       
       if (Object.keys(rates).length > 0) {
         const idrRate = rates.IDR || 1;
+        const usdToIdr = idrRate;
         
+        // --- DINAMISASI EXCHANGE RATE TABLE ---
         const mappedExchange: ExchangeRate[] = currentCurs
           .filter(c => c.code !== 'IDR')
           .map(c => ({
@@ -91,7 +94,6 @@ export default function MarketDataPage() {
             rate: idrRate / (rates[c.code] || 1)
           }));
         
-        // Fallback if user has no currencies
         if (mappedExchange.length === 0) {
           mappedExchange.push(
             { from: 'United States Dollar (USD)', to: 'Indonesian Rupiah (IDR)', rate: idrRate },
@@ -99,15 +101,72 @@ export default function MarketDataPage() {
             { from: 'Singapore Dollar (SGD)', to: 'Indonesian Rupiah (IDR)', rate: idrRate / (rates.SGD || 1) }
           );
         }
-        
         setExchangeRates(mappedExchange);
+        setUsdIdrRate(idrRate);
 
-        setForexRates([
-          { pair: 'EUR/USD', label: 'Euro / US Dollar', rate: 1 / (rates.EUR || 1), change: 0 },
-          { pair: 'USD/JPY', label: 'Dollar / Japanese Yen', rate: rates.JPY || 0, change: 0 },
-          { pair: 'GBP/USD', label: 'Pound / US Dollar', rate: 1 / (rates.GBP || 1), change: 0 },
-          { pair: 'USD/IDR', label: 'Dollar / Rupiah', rate: idrRate, change: 0 },
-        ]);
+        // --- DINAMISASI FOREIGN EXCHANGE CARD ---
+        // Filter: exclude IDR (base currency) dan exclude USD (karena semua pair vs USD)
+        const mappedForex: ForexRate[] = currentCurs
+          .filter(c => c.code !== 'IDR' && c.code !== 'USD')
+          .slice(0, 5)
+          .map(c => ({
+            pair: `${c.code}/USD`,
+            label: `${c.name} / US Dollar`,
+            rate: 1 / (rates[c.code] || 1),
+            change: 0
+          }));
+        
+        if (mappedForex.length === 0) {
+          mappedForex.push(
+            { pair: 'EUR/USD', label: 'Euro / US Dollar', rate: 1 / (rates.EUR || 1), change: 0 },
+            { pair: 'GBP/USD', label: 'Pound / US Dollar', rate: 1 / (rates.GBP || 1), change: 0 },
+            { pair: 'AUD/USD', label: 'Aussie / US Dollar', rate: 1 / (rates.AUD || 1), change: 0 },
+          );
+        }
+        // Always add USD/IDR as a reference
+        mappedForex.push({ pair: 'USD/IDR', label: 'US Dollar / Rupiah', rate: idrRate, change: 0 });
+        setForexRates(mappedForex);
+
+        // --- DINAMISASI CRYPTOCURRENCY CARD ---
+        // Mencoba mendeteksi jika user punya mata uang crypto di list-nya
+        const cryptoKeywords = ['BTC', 'ETH', 'SOL', 'BNB', 'ADA', 'XRP', 'DOT', 'DOGE'];
+        const userCryptos = currentCurs.filter(c => cryptoKeywords.includes(c.code.toUpperCase()));
+        
+        // Tetap gunakan top crypto sebagai default jika user tidak punya
+        const targetIds = userCryptos.length > 0 
+          ? userCryptos.map(c => {
+              if (c.code === 'BTC') return 'bitcoin';
+              if (c.code === 'ETH') return 'ethereum';
+              if (c.code === 'SOL') return 'solana';
+              if (c.code === 'BNB') return 'binancecoin';
+              if (c.code === 'ADA') return 'cardano';
+              return '';
+            }).filter(id => id !== '')
+          : ['bitcoin', 'ethereum', 'solana'];
+
+        if (targetIds.length > 0) {
+          const cryptoRes = await fetch(
+            `https://api.coingecko.com/api/v3/simple/price?ids=${targetIds.join(',')}&vs_currencies=usd&include_24hr_change=true`
+          );
+          if (cryptoRes.ok) {
+            const data = await cryptoRes.json();
+            const mappedCrypto: CryptoData[] = targetIds.map(id => {
+              const nameMap: any = { bitcoin: 'Bitcoin', ethereum: 'Ethereum', solana: 'Solana', binancecoin: 'BNB', cardano: 'Cardano' };
+              const symbolMap: any = { bitcoin: 'BTC/USD', ethereum: 'ETH/USD', solana: 'SOL/USD', binancecoin: 'BNB/USD', cardano: 'ADA/USD' };
+              const iconMap: any = { bitcoin: '₿', ethereum: 'Ξ', solana: '◎', binancecoin: '黃', cardano: '₳' };
+              
+              return {
+                id,
+                name: nameMap[id] || id,
+                symbol: symbolMap[id] || id.toUpperCase(),
+                current_price: data[id]?.usd || 0,
+                price_change_percentage_24h: data[id]?.usd_24h_change || 0,
+                icon: iconMap[id] || 'C'
+              };
+            });
+            setCryptoData(mappedCrypto);
+          }
+        }
       }
 
       setLastUpdated(new Date());
@@ -205,7 +264,7 @@ export default function MarketDataPage() {
                 <div>
                   <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">USD/IDR</p>
                   <p className="text-xl font-black tracking-tight">
-                    {exchangeRates[0] ? formatIDR(exchangeRates[0].rate) : '—'}
+                    {usdIdrRate ? formatIDR(usdIdrRate) : '—'}
                   </p>
                 </div>
                 <div>
