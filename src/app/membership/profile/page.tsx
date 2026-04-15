@@ -20,6 +20,7 @@ import {
   Wallet,
   Loader2
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
@@ -27,6 +28,7 @@ import { doc, getDoc, setDoc, onSnapshot, collection, query, where } from 'fireb
 import { accountService, Account } from '@/lib/services/accountService';
 import { transactionService, Transaction } from '@/lib/services/transactionService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
+import { subscribeUserProfile, UserProfile as ServiceProfile } from '@/lib/services/userService';
 
 interface UserProfile {
   displayName: string;
@@ -35,6 +37,7 @@ interface UserProfile {
   phone: string;
   address: string;
   photoURL?: string;
+  plan?: string;
 }
 
 export default function ProfilePage() {
@@ -51,29 +54,26 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
+    let unsubProfile: (() => void) | undefined;
+
+    const unsubAuth = onAuthStateChanged(auth, async (u) => {
       setUser(u);
       if (u) {
-        // Load profile dari Firestore
-        const profileRef = doc(db, 'users', u.uid);
-        const snap = await getDoc(profileRef);
-        if (snap.exists()) {
-          const data = snap.data();
-          setProfile({
-            displayName: data.displayName || u.displayName || '',
-            email: data.email || u.email || '',
-            username: data.username || '',
-            phone: data.phone || '',
-            address: data.address || '',
-            photoURL: data.photoURL || u.photoURL || ''
-          });
-        } else {
-          setProfile({
-            displayName: u.displayName || '',
-            email: u.email || '',
-            username: '', phone: '', address: ''
-          });
-        }
+        // subscribe profile dari Firestore (Real-time)
+        unsubProfile = subscribeUserProfile(u.uid, (data) => {
+          if (data) {
+            setProfile({
+              displayName: data.name || u.displayName || '',
+              email: data.email || u.email || '',
+              username: (data as any).username || '',
+              phone: (data as any).phone || '',
+              address: (data as any).address || '',
+              photoURL: data.photoURL || u.photoURL || '',
+              plan: data.plan
+            });
+          }
+        });
+
         // Load akun dan transaksi
         Promise.all([
           accountService.getUserAccounts(u.uid),
@@ -83,9 +83,16 @@ export default function ProfilePage() {
           setTransactions(trxs);
         }).catch(console.error)
           .finally(() => setLoading(false));
-      } else { setLoading(false); }
+      } else { 
+        setLoading(false); 
+        if (unsubProfile) unsubProfile();
+      }
     });
-    return () => unsub();
+
+    return () => {
+      unsubAuth();
+      if (unsubProfile) unsubProfile();
+    };
   }, []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -181,9 +188,14 @@ export default function ProfilePage() {
                 {profile.displayName || user?.email?.split('@')[0] || 'Pengguna'}
               </h1>
               <div className="flex justify-center lg:justify-start">
-                <span className="px-5 py-2 bg-indigo-50 text-indigo-600 text-[10px] font-black rounded-full uppercase tracking-[0.2em] border border-indigo-100 flex items-center gap-2">
-                  <ShieldCheck size={12} />
-                  Member Aktif
+                <span className={cn(
+                  "px-5 py-2 text-[10px] font-black rounded-full uppercase tracking-[0.2em] border flex items-center gap-2 transition-all duration-500",
+                  profile.plan === 'PRO' 
+                    ? "bg-emerald-50 text-emerald-600 border-emerald-100 shadow-lg shadow-emerald-50" 
+                    : "bg-indigo-50 text-indigo-600 border-indigo-100"
+                )}>
+                  <ShieldCheck size={12} className={cn(profile.plan === 'PRO' && "text-emerald-500")} />
+                  {profile.plan === 'PRO' ? 'PRO MEMBER' : 'Free Plan Active'}
                 </span>
               </div>
             </div>

@@ -77,7 +77,9 @@ export default function MonthlyDashboard() {
           setTransactions(data);
           setLoading(false);
         }, (err) => {
-          console.error('Realtime listener error:', err);
+          if (err.code !== 'permission-denied') {
+            console.error('Realtime listener error:', err);
+          }
           setLoading(false);
         });
         unsubTrxRef.current = unsubTrx;

@@ -27,12 +27,15 @@ import {
   Globe,
   Headphones,
   ChevronDown,
-  X
+  X,
+  ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { getUserProfile, UserProfile } from '@/lib/services/userService';
+import { subscribeUserProfile, UserProfile } from '@/lib/services/userService';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -99,13 +102,23 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
+    let unsubProfile: (() => void) | undefined;
+    
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
-        const prof = await getUserProfile(user.uid);
-        setProfile(prof);
+        unsubProfile = subscribeUserProfile(user.uid, (prof) => {
+          setProfile(prof);
+        });
+      } else {
+        setProfile(null);
+        if (unsubProfile) unsubProfile();
       }
     });
-    return () => unsub();
+
+    return () => {
+      unsubAuth();
+      if (unsubProfile) unsubProfile();
+    };
   }, []);
 
   const getInitials = (name: string) => {
@@ -122,6 +135,24 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         ? prev.filter(g => g !== label)
         : [...prev, label]
     );
+  };
+
+  const [isRequesting, setIsRequesting] = useState(false);
+
+  const handleRequestPro = async () => {
+    if (!profile?.uid) return;
+    setIsRequesting(true);
+    try {
+      await updateDoc(doc(db, 'users', profile.uid), {
+        status: 'PENDING'
+      });
+      alert('Berhasil! Permintaan akses telah terkirim. Admin akan memverifikasi akun Anda segera.');
+    } catch (error) {
+      console.error('Error requesting pro:', error);
+      alert('Gagal mengirim permintaan. Silakan coba lagi nanti.');
+    } finally {
+      setIsRequesting(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -169,47 +200,96 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
         {/* Navigation */}
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-6 custom-scrollbar">
-          {menuGroups.map((group) => {
-            const isOpenGroup = openGroups.includes(group.label);
-            return (
-              <div key={group.label} className="space-y-1">
-                <button
-                  onClick={() => toggleGroup(group.label)}
-                  className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] hover:text-slate-600 transition-colors"
-                >
-                  {group.label}
-                  {isOpenGroup ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                </button>
-
-                {isOpenGroup && (
-                  <div className="space-y-1 mt-1">
-                    {group.items.map((item) => (
-                      <Link
-                        key={item.label + item.href}
-                        href={item.href}
-                        onClick={() => { if (window.innerWidth < 1024) onClose?.(); }}
-                        className={cn(
-                          "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group relative",
-                          isItemActive(item)
-                            ? "text-indigo-600 font-bold bg-indigo-50/50"
-                            : "text-slate-500 hover:text-indigo-600 hover:bg-slate-100/50"
-                        )}
-                      >
-                        <item.icon size={18} className={cn(
-                          "transition-colors",
-                          isItemActive(item) ? "text-indigo-600" : "group-hover:text-indigo-600"
-                        )} />
-                        <span className="text-[13px]">{item.label}</span>
-                        {isItemActive(item) && (
-                          <div className="absolute left-0 w-1 h-4 bg-indigo-600 rounded-r-full" />
-                        )}
-                      </Link>
-                    ))}
+          {profile?.status === 'GUEST' || profile?.status === 'PENDING' ? (
+            <div className="py-10 px-2 space-y-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-1000">
+              <div className="w-16 h-16 rounded-[24px] bg-indigo-50 flex items-center justify-center mx-auto text-indigo-600 border border-indigo-100 shadow-sm relative">
+                <ShieldCheck size={32} />
+                {profile?.status === 'PENDING' && (
+                  <div className="absolute inset-0 rounded-[24px] border-2 border-indigo-600 border-t-transparent animate-spin" />
+                )}
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-sm font-black text-slate-900 tracking-tight uppercase">
+                  {profile?.status === 'PENDING' ? 'Sedang Diverifikasi' : 'Akses Terbatas'}
+                </h3>
+                <p className="text-[11px] font-medium text-slate-400 leading-relaxed">
+                  {profile?.status === 'PENDING' 
+                    ? 'Permintaan akses Anda sudah terkirim. Admin akan memverifikasi data Anda segera.' 
+                    : 'Akun Anda sedang dalam status tamu. Silakan ajukan akses member untuk melihat dashboard.'}
+                </p>
+              </div>
+              <div className="space-y-3 pt-2">
+                {profile?.status === 'GUEST' ? (
+                  <button 
+                    onClick={handleRequestPro}
+                    disabled={isRequesting}
+                    className={cn(
+                      "w-full py-4 bg-indigo-600 text-white text-[11px] font-black rounded-xl hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-2 group",
+                      isRequesting && "opacity-70 cursor-not-allowed"
+                    )}
+                  >
+                    {isRequesting ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Mengirim...
+                      </>
+                    ) : (
+                      <>
+                        🚀 Request Akses
+                        <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <div className="w-full py-4 bg-slate-100 text-slate-400 text-[10px] font-black rounded-xl border border-slate-200 uppercase tracking-widest">
+                    Menunggu Konfirmasi...
                   </div>
                 )}
               </div>
-            );
-          })}
+            </div>
+          ) : (
+            menuGroups.map((group) => {
+              const isOpenGroup = openGroups.includes(group.label);
+              return (
+                <div key={group.label} className="space-y-1">
+                  <button
+                    onClick={() => toggleGroup(group.label)}
+                    className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] hover:text-slate-600 transition-colors"
+                  >
+                    {group.label}
+                    {isOpenGroup ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                  </button>
+
+                  {isOpenGroup && (
+                    <div className="space-y-1 mt-1">
+                      {group.items.map((item) => (
+                        <Link
+                          key={item.label + item.href}
+                          href={item.href}
+                          onClick={() => { if (window.innerWidth < 1024) onClose?.(); }}
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group relative",
+                            isItemActive(item)
+                              ? "text-indigo-600 font-bold bg-indigo-50/50"
+                              : "text-slate-500 hover:text-indigo-600 hover:bg-slate-100/50"
+                          )}
+                        >
+                          <item.icon size={18} className={cn(
+                            "transition-colors",
+                            isItemActive(item) ? "text-indigo-600" : "group-hover:text-indigo-600"
+                          )} />
+                          <span className="text-[13px]">{item.label}</span>
+                          {isItemActive(item) && (
+                            <div className="absolute left-0 w-1 h-4 bg-indigo-600 rounded-r-full" />
+                          )}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Footer */}
@@ -233,8 +313,16 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 hidden md:block">
             <div className="flex items-center justify-between mb-1">
-               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-none">Pro Plan Active</p>
-               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+               <p className={cn(
+                 "text-[9px] font-black uppercase tracking-wider leading-none",
+                 profile?.plan === 'PRO' ? "text-emerald-600" : "text-slate-400"
+               )}>
+                 {profile?.plan === 'PRO' ? 'Pro Member' : 'Free Plan Active'}
+               </p>
+               <div className={cn(
+                 "w-1.5 h-1.5 rounded-full",
+                 profile?.plan === 'PRO' ? "bg-emerald-500 animate-pulse" : "bg-slate-300"
+               )} />
             </div>
           </div>
 

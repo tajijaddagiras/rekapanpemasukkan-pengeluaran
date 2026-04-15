@@ -47,6 +47,9 @@ export default function BudgetPage() {
             return { ...d, id: doc.id, amount: Number(d.amount) || 0, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Budget;
           }));
           setLoading(false);
+        }, (err) => {
+          if (err.code !== 'permission-denied') console.error('Budget listener error:', err);
+          setLoading(false);
         });
 
         // Fetch Transactions for current month to calculate Realisasi
@@ -64,6 +67,8 @@ export default function BudgetPage() {
             const d = doc.data();
             return { ...d, id: doc.id, amount: Number(d.amount) || 0 } as Transaction;
           }));
+        }, (err) => {
+          if (err.code !== 'permission-denied') console.error('Transaction listener error:', err);
         });
       } else {
         setBudgets([]);

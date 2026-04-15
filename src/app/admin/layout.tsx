@@ -35,18 +35,9 @@ export default function AdminLayout({
     return () => unsub();
   }, [router]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
-          <p className="text-slate-400 text-xs font-black uppercase tracking-widest">Checking Authorization...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!authorized) return null;
+  // Kita tidak lagi menampilkan spinner full-screen agar transisi terasa instan.
+  // Jika belum authorized, kita kembalikan null agar tidak ada bocoran konten.
+  if (loading || !authorized) return null;
 
   return (
     <div className="flex min-h-screen bg-slate-50 relative overflow-x-hidden">

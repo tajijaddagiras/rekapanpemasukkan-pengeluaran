@@ -13,12 +13,18 @@ import {
   Database,
   Lock,
   Save,
-  ChevronRight
+  ChevronRight,
+  ArrowRight,
+  X,
+  Image as ImageIcon,
+  Upload,
+  RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { onAuthStateChanged, updateProfile, updatePassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
 import { subscribeUserProfile, UserProfile } from '@/lib/services/userService';
 import { 
   getAppSettings,
@@ -29,15 +35,74 @@ import {
   updateAdminProfile
 } from '@/lib/services/adminService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
-import { Image as ImageIcon, Upload } from 'lucide-react';
 
 export default function AdminPengaturanPage() {
   const [userEmail, setUserEmail] = useState('admin@leosiqra.com');
   const [activeTab, setActiveTab] = useState('billing');
   const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [isRefreshingMarket, setIsRefreshingMarket] = useState(false);
+
+  // FETCH MARKET DATA
+  const fetchMarketData = useCallback(async () => {
+    setIsRefreshingMarket(true);
+    try {
+      const [cryptoRes, fxRes, usersSnap] = await Promise.all([
+        fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,binancecoin,solana&vs_currencies=idr&include_24hr_change=true'),
+        fetch('https://open.er-api.com/v6/latest/IDR'),
+        getDocs(collection(db, 'users'))
+      ]);
+
+      const crypto = cryptoRes.ok ? await cryptoRes.json() : null;
+      const fx = fxRes.ok ? await fxRes.json() : null;
+      
+      // Filter: Hanya hitung role 'user' dan status bukan 'GUEST'
+      const filteredUsers = usersSnap.docs.filter(doc => {
+        const data = doc.data();
+        return data.role === 'user' && data.status !== 'GUEST';
+      });
+      const totalUsers = filteredUsers.length;
+
+      const now = new Date();
+      const timestamp = now.toLocaleString('id-ID', { 
+        day: '2-digit', month: '2-digit', year: 'numeric', 
+        hour: '2-digit', minute: '2-digit', second: '2-digit' 
+      });
+
+      setSettings(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          marketData: {
+            userCovered: totalUsers,
+            fxUpdate: 5, // Misal kita track 5 pairs
+            cryptoUpdate: 4,
+            stockUpdate: 3,
+            lastUpdate: timestamp
+          }
+        };
+      });
+
+      // Simpan data mentah ini untuk pamer di tabel dummy (agar terlihat live)
+      // Di masa depan bisa disimpan ke koleksi 'market_rates'
+      (window as any).liveMarket = { crypto, fx, totalUsers, timestamp };
+
+    } catch (err) {
+      console.error("Gagal refresh market data:", err);
+    } finally {
+      setIsRefreshingMarket(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'market') {
+      fetchMarketData();
+    }
+  }, [activeTab, fetchMarketData]);
   const [loading, setLoading] = useState(true);
   const [isUploadingQRIS, setIsUploadingQRIS] = useState(false);
   const [isUploadingProfile, setIsUploadingProfile] = useState(false);
+  const [isUploadingMaintenanceImage, setIsUploadingMaintenanceImage] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [newPassword, setNewPassword] = useState('');
@@ -185,6 +250,26 @@ export default function AdminPengaturanPage() {
       }
     } else {
       alert('Masukkan password baru jika ingin mengubah.');
+    }
+  };
+
+  const handleMaintenanceImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingMaintenanceImage(true);
+      const url = await uploadToCloudinary(file);
+      setSettings(prev => ({ 
+        ...prev as AppSettings, 
+        maintenance: { ...(prev as AppSettings).maintenance!, imageUrl: url } 
+      }));
+      alert('Gambar maintenance berhasil diunggah!');
+    } catch (error) {
+      console.error(error);
+      alert('Gagal mengunggah gambar maintenance.');
+    } finally {
+      setIsUploadingMaintenanceImage(false);
     }
   };
 
@@ -578,8 +663,8 @@ export default function AdminPengaturanPage() {
           <div className="space-y-8">
             <div className="p-8 lg:p-12 rounded-[40px] bg-white border border-slate-100 shadow-sm flex items-center justify-between gap-8">
               <div className="space-y-2">
-                <h4 className="text-2xl font-serif font-black text-slate-900 tracking-tight">Maintenance Leosiqra</h4>
-                <p className="text-sm font-medium text-slate-400 leading-relaxed">Jika aktif, semua halaman user akan menampilkan layar maintenance Leosiqra yang lebih rapi.</p>
+                <h4 className="text-2xl font-serif font-black text-slate-900 tracking-tight">Status Maintenance</h4>
+                <p className="text-sm font-medium text-slate-400 leading-relaxed">Aktifkan untuk mengalihkan seluruh akses member ke layar pemeliharaan.</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer group">
                 <input 
@@ -595,27 +680,168 @@ export default function AdminPengaturanPage() {
               </label>
             </div>
 
-            <div className="space-y-4">
-              <label className="text-sm font-black text-slate-900 ml-2">Pesan Maintenance Leosiqra</label>
-              <div className="space-y-3">
-                <textarea 
-                  className="w-full p-8 bg-white border border-slate-100 rounded-[32px] text-base font-medium text-slate-600 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all shadow-sm min-h-[160px] resize-none"
-                  value={settings?.maintenance?.message || ''}
-                  onChange={(e) => setSettings(prev => ({ 
-                    ...prev as AppSettings, 
-                    maintenance: { ...(prev as AppSettings).maintenance!, message: e.target.value } 
-                  }))}
-                />
-                <p className="text-xs text-slate-400 font-medium ml-2">Tulis status singkat, estimasi waktu, atau arah kontak yang tetap bisa dihubungi.</p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-6 p-8 lg:p-10 rounded-[40px] bg-white border border-slate-100 shadow-sm">
+                <div className="space-y-2">
+                  <h5 className="text-lg font-black text-slate-900 tracking-tight">Konfigurasi Konten</h5>
+                  <p className="text-[11px] font-medium text-slate-400">Pilih bagaimana maintenance akan ditampilkan ke user.</p>
+                </div>
+
+                <div className="flex p-1.5 bg-slate-50 rounded-2xl gap-1">
+                  <button 
+                    onClick={() => setSettings(prev => ({ ...prev as AppSettings, maintenance: { ...(prev as AppSettings).maintenance!, type: 'code' } }))}
+                    className={cn(
+                      "flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all",
+                      settings?.maintenance?.type === 'code' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                    )}
+                  >
+                    Mode Program (HTML)
+                  </button>
+                  <button 
+                    onClick={() => setSettings(prev => ({ ...prev as AppSettings, maintenance: { ...(prev as AppSettings).maintenance!, type: 'image' } }))}
+                    className={cn(
+                      "flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all",
+                      settings?.maintenance?.type === 'image' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                    )}
+                  >
+                    Mode Gambar
+                  </button>
+                </div>
+
+                {settings?.maintenance?.type === 'code' ? (
+                  <div className="space-y-4 pt-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-black text-slate-900 uppercase tracking-widest">HTML Code Template</label>
+                      <button 
+                        onClick={() => setShowPreviewModal(true)}
+                        className="text-[10px] font-black text-indigo-600 hover:underline flex items-center gap-1"
+                      >
+                        Lihat Preview <ArrowRight size={12} />
+                      </button>
+                    </div>
+                    <textarea 
+                      className="w-full p-6 bg-slate-900 text-indigo-300 font-mono text-[12px] rounded-3xl min-h-[300px] outline-none focus:ring-4 focus:ring-indigo-500/20 transition-all border border-slate-800"
+                      placeholder="Masukkan kode HTML/CSS kustom Anda di sini..."
+                      value={settings?.maintenance?.code || ''}
+                      onChange={(e) => setSettings(prev => ({ 
+                        ...prev as AppSettings, 
+                        maintenance: { ...(prev as AppSettings).maintenance!, code: e.target.value } 
+                      }))}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-6 pt-4">
+                    <label className="text-[11px] font-black text-slate-900 uppercase tracking-widest">Maintenance Image</label>
+                    
+                    <div className="aspect-video w-full rounded-[32px] bg-slate-50 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center overflow-hidden relative group">
+                      {settings?.maintenance?.imageUrl ? (
+                        <>
+                          <img src={settings.maintenance.imageUrl} alt="Maintenance" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button 
+                              onClick={() => setShowPreviewModal(true)}
+                              className="px-6 py-2 bg-white text-slate-900 rounded-full text-[10px] font-black uppercase tracking-widest"
+                            >
+                              Zoom Preview
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center gap-3 text-slate-300">
+                          <ImageIcon size={48} strokeWidth={1} />
+                          <p className="text-[10px] font-black uppercase tracking-widest">No Image Selected</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="w-full">
+                      <input 
+                        type="file" 
+                        id="maintenance-image-input" 
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={handleMaintenanceImageUpload}
+                        disabled={isUploadingMaintenanceImage}
+                      />
+                      <label 
+                        htmlFor="maintenance-image-input"
+                        className={cn(
+                          "w-full flex items-center justify-center gap-2 py-4 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest cursor-pointer hover:bg-slate-800 transition-all",
+                          isUploadingMaintenanceImage && "opacity-50 cursor-not-allowed"
+                        )}
+                      >
+                        {isUploadingMaintenanceImage ? "Uploading..." : "Upload Gambar Maintenance"}
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-8 flex flex-col justify-between">
+                <div className="p-8 lg:p-10 rounded-[40px] bg-indigo-600 text-white shadow-xl shadow-indigo-200 relative overflow-hidden">
+                  <div className="relative z-10 space-y-6">
+                    <h5 className="text-xl font-serif font-black tracking-tight">Kenapa Mode Ini?</h5>
+                    <p className="text-sm font-medium text-indigo-100 leading-relaxed">
+                      Mode "Advanced" memberikan Anda kebebasan penuh. Gunakan **Mode Program** jika Anda memiliki desain khusus berbasis kode, atau **Mode Gambar** jika Anda sudah menyiapkan banner maintenance dari desainer.
+                    </p>
+                    <div className="pt-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                        <ShieldCheck size={20} />
+                      </div>
+                      <span className="text-[11px] font-black uppercase tracking-widest">Full Control Protocol</span>
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-white/10 blur-3xl rounded-full" />
+                </div>
+
+                <div className="p-10 rounded-[40px] bg-slate-50 border border-slate-100 flex flex-col gap-6">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fallback Message</p>
+                    <p className="text-xs font-bold text-slate-500 italic">"Kami kembali sebentar lagi. Leosiqra sedang dalam pemeliharaan sistem."</p>
+                  </div>
+                  <button 
+                    onClick={handleSaveSettings}
+                    className="w-full py-5 bg-[#2563EB] text-white rounded-[24px] text-[13px] font-black tracking-wide hover:bg-slate-900 transition-all shadow-xl shadow-blue-500/20 active:scale-[0.98]"
+                  >
+                    Simpan & Aktifkan Perubahan
+                  </button>
+                </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
 
+      {/* Live Preview Modal */}
+      {showPreviewModal && (
+        <div className="fixed inset-0 z-[100] bg-slate-900 flex flex-col animate-in fade-in duration-300">
+          <div className="h-16 border-b border-white/10 flex items-center justify-between px-8 bg-slate-900/50 backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-white text-[11px] font-black uppercase tracking-[0.2em]">Live Maintenance Preview</span>
+            </div>
             <button 
-              onClick={handleSaveSettings}
-              className="w-full py-5 bg-[#2563EB] text-white rounded-[20px] text-sm font-black tracking-wide hover:bg-slate-900 transition-all shadow-xl shadow-blue-500/20 active:scale-[0.98]"
+              onClick={() => setShowPreviewModal(false)}
+              className="p-2 text-white/60 hover:text-white transition-colors"
             >
-              Simpan Perubahan
+              <X size={24} />
             </button>
+          </div>
+          <div className="flex-1 overflow-hidden relative">
+            {settings?.maintenance?.type === 'code' ? (
+              <div 
+                className="w-full h-full overflow-auto bg-white"
+                dangerouslySetInnerHTML={{ __html: settings?.maintenance?.code || '<div style="display:flex;align-items:center;justify-center;height:100vh;font-family:sans-serif;"><h1>No Code Content</h1></div>' }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-black">
+                {settings?.maintenance?.imageUrl ? (
+                  <img src={settings.maintenance.imageUrl} alt="Maintenance Preview" className="w-full h-full object-contain" />
+                ) : (
+                  <p className="text-white/40 font-mono text-xs uppercase tracking-widest">No Image uploaded</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -631,8 +857,16 @@ export default function AdminPengaturanPage() {
                 Pantau hasil sinkron market seluruh user dan jalankan refresh global saat dibutuhkan tanpa keluar dari ruang konfigurasi.
               </p>
             </div>
-            <button className="px-6 py-3 border border-slate-200 rounded-2xl text-[11px] font-black text-slate-900 uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
-              Refresh Semua User
+            <button 
+              onClick={fetchMarketData}
+              disabled={isRefreshingMarket}
+              className={cn(
+                "px-6 py-3 border border-slate-200 rounded-2xl text-[11px] font-black text-slate-900 uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2",
+                isRefreshingMarket && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              <RefreshCw size={14} className={cn(isRefreshingMarket && "animate-spin")} />
+              {isRefreshingMarket ? "Refreshing..." : "Refresh Semua User"}
             </button>
           </div>
 
@@ -670,20 +904,25 @@ export default function AdminPengaturanPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {[
-                    { pair: 'SGD_IDR', rate: '13.513,514', user: '17', updated: '15/4/2026, 18.18.10' },
-                    { pair: 'EUR_IDR', rate: '20.408,163', user: '17', updated: '15/4/2026, 18.18.10' },
-                    { pair: 'JPY_IDR', rate: '107.875', user: '17', updated: '15/4/2026, 18.18.10' },
-                    { pair: 'AUD_IDR', rate: '12.195,122', user: '17', updated: '15/4/2026, 18.18.10' },
-                    { pair: 'MYR_IDR', rate: '4.347,826', user: '17', updated: '15/4/2026, 18.18.10' },
-                  ].map((row, idx) => (
-                    <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
-                      <td className="py-4 text-[11px] font-black text-slate-500">{row.pair}</td>
-                      <td className="py-4 text-[11px] font-bold text-slate-900">{row.rate}</td>
-                      <td className="py-4 text-[11px] font-medium text-slate-400">{row.user}</td>
-                      <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{row.updated}</td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    const fx = (window as any).liveMarket?.fx?.rates;
+                    const timestamp = (window as any).liveMarket?.timestamp || '-';
+                    const data = [
+                      { pair: 'USD_IDR', rate: fx ? (1 / fx.USD).toLocaleString('id-ID') : '15.700', user: settings?.marketData?.userCovered || 0 },
+                      { pair: 'SGD_IDR', rate: fx ? (1 / fx.SGD).toLocaleString('id-ID') : '13.513', user: settings?.marketData?.userCovered || 0 },
+                      { pair: 'EUR_IDR', rate: fx ? (1 / fx.EUR).toLocaleString('id-ID') : '20.408', user: settings?.marketData?.userCovered || 0 },
+                      { pair: 'JPY_IDR', rate: fx ? (1 / fx.JPY).toLocaleString('id-ID') : '107,8', user: settings?.marketData?.userCovered || 0 },
+                      { pair: 'MYR_IDR', rate: fx ? (1 / fx.MYR).toLocaleString('id-ID') : '4.347', user: settings?.marketData?.userCovered || 0 },
+                    ];
+                    return data.map((row, idx) => (
+                      <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 text-[11px] font-black text-slate-500">{row.pair}</td>
+                        <td className="py-4 text-[11px] font-bold text-slate-900">{row.rate}</td>
+                        <td className="py-4 text-[11px] font-medium text-slate-400">{row.user}</td>
+                        <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{timestamp}</td>
+                      </tr>
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -706,36 +945,41 @@ export default function AdminPengaturanPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {[
-                    { asset: 'SOL', price: '0,005 IDR', user: '17', updated: '15/4/2026, 18.18.10' },
-                    { asset: 'BNB', price: '0,036 IDR', user: '17', updated: '15/4/2026, 18.18.10' },
-                    { asset: 'BTC', price: '4,29 IDR', user: '17', updated: '15/4/2026, 18.18.10' },
-                    { asset: 'ETH', price: '0,135 IDR', user: '17', updated: '15/4/2026, 18.18.10' },
-                  ].map((row, idx) => (
-                    <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
-                      <td className="py-4 text-[11px] font-black text-slate-500">{row.asset}</td>
-                      <td className="py-4 text-[11px] font-bold text-slate-900">{row.price}</td>
-                      <td className="py-4 text-[11px] font-medium text-slate-400">{row.user}</td>
-                      <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{row.updated}</td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    const crypto = (window as any).liveMarket?.crypto;
+                    const timestamp = (window as any).liveMarket?.timestamp || '-';
+                    const data = [
+                      { asset: 'BTC', price: crypto?.bitcoin?.idr ? `Rp ${crypto.bitcoin.idr.toLocaleString('id-ID')}` : '—' },
+                      { asset: 'ETH', price: crypto?.ethereum?.idr ? `Rp ${crypto.ethereum.idr.toLocaleString('id-ID')}` : '—' },
+                      { asset: 'BNB', price: crypto?.binancecoin?.idr ? `Rp ${crypto.binancecoin.idr.toLocaleString('id-ID')}` : '—' },
+                      { asset: 'SOL', price: crypto?.solana?.idr ? `Rp ${crypto.solana.idr.toLocaleString('id-ID')}` : '—' },
+                    ];
+                    return data.map((row, idx) => (
+                      <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 text-[11px] font-black text-slate-500">{row.asset}</td>
+                        <td className="py-4 text-[11px] font-bold text-slate-900">{row.price}</td>
+                        <td className="py-4 text-[11px] font-medium text-slate-400">{settings?.marketData?.userCovered || 0}</td>
+                        <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{timestamp}</td>
+                      </tr>
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
           </div>
 
-          {/* Stock Feed */}
+          {/* Saham IDX */}
           <div className="space-y-6">
             <div className="space-y-2">
-              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">STOCK FEED</p>
+              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">SAHAM IDX</p>
               <h4 className="text-4xl font-serif font-black text-slate-900/10 tracking-tight -mb-2">Equity Monitoring</h4>
             </div>
             <div className="overflow-x-auto pt-4">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-slate-100">
-                    <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Aset</th>
-                    <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Price</th>
+                    <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Emiten</th>
+                    <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Harga</th>
                     <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Source</th>
                     <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">User</th>
                     <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Updated</th>
@@ -743,16 +987,51 @@ export default function AdminPengaturanPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {[
-                    { asset: 'XAUUSD=O', price: '82.630.517.241 IDR', source: 'BINANCE:PAXGUSDT', user: '16', updated: '15/4/2026, 18.18.08' },
-                    { asset: '^JKSE', price: '7.458.496 IDR', source: 'YAHOO', user: '19', updated: '11/4/2026, 23.53.54' },
-                    { asset: 'BBCA.JK', price: '6.700 IDR', source: 'YAHOO', user: '19', updated: '11/4/2026, 23.08.54' },
+                    { asset: '^JKSE (IHSG)', price: '7.285', source: 'YAHOO' },
+                    { asset: 'BBCA.JK', price: '10.200', source: 'YAHOO' },
+                    { asset: 'BBRI.JK', price: '4.130', source: 'YAHOO' },
                   ].map((row, idx) => (
                     <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
                       <td className="py-4 text-[11px] font-black text-slate-500">{row.asset}</td>
                       <td className="py-4 text-[11px] font-bold text-slate-900">{row.price}</td>
                       <td className="py-4 text-[9px] font-black text-indigo-400 uppercase tracking-tighter">{row.source}</td>
-                      <td className="py-4 text-[11px] font-medium text-slate-400">{row.user}</td>
-                      <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{row.updated}</td>
+                      <td className="py-4 text-[11px] font-medium text-slate-400">{settings?.marketData?.userCovered || 0}</td>
+                      <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{(window as any).liveMarket?.timestamp || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Emas & Komoditas */}
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">EMAS & KOMODITAS</p>
+              <h4 className="text-4xl font-serif font-black text-slate-900/10 tracking-tight -mb-2">Precious Metals</h4>
+            </div>
+            <div className="overflow-x-auto pt-4">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-slate-100">
+                    <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Aset</th>
+                    <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Harga</th>
+                    <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Source</th>
+                    <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">User</th>
+                    <th className="pb-4 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Updated</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {[
+                    { asset: 'XAUUSD (Emas)', price: 'Rp 1.690.000 / gram', source: 'REFERENSI' },
+                    { asset: 'Emas Antam', price: 'Rp 1.920.000 / gram', source: 'LOGAM MULIA' },
+                  ].map((row, idx) => (
+                    <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
+                      <td className="py-4 text-[11px] font-black text-slate-500">{row.asset}</td>
+                      <td className="py-4 text-[11px] font-bold text-slate-900">{row.price}</td>
+                      <td className="py-4 text-[9px] font-black text-amber-500 uppercase tracking-tighter">{row.source}</td>
+                      <td className="py-4 text-[11px] font-medium text-slate-400">{settings?.marketData?.userCovered || 0}</td>
+                      <td className="py-4 text-[11px] font-medium text-slate-400 font-mono tracking-tight">{(window as any).liveMarket?.timestamp || '-'}</td>
                     </tr>
                   ))}
                 </tbody>

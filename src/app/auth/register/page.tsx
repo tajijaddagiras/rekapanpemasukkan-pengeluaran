@@ -66,7 +66,16 @@ export default function RegisterPage() {
         whatsapp,
         createdAt: new Date().toISOString(),
         role: 'user',
+        plan: 'FREE',
+        status: 'GUEST',
         balance: 0,
+        totalWealth: 0,
+        totalIncome: 0,
+        totalExpenses: 0,
+        totalSavings: 0,
+        totalInvestment: 0,
+        creditCardBills: 0,
+        otherDebts: 0
       });
 
       router.push('/membership/dashboard');

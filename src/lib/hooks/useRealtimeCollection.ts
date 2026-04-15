@@ -63,7 +63,10 @@ export function useRealtimeCollection<T>(
         setLoading(false);
       },
       (err) => {
-        console.error(`[useRealtimeCollection] ${collectionName}:`, err);
+        // Silently skip permission-denied errors (common during logout/auth transition)
+        if (err.code !== 'permission-denied') {
+          console.warn(`[useRealtimeCollection] ${collectionName} error:`, err.message);
+        }
         setLoading(false);
       }
     );

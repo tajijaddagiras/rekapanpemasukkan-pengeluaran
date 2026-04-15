@@ -36,7 +36,10 @@ export default function NamaAkunPage() {
             } as Category;
           }));
           setLoading(false);
-        }, (err) => { console.error(err); setLoading(false); });
+        }, (err) => { 
+          if (err.code !== 'permission-denied') console.error('Ledger listener error:', err);
+          setLoading(false); 
+        });
       } else { setCategories([]); setLoading(false); }
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };

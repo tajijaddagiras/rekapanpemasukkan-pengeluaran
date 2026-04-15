@@ -43,6 +43,8 @@ export default function SavingsPage() {
         const qAcc = query(collection(db, 'accounts'), where('userId', '==', u.uid));
         onSnapshot(qAcc, (snap) => {
           setAccounts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account)));
+        }, (err) => {
+          if (err.code !== 'permission-denied') console.error('Account listener error:', err);
         });
 
         const startOfMonth = new Date(selectedYear, selectedMonth, 1);
@@ -65,7 +67,10 @@ export default function SavingsPage() {
             } as Saving;
           }));
           setLoading(false);
-        }, (err) => { console.error(err); setLoading(false); });
+        }, (err) => { 
+          if (err.code !== 'permission-denied') console.error(err); 
+          setLoading(false); 
+        });
       } else { setSavings([]); setLoading(false); }
     });
     return () => { unsub(); if (unsubRef.current) unsubRef.current(); };

@@ -15,7 +15,7 @@ import {
   Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { 
@@ -45,6 +45,44 @@ export default function AdminLaporanPage() {
       unsubLogs();
     };
   }, []);
+
+  const exportCSV = useCallback(() => {
+    if (logs.length === 0) return;
+    const header = ['Waktu', 'Admin', 'Aksi', 'Target', 'Catatan'];
+    const rows = logs.map(l => [
+      l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString('id-ID') : '-',
+      l.adminEmail,
+      l.action,
+      l.target,
+      `"${l.note}"`
+    ]);
+    const csvContent = [header, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `admin-log-${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [logs]);
+
+  const exportJSON = useCallback(() => {
+    if (logs.length === 0) return;
+    const data = logs.map(l => ({
+      waktu: l.timestamp?.toDate ? l.timestamp.toDate().toISOString() : null,
+      admin: l.adminEmail,
+      aksi: l.action,
+      target: l.target,
+      catatan: l.note
+    }));
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `admin-log-${new Date().toISOString().slice(0,10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [logs]);
 
   const stats = {
     total: logs.length,
@@ -175,11 +213,25 @@ export default function AdminLaporanPage() {
             <p className="text-slate-400 font-medium text-xs max-w-md leading-relaxed">Riwayat tindakan penting untuk audit internal, verifikasi perubahan, dan keamanan akses.</p>
           </div>
           <div className="flex gap-2">
-            <button className="px-5 py-3 bg-white border border-slate-200 rounded-xl text-[12px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
-              Ekspor CSV
+            <button
+              onClick={exportCSV}
+              disabled={logs.length === 0}
+              className={cn(
+                "flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 rounded-xl text-[12px] font-bold text-slate-700 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-all",
+                logs.length === 0 && "opacity-40 cursor-not-allowed"
+              )}
+            >
+              <Download size={13} /> Ekspor CSV
             </button>
-            <button className="px-5 py-3 bg-white border border-slate-200 rounded-xl text-[12px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
-              Ekspor JSON
+            <button
+              onClick={exportJSON}
+              disabled={logs.length === 0}
+              className={cn(
+                "flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 rounded-xl text-[12px] font-bold text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all",
+                logs.length === 0 && "opacity-40 cursor-not-allowed"
+              )}
+            >
+              <Download size={13} /> Ekspor JSON
             </button>
           </div>
         </div>

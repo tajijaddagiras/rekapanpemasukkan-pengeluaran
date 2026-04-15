@@ -64,9 +64,15 @@ export default function AdminUserPage() {
     }
   };
 
-  const handleExtendPro = async (userId: string, currentEmail: string) => {
+  const handleExtendPro = async (userId: string, currentEmail: string, currentExpiredAt?: string) => {
     try {
-      const nextMonth = new Date();
+      const now = new Date();
+      // Jika sudah ada expiredAt dan belum basi, hitung dari tanggal tersebut. Jika tidak, dari hari ini.
+      const baseDate = (currentExpiredAt && new Date(currentExpiredAt) > now) 
+        ? new Date(currentExpiredAt) 
+        : now;
+        
+      const nextMonth = new Date(baseDate);
       nextMonth.setMonth(nextMonth.getMonth() + 1);
       
       await updateDoc(doc(db, 'users', userId), {
@@ -79,10 +85,10 @@ export default function AdminUserPage() {
         adminEmail: userEmail,
         action: 'EXTEND_PRO',
         target: currentEmail,
-        note: `Memperpanjang paket PRO manual selama 1 bulan`,
+        note: `Memperpanjang paket PRO akumulatif. Expired baru: ${nextMonth.toLocaleDateString('id-ID')}`,
         color: 'indigo'
       });
-      alert('Paket berhasil diperpanjang.');
+      alert('Paket berhasil diperpanjang (akumulatif).');
     } catch (error) {
       alert('Gagal memperbarui paket.');
     }
@@ -91,7 +97,9 @@ export default function AdminUserPage() {
   const filteredUsers = users.filter(u => 
     (u.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
      u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     u.id?.includes(searchQuery)) && u.role === 'user'
+     u.id?.includes(searchQuery)) && 
+     u.role === 'user' && 
+     u.status !== 'GUEST'
   );
 
   return (
@@ -278,23 +286,46 @@ export default function AdminUserPage() {
                       {row.status || 'NONAKTIF'}
                     </span>
                   </td>
-                  <td className="py-6 px-4 text-[12px] font-medium text-slate-400">
-                    {row.expiredAt ? new Date(row.expiredAt).toLocaleDateString() : '-'}
+                  <td className="py-6 px-4">
+                    {row.expiredAt ? (
+                      <div className="flex items-center gap-2 text-[12px] font-bold text-slate-600">
+                        <Clock size={12} className="text-slate-400" />
+                        {new Date(row.expiredAt).toLocaleDateString('id-ID', { 
+                          day: 'numeric', 
+                          month: 'short', 
+                          year: 'numeric' 
+                        })}
+                      </div>
+                    ) : (
+                      <span className="text-[12px] text-slate-300 font-medium italic">No active plan</span>
+                    )}
                   </td>
                   <td className="py-6 px-4">
                     <div className="flex items-center gap-2">
                       <button 
-                        onClick={() => handleExtendPro(row.id, row.email)}
+                        onClick={() => handleExtendPro(row.id, row.email, row.expiredAt)}
                         className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-black text-slate-900 hover:border-indigo-600 hover:text-indigo-600 transition-all"
                       >
                         Perpanjang 1 Bulan
                       </button>
                       <button 
                         onClick={async () => {
-                          await updateDoc(doc(db, 'users', row.id), { plan: 'FREE', status: 'NONAKTIF' });
+                          if(!confirm(`Set ${row.email} ke paket FREE?`)) return;
+                          await updateDoc(doc(db, 'users', row.id), { 
+                            plan: 'FREE', 
+                            status: 'AKTIF',
+                            expiredAt: null 
+                          });
+                          await addAdminLog({
+                            adminEmail: userEmail,
+                            action: 'SET_FREE',
+                            target: row.email,
+                            note: `Mengubah status user menjadi FREE & AKTIF`,
+                            color: 'orange'
+                          });
                           alert('Status diatur ke FREE');
                         }}
-                        className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-black text-slate-900 hover:border-indigo-600 hover:text-indigo-600 transition-all"
+                        className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-black text-slate-900 hover:border-indigo-600 hover:text-indigo-600 transition-all font-sans"
                       >
                         Set Free
                       </button>

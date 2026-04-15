@@ -38,7 +38,10 @@ export default function RekeningPage() {
             return { ...d, id: doc.id, balance: Number(d.balance) || 0, createdAt: d.createdAt?.toDate?.() ?? new Date() } as Account;
           }));
           setLoading(false);
-        }, (err) => { console.error(err); setLoading(false); });
+        }, (err) => { 
+          if (err.code !== 'permission-denied') console.error('Account listener error:', err);
+          setLoading(false); 
+        });
         unsubRef.current = unsubSnap;
       } else { setAccounts([]); setLoading(false); }
     });

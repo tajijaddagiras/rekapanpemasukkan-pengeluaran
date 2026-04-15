@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { ModalProvider } from '@/context/ModalContext';
@@ -12,6 +15,23 @@ export default function MembershipLayout({
   children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        router.push('/auth/login');
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => unsub();
+  }, [router]);
+
+  // Hapus spinner agar transisi dari tombol login terasa instan.
+  if (loading) return null;
 
   return (
     <ModalProvider>

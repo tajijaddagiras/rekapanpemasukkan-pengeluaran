@@ -27,6 +27,8 @@ export const metadata: Metadata = {
   },
 };
 
+import MaintenanceGuard from "@/components/MaintenanceGuard";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -38,7 +40,11 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${dmSerif.variable} h-full antialiased`}
       data-scroll-behavior="smooth"
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <MaintenanceGuard>
+          {children}
+        </MaintenanceGuard>
+      </body>
     </html>
   );
 }

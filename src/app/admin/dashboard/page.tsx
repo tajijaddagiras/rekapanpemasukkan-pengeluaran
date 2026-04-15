@@ -53,11 +53,13 @@ export default function AdminDashboard() {
     };
   }, []);
 
+  const userList = users.filter(u => u.role === 'user' && u.status !== 'GUEST');
+
   const stats = {
     totalRevenue: payments.filter(p => p.status === 'DISETUJUI').reduce((acc, curr) => acc + (curr.amount || 0), 0),
     pendingRevenue: payments.filter(p => p.status === 'MENUNGGU').reduce((acc, curr) => acc + (curr.amount || 0), 0),
-    totalUsers: users.length,
-    activePro: users.filter(u => u.plan === 'PRO' && u.status === 'AKTIF' && u.role === 'user').length,
+    totalUsers: userList.length,
+    activePro: userList.filter(u => u.plan === 'PRO' && u.status === 'AKTIF').length,
     pendingTickets: payments.filter(p => p.status === 'MENUNGGU').length,
     revenueThisMonth: payments.filter(p => {
       if (p.status !== 'DISETUJUI') return false;
@@ -65,10 +67,10 @@ export default function AdminDashboard() {
       return approvedAt && approvedAt.getMonth() === new Date().getMonth() && approvedAt.getFullYear() === new Date().getFullYear();
     }).reduce((acc, curr) => acc + (curr.amount || 0), 0),
     // Additional for signals
-    conversionRate: users.filter(u => u.role === 'user').length > 0 ? (users.filter(u => u.plan === 'PRO' && u.role === 'user').length / users.filter(u => u.role === 'user').length * 100).toFixed(1) : '0',
-    newUsersToday: users.filter(u => {
+    conversionRate: userList.length > 0 ? (userList.filter(u => u.plan === 'PRO').length / userList.length * 100).toFixed(1) : '0',
+    newUsersToday: userList.filter(u => {
       const d = u.createdAt ? new Date(u.createdAt) : null;
-      return u.role === 'user' && d && d.toDateString() === new Date().toDateString();
+      return d && d.toDateString() === new Date().toDateString();
     }).length,
     weeklyChartData: (() => {
       const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
@@ -89,7 +91,7 @@ export default function AdminDashboard() {
     })()
   };
 
-  const latestUsers = users.filter(u => u.role === 'user').slice(0, 3);
+  const latestUsers = userList.slice(0, 3);
 
   return (
     <div className="space-y-12 pb-20 max-w-[1600px] mx-auto">
@@ -232,16 +234,16 @@ export default function AdminDashboard() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
             {[
-              { label: 'BERHASIL', value: stats.totalRevenue > 0 ? stats.totalRevenue / 30000 : 0, sub: 'pembayaran' },
+              { label: 'BERHASIL', value: payments.filter(p => p.status === 'DISETUJUI').length, sub: 'pembayaran' },
               { label: 'ANTRIAN', value: stats.pendingTickets, sub: 'tiket pending' },
-              { label: 'MEMBERS', value: users.filter(u => u.role === 'user').length, sub: 'akun aktif' },
+              { label: 'MEMBERS', value: userList.length, sub: 'akun aktif' },
               { label: 'STRATEGI', value: stats.activePro, sub: 'akun pro' },
             ].map((m) => (
-              <div key={m.label} className="space-y-1 p-6 rounded-[32px] bg-slate-50/50 hover:bg-indigo-50/30 transition-colors border border-transparent hover:border-indigo-100/50">
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{m.label}</p>
-                <div className="flex items-baseline gap-1">
-                  <h4 className="text-3xl font-black text-slate-900 leading-none">{m.value}</h4>
-                  <span className="text-[10px] text-slate-400 font-medium">{m.sub}</span>
+              <div key={m.label} className="space-y-1 p-6 rounded-[32px] bg-slate-50/50 hover:bg-indigo-50/30 transition-colors border border-transparent hover:border-indigo-100/50 min-w-0">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">{m.label}</p>
+                <div className="flex items-baseline gap-1 overflow-hidden">
+                  <h4 className="text-2xl md:text-3xl font-black text-slate-900 leading-none">{m.value}</h4>
+                  <span className="text-[9px] text-slate-400 font-medium truncate">{m.sub}</span>
                 </div>
               </div>
             ))}
@@ -249,19 +251,23 @@ export default function AdminDashboard() {
 
           <div className="space-y-6">
             <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] border-b border-slate-50 pb-4">Revenue Radar</h4>
-            <div className="p-8 rounded-[36px] bg-slate-50/50 border border-slate-100 flex items-center justify-between group hover:bg-white hover:shadow-lg transition-all">
+            <div className="p-8 rounded-[36px] bg-slate-50/50 border border-slate-100 flex flex-col md:flex-row md:items-center justify-between group hover:bg-white hover:shadow-lg transition-all gap-4">
               <div className="flex items-center gap-6">
                 <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
                   <Layers size={20} />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-black text-slate-900 tracking-tight">Kanal Pembayaran Teratas</p>
-                  <p className="text-[11px] text-slate-400 font-medium italic">1. Konfigurasi QRIS Aktif</p>
+                  <p className="text-sm font-black text-slate-900 tracking-tight">Status Verifikasi Sistem</p>
+                  <p className="text-[11px] text-slate-400 font-medium italic">
+                    {stats.pendingTickets > 0 
+                      ? `${stats.pendingTickets} tiket baru butuh tindakan.` 
+                      : 'Seluruh pembayaran berhasil diverifikasi.'}
+                  </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-serif font-black text-indigo-600 tracking-tight">Rp 30k</p>
-                <p className="text-[10px] text-emerald-500 font-black tracking-widest">+12% vs last week</p>
+                <p className="text-2xl font-serif font-black text-indigo-600 tracking-tight">Rp {stats.totalRevenue.toLocaleString()}</p>
+                <p className="text-[10px] text-emerald-500 font-black tracking-widest uppercase">Live Gross Revenue</p>
               </div>
             </div>
             
@@ -270,8 +276,12 @@ export default function AdminDashboard() {
                 <Clock size={20} />
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-black text-slate-900 tracking-tight">Konfigurasi Belum Lengkap</p>
-                <p className="text-[11px] text-orange-600 font-medium">Lengkapi WhatsApp & data penarikan untuk optimasi alur.</p>
+                <p className="text-sm font-black text-slate-900 tracking-tight">Kesehatan Pemasukan</p>
+                <p className="text-[11px] text-orange-600 font-medium">
+                  {stats.pendingRevenue > 0 
+                    ? `Ada Rp ${stats.pendingRevenue.toLocaleString()} volume yang belum cair.` 
+                    : 'Likuiditas pemasukan stabil.'}
+                </p>
               </div>
             </div>
           </div>
@@ -286,8 +296,8 @@ export default function AdminDashboard() {
 
             <div className="space-y-3">
               {[
-                { label: 'Verifikasi Pembayaran', note: '1 tiket menunggu', bg: 'bg-orange-50/50', border: 'border-orange-100/50', color: 'text-orange-600' },
-                { label: 'Kelola Pelanggan', note: '10 akun terdaftar', bg: 'bg-white', border: 'border-slate-100', color: 'text-slate-400' },
+                { label: 'Verifikasi Pembayaran', note: `${stats.pendingTickets} tiket menunggu`, bg: 'bg-orange-50/50', border: 'border-orange-100/50', color: 'text-orange-600' },
+                { label: 'Kelola Pelanggan', note: `${stats.totalUsers} akun terdaftar`, bg: 'bg-white', border: 'border-slate-100', color: 'text-slate-400' },
                 { label: 'Buka Laporan', note: 'Executive audit', bg: 'bg-emerald-50/50', border: 'border-emerald-100/50', color: 'text-emerald-600' },
                 { label: 'Atur Billing', note: 'System configuration', bg: 'bg-white', border: 'border-slate-100', color: 'text-slate-400' },
               ].map((action) => (

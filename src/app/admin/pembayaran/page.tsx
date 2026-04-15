@@ -11,7 +11,9 @@ import {
   Activity,
   ArrowUpRight,
   Filter,
-  ChevronRight
+  ChevronRight,
+  X,
+  ImageIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
@@ -29,6 +31,7 @@ export default function AdminPembayaranPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('Menunggu');
+  const [proofModal, setProofModal] = useState<string | null>(null);
   
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (user) => {
@@ -61,14 +64,21 @@ export default function AdminPembayaranPage() {
       const userRef = doc(db, 'users', payment.userId);
       const userSnap = await getDoc(userRef);
       
-      const nextMonth = new Date();
-      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      // Perhitungan expiredAt berdasarkan paket yang dipilih
+      const expiryDate = new Date();
+      let monthsToAdd = 1;
+      const pkgName = payment.package?.id || '';
+      
+      if (pkgName.includes('6 Bulan')) monthsToAdd = 6;
+      else if (pkgName.includes('12 Bulan')) monthsToAdd = 12;
+      
+      expiryDate.setMonth(expiryDate.getMonth() + monthsToAdd);
 
       if (userSnap.exists()) {
         await updateDoc(userRef, {
           plan: 'PRO',
           status: 'AKTIF',
-          expiredAt: nextMonth.toISOString()
+          expiredAt: expiryDate.toISOString()
         });
       }
 
@@ -111,7 +121,8 @@ export default function AdminPembayaranPage() {
   };
 
   return (
-    <div className="space-y-12 pb-20 max-w-[1600px] mx-auto">
+    <>
+      <div className="space-y-12 pb-20 max-w-[1600px] mx-auto">
       {/* HEADER SECTION */}
       <div className="flex flex-col xl:flex-row gap-12">
         <div className="flex-1 space-y-10">
@@ -337,7 +348,7 @@ export default function AdminPembayaranPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-50">
-                {['TIKET', 'PELANGGAN', 'PAKET', 'METODE', 'REF', 'STATUS', 'AKSI'].map((head) => (
+                {['TIKET', 'PELANGGAN', 'PAKET', 'METODE', 'REF', 'BUKTI', 'STATUS', 'AKSI'].map((head) => (
                   <th key={head} className="text-left py-6 px-4 text-[11px] font-black text-slate-900 tracking-widest uppercase">
                     {head}
                   </th>
@@ -347,7 +358,7 @@ export default function AdminPembayaranPage() {
             <tbody className="divide-y divide-slate-50">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-20 text-center">
+                  <td colSpan={8} className="py-20 text-center">
                     <div className="flex flex-col items-center gap-4 animate-pulse">
                       <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
                       <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Memuat antrian pembayaran...</p>
@@ -356,7 +367,7 @@ export default function AdminPembayaranPage() {
                 </tr>
               ) : filteredPayments.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-20 text-center text-slate-400 font-medium italic">
+                  <td colSpan={8} className="py-20 text-center text-slate-400 font-medium italic">
                     Antrian pembayaran kosong.
                   </td>
                 </tr>
@@ -386,6 +397,22 @@ export default function AdminPembayaranPage() {
                   </td>
                   <td className="py-6 px-4 text-[12px] font-bold text-slate-500 tracking-tight italic uppercase">{row.method || 'TRANSFER'}</td>
                   <td className="py-6 px-4 text-[12px] font-medium text-slate-500 tracking-tighter truncate max-w-[100px]">{row.ref || '-'}</td>
+                  {/* KOLOM BUKTI */}
+                  <td className="py-6 px-4">
+                    {row.proofImageUrl ? (
+                      <button
+                        onClick={() => setProofModal(row.proofImageUrl)}
+                        className="group relative w-14 h-14 rounded-xl overflow-hidden border-2 border-indigo-100 hover:border-indigo-400 transition-all"
+                      >
+                        <img src={row.proofImageUrl} alt="Bukti" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/40 transition-all flex items-center justify-center">
+                          <p className="text-white text-[8px] font-black opacity-0 group-hover:opacity-100">LIHAT</p>
+                        </div>
+                      </button>
+                    ) : (
+                      <span className="text-[10px] font-bold text-slate-300 italic">—</span>
+                    )}
+                  </td>
                   <td className="py-6 px-4">
                     <span className={cn(
                       "inline-flex px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase",
@@ -446,5 +473,34 @@ export default function AdminPembayaranPage() {
         </div>
       </div>
     </div>
+
+      {/* PROOF IMAGE MODAL */}
+      {proofModal && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200"
+          onClick={() => setProofModal(null)}
+        >
+          <div className="relative max-w-3xl w-full" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setProofModal(null)}
+              className="absolute -top-12 right-0 p-2 bg-white/20 hover:bg-white/40 rounded-full text-white transition-all"
+            >
+              <X size={20} />
+            </button>
+            <div className="bg-white rounded-[32px] overflow-hidden shadow-2xl">
+              <div className="p-5 border-b border-slate-100 flex items-center gap-3">
+                <ImageIcon size={16} className="text-indigo-500" />
+                <h4 className="text-[13px] font-black text-slate-900 uppercase tracking-widest">Bukti Pembayaran</h4>
+              </div>
+              <img 
+                src={proofModal} 
+                alt="Bukti Pembayaran" 
+                className="w-full max-h-[70vh] object-contain bg-slate-50"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

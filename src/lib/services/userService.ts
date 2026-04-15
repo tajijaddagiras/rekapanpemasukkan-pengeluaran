@@ -15,7 +15,7 @@ export interface UserProfile {
   photoURL?: string;
   role: 'admin' | 'user';
   plan: 'FREE' | 'PRO';
-  status: 'AKTIF' | 'NONAKTIF';
+  status: 'AKTIF' | 'NONAKTIF' | 'GUEST' | 'PENDING';
   expiredAt?: string;
   createdAt: string;
   totalWealth: number;
@@ -34,20 +34,26 @@ export const getUserProfile = async (uid: string) => {
   const docSnap = await getDoc(docRef);
   
   if (docSnap.exists()) {
-    return docSnap.data() as UserProfile;
+    return { uid: docSnap.id, ...docSnap.data() } as UserProfile;
   }
   return null;
 };
 
 export const subscribeUserProfile = (uid: string, callback: (profile: UserProfile | null) => void) => {
   const docRef = doc(db, COLLECTION_NAME, uid);
-  return onSnapshot(docRef, (doc) => {
-    if (doc.exists()) {
-      callback(doc.data() as UserProfile);
-    } else {
+  return onSnapshot(docRef, 
+    (doc) => {
+      if (doc.exists()) {
+        callback({ uid: doc.id, ...doc.data() } as UserProfile);
+      } else {
+        callback(null);
+      }
+    },
+    (error) => {
+      console.warn("Permasalahan perizinan pada profile user (diabaikan):", error.message);
       callback(null);
     }
-  });
+  );
 };
 
 export const updateUserProfile = async (uid: string, data: Partial<UserProfile>) => {
