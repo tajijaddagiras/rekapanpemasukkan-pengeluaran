@@ -18,7 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { getUserProfile, UserProfile } from '@/lib/services/userService';
+import { subscribeUserProfile, UserProfile } from '@/lib/services/userService';
 
 interface AdminSidebarProps {
   isOpen?: boolean;
@@ -50,13 +50,24 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
+    let unsubProfile: (() => void) | undefined;
+
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
-        const prof = await getUserProfile(user.uid);
-        setProfile(prof);
+        // Gunakan onSnapshot untuk update real-time
+        unsubProfile = subscribeUserProfile(user.uid, (prof: UserProfile | null) => {
+          setProfile(prof);
+        });
+      } else {
+        setProfile(null);
+        if (unsubProfile) unsubProfile();
       }
     });
-    return () => unsub();
+
+    return () => {
+      unsubAuth();
+      if (unsubProfile) unsubProfile();
+    };
   }, []);
 
   const getInitials = (name: string) => {

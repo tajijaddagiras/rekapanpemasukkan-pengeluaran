@@ -16,9 +16,10 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { useState, useEffect, useMemo } from 'react';
+import { onAuthStateChanged, updateProfile, updatePassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { subscribeUserProfile, UserProfile } from '@/lib/services/userService';
 import { 
   getAppSettings,
   subscribeAppSettings,
@@ -37,11 +38,36 @@ export default function AdminPengaturanPage() {
   const [loading, setLoading] = useState(true);
   const [isUploadingQRIS, setIsUploadingQRIS] = useState(false);
   const [isUploadingProfile, setIsUploadingProfile] = useState(false);
+
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errorStatus, setErrorStatus] = useState('');
+  const [isSavingAccount, setIsSavingAccount] = useState(false);
+
+  const passwordStrength = useMemo(() => {
+    const hasUpperCaseStart = /^[A-Z]/.test(newPassword);
+    const hasMinLength = newPassword.length >= 6;
+    const hasSymbol = /[!@#$%^&*(),.?":{}|<>;]/.test(newPassword);
+    const hasNumber = /\d/.test(newPassword);
+
+    const metCriteria = [hasUpperCaseStart, hasMinLength, hasSymbol, hasNumber].filter(Boolean).length;
+
+    if (newPassword.length === 0) return { label: 'Kosong', color: 'bg-slate-200', width: 'w-0' };
+    if (hasUpperCaseStart && hasMinLength && hasSymbol && hasNumber) return { label: 'Kuat', color: 'bg-emerald-500', width: 'w-full' };
+    if (metCriteria >= 3) return { label: 'Sedang', color: 'bg-orange-500', width: 'w-2/3' };
+    return { label: 'Lemah', color: 'bg-red-500', width: 'w-1/3' };
+  }, [newPassword]);
   
   useEffect(() => {
+    let unsubProfile: (() => void) | undefined;
+
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUserEmail(user.email || 'admin@leosiqra.com');
+        unsubProfile = subscribeUserProfile(user.uid, (data) => {
+          setProfile(data);
+        });
       }
     });
 
@@ -53,6 +79,7 @@ export default function AdminPengaturanPage() {
     return () => {
       unsubAuth();
       unsubSettings();
+      if (unsubProfile) unsubProfile();
     };
   }, []);
 
@@ -101,15 +128,63 @@ export default function AdminPengaturanPage() {
     try {
       setIsUploadingProfile(true);
       const url = await uploadToCloudinary(file);
+      
+      // Update Firestore
       await updateAdminProfile(user.uid, { photoURL: url });
       
-      // Update local profile if needed, or wait for refresh
+      // Update Auth Profile for fallback/consistency
+      await updateProfile(user, { photoURL: url });
+      
       alert('Foto profil berhasil diperbarui!');
     } catch (error) {
       console.error(error);
       alert('Gagal mengunggah foto profil.');
     } finally {
       setIsUploadingProfile(false);
+    }
+  };
+
+  const handleSaveAccount = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    if (newPassword) {
+      if (newPassword !== confirmPassword) {
+        alert('Konfirmasi password tidak cocok.');
+        return;
+      }
+      if (passwordStrength.label !== 'Kuat') {
+        alert('Password harus memenuhi kriteria keamanan (Dimulai Huruf Besar, min 6 char, ada Simbol & Angka).');
+        return;
+      }
+
+      try {
+        setIsSavingAccount(true);
+        await updatePassword(user, newPassword);
+        
+        await addAdminLog({
+          adminEmail: userEmail,
+          action: 'UPDATE_PASSWORD',
+          target: 'admin_account',
+          note: 'Memperbarui password akun admin',
+          color: 'orange'
+        });
+
+        alert('Password berhasil diperbarui!');
+        setNewPassword('');
+        setConfirmPassword('');
+      } catch (error: any) {
+        console.error(error);
+        if (error.code === 'auth/requires-recent-login') {
+          alert('Sesi Anda sudah lama. Silakan logout dan login kembali untuk mengubah password.');
+        } else {
+          alert('Gagal memperbarui password: ' + error.message);
+        }
+      } finally {
+        setIsSavingAccount(false);
+      }
+    } else {
+      alert('Masukkan password baru jika ingin mengubah.');
     }
   };
 
@@ -401,8 +476,8 @@ export default function AdminPengaturanPage() {
               <div className="p-10 rounded-[48px] bg-white border border-slate-100 shadow-sm flex flex-col items-center text-center space-y-6">
                 <div className="relative group">
                   <div className="w-32 h-32 rounded-[40px] bg-slate-100 border-4 border-white shadow-xl flex items-center justify-center overflow-hidden">
-                    {auth.currentUser?.photoURL ? (
-                      <img src={auth.currentUser.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                    {profile?.photoURL ? (
+                      <img src={profile.photoURL} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
                       <img src={`https://ui-avatars.com/api/?name=${userEmail}&background=6366f1&color=fff&size=128`} alt="Profile" />
                     )}
@@ -440,13 +515,57 @@ export default function AdminPengaturanPage() {
                     <label className="text-[13px] font-black text-slate-900">Email Admin Utama</label>
                     <input type="email" defaultValue={userEmail} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[14px] font-medium" />
                   </div>
-                  <div className="space-y-3">
-                    <label className="text-[13px] font-black text-slate-900">New Password</label>
-                    <input type="password" placeholder="••••••••" className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[14px] font-medium" />
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      <label className="text-[13px] font-black text-slate-900">Password Baru</label>
+                      <input 
+                        type="password" 
+                        placeholder="Min 6 karakter, Simbol, Angka" 
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[14px] font-medium" 
+                      />
+                    </div>
+                    
+                    {/* Strength Indicator */}
+                    {newPassword && (
+                      <div className="px-1 space-y-1.5">
+                        <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                          <div className={`h-full transition-all duration-500 ${passwordStrength.width} ${passwordStrength.color}`} />
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-400">
+                          Kekuatan: <span className="text-slate-900 uppercase">{passwordStrength.label}</span>
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="space-y-3">
+                      <label className="text-[13px] font-black text-slate-900">Ulangi Password</label>
+                      <input 
+                        type="password" 
+                        placeholder="••••••••" 
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[14px] font-medium" 
+                      />
+                    </div>
                   </div>
                 </div>
-                <button className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-[24px] text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg shadow-slate-900/10">
-                  <Save size={14} /> Perbarui Data Akun
+                <button 
+                  onClick={handleSaveAccount}
+                  disabled={isSavingAccount}
+                  className={cn(
+                    "flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-[24px] text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg shadow-slate-900/10",
+                    isSavingAccount && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  {isSavingAccount ? (
+                    "Memperbarui..."
+                  ) : (
+                    <>
+                      <Save size={14} /> Perbarui Password & Akun
+                    </>
+                  )}
                 </button>
               </div>
             </div>
