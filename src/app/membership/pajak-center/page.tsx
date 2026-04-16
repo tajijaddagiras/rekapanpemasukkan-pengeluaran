@@ -159,7 +159,7 @@ export default function PajakCenterPage() {
   };
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 max-w-[1400px] print:p-0 print:m-0 print:bg-white print:max-w-none">
+    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 max-w-[1400px] print:p-0 print:m-0 print:bg-white print:max-w-none">
       
       {/* 0. Print-Only Minimalist Report (Matches User Image) */}
       <div className="hidden print:block font-sans text-slate-800 p-8 space-y-10">
@@ -209,7 +209,7 @@ export default function PajakCenterPage() {
         </div>
       </div>
 
-      {/* 1. Header (Dashboard View) */}
+      {/* 1. Dashboard View Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] border border-slate-50 shadow-sm print:hidden">
         <div>
           <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Pajak Center</h2>
@@ -241,94 +241,111 @@ export default function PajakCenterPage() {
         </div>
       </div>
 
-      {/* 2. SPT Assistant Section (Dashboard View) */}
-      <div className="p-8 md:p-10 rounded-[40px] bg-slate-900 text-white relative overflow-hidden group print:hidden">
-        <div className="absolute top-0 right-0 p-12 text-white/5 group-hover:text-white/10 transition-colors">
-          <ShieldCheck size={180} />
+      {/* 2. Top Info Cards (Embel-embel Professional) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 print:hidden">
+        <div className="p-6 rounded-[32px] bg-slate-900 text-white space-y-4 shadow-xl shadow-slate-200/50">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status SPT Aktif</p>
+          <h3 className="text-2xl font-black tracking-tight">Siap Disusun</h3>
+          <p className="text-[11px] text-slate-400 leading-relaxed font-medium">Fokus awal diarahkan ke siklus tahunan terbaru agar summary dan arsip bisa ditelusuri per tahun.</p>
         </div>
+
+        <div className="p-6 rounded-[32px] bg-white border border-slate-100 space-y-4 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Target Pelaporan</p>
+          <h3 className="text-2xl font-black tracking-tight text-slate-900">Tahun Pajak {selectedYear}</h3>
+          <p className="text-[11px] text-slate-400 leading-relaxed font-medium">Fondasi modul sudah aktif dan siap disambungkan ke data transaksi, investasi, dan dokumen pendukung.</p>
+        </div>
+
+        <div className="p-6 rounded-[32px] bg-white border border-slate-100 space-y-4 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Output Utama</p>
+          <h3 className="text-2xl font-black tracking-tight text-slate-900">PDF / Print</h3>
+          <p className="text-[11px] text-slate-400 leading-relaxed font-medium">Step berikutnya akan menambahkan generator draft, status pelaporan, dan export dokumen yang lebih formal.</p>
+        </div>
+      </div>
+
+      {/* 3. Main Data Section (Redesigned & Grouped) */}
+      <div className="space-y-12 print:hidden">
         
-        <div className="relative z-10 space-y-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-black uppercase tracking-widest border border-indigo-500/30">
-                SPT Tax Assistant
-              </div>
-              <h3 className="text-3xl font-serif font-black tracking-tight">Kesiapan Laporan Pajak</h3>
-              <p className="text-slate-400 font-medium text-sm max-w-md">Data di bawah ini dirangkum untuk membantu Anda mengisi daftar harta dan kewajiban pada SPT Tahunan.</p>
+        {/* Grup Asset */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+              <TrendingUp size={18} />
             </div>
-            <div className="text-right">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Status Ketersediaan Data</p>
-              <div className="flex items-center gap-2 justify-end">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-sm font-bold text-emerald-400">Siap Dilaporkan</span>
-              </div>
-            </div>
+            <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">Daftar Harta (Aset)</h4>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
-            {/* Daftar Harta */}
-            <div className="lg:col-span-8 space-y-4">
-              <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                <TrendingUp size={14} className="text-emerald-500" />
-                Daftar Harta (Aset)
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {daftarHarta.length === 0 ? (
-                  <div className="col-span-2 p-6 rounded-2xl bg-white/5 border border-white/10 text-center text-slate-500 italic text-sm">Belum ada aset terdaftar.</div>
-                ) : (
-                  daftarHarta.map((harta, i) => (
-                    <div key={i} className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all flex items-center justify-between group">
-                      <div className="min-w-0">
-                        <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1 truncate">{harta.type}</p>
-                        <p className="text-sm font-bold text-white truncate">{harta.name}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-black text-white">Rp {harta.value.toLocaleString()}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {daftarHarta.length === 0 ? (
+              <div className="col-span-full p-12 rounded-[32px] bg-slate-50 border border-dashed border-slate-200 text-center space-y-2">
+                <Info className="mx-auto text-slate-300" size={32} />
+                <p className="text-sm text-slate-500 font-medium">Belum ada aset terdaftar pada periode ini.</p>
               </div>
-            </div>
-
-            {/* Daftar Utang & Kewajiban */}
-            <div className="lg:col-span-4 space-y-4">
-              <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                <TrendingDown size={14} className="text-rose-500" />
-                Daftar Utang
-              </h4>
-              <div className="space-y-3">
-                {daftarUtang.length === 0 ? (
-                  <div className="p-6 rounded-2xl bg-white/5 border border-white/10 text-center text-slate-500 italic text-sm">Tidak ada kewajiban tercatat.</div>
-                ) : (
-                  daftarUtang.map((utang, i) => (
-                    <div key={i} className="p-5 rounded-2xl bg-rose-500/5 border border-rose-500/10 hover:bg-rose-500/10 transition-all flex items-center justify-between">
-                      <div className="min-w-0">
-                        <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest mb-1">KEWAJIBAN</p>
-                        <p className="text-sm font-bold text-white truncate">{utang.name}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-black text-rose-400">Rp {utang.value.toLocaleString()}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-              
-              <div className="pt-4 border-t border-white/5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-400">Total Harta Bersih</span>
-                  <span className="text-lg font-serif font-black text-indigo-400">Rp {(totalHarta - totalUtang).toLocaleString()}</span>
+            ) : (
+              daftarHarta.map((harta, i) => (
+                <div key={i} className="p-6 rounded-[32px] bg-white border border-slate-100 hover:border-indigo-100 hover:shadow-lg hover:shadow-indigo-500/5 transition-all group relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="px-2.5 py-1 rounded-full bg-slate-50 text-slate-500 text-[9px] font-black uppercase tracking-widest border border-slate-100">
+                      {harta.type}
+                    </span>
+                  </div>
+                  <h5 className="text-sm font-bold text-slate-900 mb-1 truncate">{harta.name}</h5>
+                  <p className="text-lg font-serif font-black text-slate-900">
+                    Rp {harta.value.toLocaleString()}
+                  </p>
                 </div>
-              </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Grup Utang */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600">
+              <TrendingDown size={18} />
             </div>
+            <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">Daftar Utang & Kewajiban</h4>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {daftarUtang.length === 0 ? (
+              <div className="col-span-full p-10 rounded-[32px] bg-slate-50 border border-dashed border-slate-200 text-center">
+                <p className="text-sm text-slate-400 font-medium italic">Tidak ada kewajiban tercatat.</p>
+              </div>
+            ) : (
+              <>
+                {daftarUtang.map((utang, i) => (
+                  <div key={i} className="p-6 rounded-[32px] bg-white border border-slate-100 hover:border-rose-100 hover:shadow-lg hover:shadow-rose-500/5 transition-all group relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-rose-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-500 text-[9px] font-black uppercase tracking-widest border border-rose-100">
+                        KEWAJIBAN
+                      </span>
+                    </div>
+                    <h5 className="text-sm font-bold text-slate-900 mb-1 truncate">{utang.name}</h5>
+                    <p className="text-lg font-serif font-black text-rose-600">
+                      Rp {utang.value.toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+                
+                {/* Total Harta Bersih Mini Card */}
+                <div className="p-6 rounded-[32px] bg-indigo-600 text-white shadow-lg shadow-indigo-200 lg:col-start-3">
+                  <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Total Harta Bersih</p>
+                  <p className="text-2xl font-serif font-black">
+                    Rp {(totalHarta - totalUtang).toLocaleString()}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      {/* 3. Catatan Section (Dashboard View) */}
-      <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm flex items-start gap-6 border-l-4 border-l-indigo-600 print:hidden">
-        <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+      {/* 4. Footer Note Section (Dashboard View) */}
+      <div className="bg-slate-50 p-8 rounded-[32px] border border-slate-100 flex items-start gap-6 border-l-4 border-l-slate-300 print:hidden">
+        <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-slate-400 shrink-0 shadow-sm">
           <Info size={24} />
         </div>
         <div className="space-y-1">
