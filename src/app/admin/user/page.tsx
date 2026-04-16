@@ -19,7 +19,9 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { 
   subscribeAllUsers, 
-  addAdminLog 
+  addAdminLog,
+  subscribeAppSettings,
+  AppSettings
 } from '@/lib/services/adminService';
 import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 
@@ -28,6 +30,7 @@ export default function AdminUserPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [settings, setSettings] = useState<AppSettings | null>(null);
   
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (user) => {
@@ -41,9 +44,14 @@ export default function AdminUserPage() {
       setLoading(false);
     });
 
+    const unsubSettings = subscribeAppSettings((data) => {
+      setSettings(data);
+    });
+
     return () => {
       unsubAuth();
       unsubUsers();
+      unsubSettings();
     };
   }, []);
 
@@ -311,16 +319,24 @@ export default function AdminUserPage() {
                       <button 
                         onClick={async () => {
                           if(!confirm(`Set ${row.email} ke paket FREE?`)) return;
+                          
+                          let activeExpiredAt = null;
+                          if (settings?.freePlanDays && settings.freePlanDays > 0) {
+                            const d = new Date();
+                            d.setDate(d.getDate() + settings.freePlanDays);
+                            activeExpiredAt = d.toISOString();
+                          }
+                          
                           await updateDoc(doc(db, 'users', row.id), { 
                             plan: 'FREE', 
                             status: 'AKTIF',
-                            expiredAt: null 
+                            expiredAt: activeExpiredAt 
                           });
                           await addAdminLog({
                             adminEmail: userEmail,
                             action: 'SET_FREE',
                             target: row.email,
-                            note: `Mengubah status user menjadi FREE & AKTIF`,
+                            note: `Mengubah status user menjadi FREE & AKTIF${activeExpiredAt ? ` (Expired dalam ${settings?.freePlanDays} hari)` : ' (Unlimited)'}`,
                             color: 'orange'
                           });
                           alert('Status diatur ke FREE');

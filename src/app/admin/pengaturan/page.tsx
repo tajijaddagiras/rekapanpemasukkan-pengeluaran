@@ -18,7 +18,10 @@ import {
   X,
   Image as ImageIcon,
   Upload,
-  RefreshCw
+  RefreshCw,
+  Users,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -32,7 +35,8 @@ import {
   saveAppSettings,
   addAdminLog,
   AppSettings,
-  updateAdminProfile
+  updateAdminProfile,
+  ProPackage
 } from '@/lib/services/adminService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { exchangeRateService } from '@/lib/services/exchangeRateService';
@@ -383,10 +387,11 @@ export default function AdminPengaturanPage() {
       </div>
 
       {/* TAB SWITCHER */}
-      <div className="flex flex-wrap gap-3 p-2 bg-slate-50 border border-slate-100 rounded-[32px] w-fit">
+      <div className="flex overflow-x-auto no-scrollbar gap-3 p-2 bg-slate-50 border border-slate-100 rounded-[32px] w-full max-w-full">
         {[
           { id: 'billing', label: 'Konfigurasi Pembayaran', icon: Database },
           { id: 'account', label: 'Konfigurasi Akun', icon: Lock },
+          { id: 'member', label: 'Konfigurasi Member', icon: Users },
           { id: 'maintenance', label: 'Maintenance Mode', icon: Activity },
           { id: 'market', label: 'Market Control Center', icon: Globe },
         ].map((tab) => (
@@ -394,7 +399,7 @@ export default function AdminPengaturanPage() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "flex items-center gap-3 px-8 py-4 rounded-3xl text-[11px] font-black uppercase tracking-widest transition-all",
+              "flex items-center justify-center shrink-0 gap-3 px-8 py-4 rounded-3xl text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
               activeTab === tab.id 
                 ? "bg-white text-slate-900 shadow-xl shadow-slate-200 ring-1 ring-slate-100 scale-[1.02]" 
                 : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
@@ -567,6 +572,161 @@ export default function AdminPengaturanPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'member' && !loading && (
+        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="space-y-2">
+            <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Membership Configuration</p>
+            <h3 className="text-3xl font-serif font-black text-slate-900 tracking-tight">Konfigurasi Member</h3>
+          </div>
+
+          {/* Konfigurasi Free Plan */}
+          <div className="p-8 md:p-10 rounded-[48px] bg-white border border-slate-100 shadow-sm space-y-8">
+            <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center">
+                <Users className="text-indigo-600" size={24} />
+              </div>
+              <div>
+                <h4 className="text-lg font-black text-slate-900">Aturan Free Plan</h4>
+                <p className="text-[11px] font-medium text-slate-400">Tentukan masa berlaku gratis (Free Plan) untuk user guest baru.</p>
+              </div>
+            </div>
+
+            <div className="max-w-xs space-y-3">
+              <label className="text-[13px] font-black text-slate-900">Durasi Free Plan (Hari)</label>
+              <div className="relative">
+                <input 
+                  type="number" 
+                  value={settings?.freePlanDays || 0}
+                  onChange={(e) => setSettings(prev => ({ ...prev as AppSettings, freePlanDays: parseInt(e.target.value) || 0 }))}
+                  className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl text-[14px] font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500/20 outline-none" 
+                />
+                <span className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold pointer-events-none">Hari</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Konfigurasi Paket Pro */}
+          <div className="p-8 md:p-10 rounded-[48px] bg-white border border-slate-100 shadow-sm space-y-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 pb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center">
+                  <Database className="text-amber-500" size={24} />
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-slate-900">Daftar Paket Pro</h4>
+                  <p className="text-[11px] font-medium text-slate-400">Atur opsi langganan bulanan maupun tahunan secara dinamis.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  const newPackage: ProPackage = {
+                    id: Date.now().toString(),
+                    name: 'Paket Baru',
+                    durationMonths: 1,
+                    price: 50000,
+                    isPopular: false
+                  };
+                  setSettings(prev => ({
+                    ...prev as AppSettings,
+                    proPackages: [...(prev?.proPackages || []), newPackage]
+                  }));
+                }}
+                className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-black tracking-widest uppercase flex items-center gap-2 hover:bg-slate-800 transition-colors shrink-0"
+              >
+                <Plus size={14} /> Tambah Paket
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {(settings?.proPackages?.length || 0) === 0 ? (
+                <div className="p-8 rounded-3xl border-2 border-dashed border-slate-200 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mx-auto text-slate-400">
+                    <Database size={20} />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-slate-600">Belum Ada Paket</h5>
+                    <p className="text-xs text-slate-400">Silakan tambahkan paket berlangganan baru, atau sistem akan memunculkan harga default.</p>
+                  </div>
+                </div>
+              ) : (
+                settings?.proPackages?.map((pkg, index) => (
+                  <div key={pkg.id} className="p-6 rounded-3xl bg-slate-50 border border-slate-100 flex flex-col xl:flex-row xl:items-end gap-6 relative group">
+                    <button 
+                      onClick={() => {
+                        setSettings(prev => ({
+                          ...prev as AppSettings,
+                          proPackages: prev?.proPackages?.filter(p => p.id !== pkg.id)
+                        }));
+                      }}
+                      className="absolute top-6 right-6 p-2 bg-white text-rose-500 rounded-lg shadow-sm border border-slate-100 opacity-50 hover:opacity-100 hover:bg-rose-50 transition-all z-10"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 pr-12 xl:pr-0">
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-2">Nama Paket</label>
+                        <input
+                          type="text"
+                          value={pkg.name}
+                          onChange={(e) => {
+                            const newArr = [...(settings.proPackages || [])];
+                            newArr[index].name = e.target.value;
+                            setSettings({ ...settings, proPackages: newArr });
+                          }}
+                          className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-100 outline-none"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                         <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-2">Harga (IDR)</label>
+                         <input
+                           type="number"
+                           value={pkg.price}
+                           onChange={(e) => {
+                             const newArr = [...(settings.proPackages || [])];
+                             newArr[index].price = Number(e.target.value);
+                             setSettings({ ...settings, proPackages: newArr });
+                           }}
+                           className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl text-sm font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none"
+                         />
+                      </div>
+                      <div className="space-y-2">
+                         <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-2">Masa Berlaku (Bulan)</label>
+                         <div className="flex gap-4 items-center">
+                           <input
+                             type="number"
+                             value={pkg.durationMonths}
+                             onChange={(e) => {
+                               const newArr = [...(settings.proPackages || [])];
+                               newArr[index].durationMonths = Number(e.target.value);
+                               setSettings({ ...settings, proPackages: newArr });
+                             }}
+                             className="w-full px-5 py-3 bg-white border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-100 outline-none"
+                           />
+                           <label className="flex items-center gap-2 cursor-pointer shrink-0">
+                             <input 
+                               type="checkbox" 
+                               checked={pkg.isPopular || false}
+                               onChange={(e) => {
+                                 const newArr = [...(settings.proPackages || [])];
+                                 newArr[index].isPopular = e.target.checked;
+                                 setSettings({ ...settings, proPackages: newArr });
+                               }}
+                               className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                             />
+                             <span className="text-[11px] font-black uppercase text-amber-500 tracking-wider">Populer</span>
+                           </label>
+                         </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -1093,7 +1253,7 @@ export default function AdminPengaturanPage() {
         </div>
       )}
 
-      {activeTab === 'billing' && (
+      {(activeTab === 'billing' || activeTab === 'member') && (
         <div className="pt-12 flex justify-end">
           <button 
             onClick={handleSaveSettings}

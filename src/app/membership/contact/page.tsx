@@ -15,7 +15,7 @@ import {
   ImageIcon
 } from 'lucide-react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { subscribeAppSettings, AppSettings } from '@/lib/services/adminService';
+import { subscribeAppSettings, AppSettings, ProPackage } from '@/lib/services/adminService';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { auth, db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -43,15 +43,9 @@ export default function ContactPage() {
     note: ''
   });
 
-  // Harga otomatis berdasarkan paket & harga admin
-  const packagePriceMap = useMemo(() => {
-    const base = settings?.proPrice || 0;
-    return {
-      '1 Bulan - Pro Solo': base,
-      '6 Bulan - Pro Saver': base * 6,
-      '12 Bulan - Pro Annual': base * 12,
-    } as Record<string, number>;
-  }, [settings?.proPrice]);
+  const activePackages = useMemo(() => {
+    return settings?.proPackages || [];
+  }, [settings?.proPackages]);
 
   useEffect(() => {
     const unsub = subscribeAppSettings((data) => {
@@ -66,13 +60,19 @@ export default function ContactPage() {
     return () => { unsub(); unsubAuth(); };
   }, []);
 
-  // Sync amount saat paket/harga berubah
   useEffect(() => {
-    const price = packagePriceMap[form.package];
-    if (price !== undefined) {
-      setForm(prev => ({ ...prev, amount: price.toString() }));
+    if (activePackages.length > 0 && !activePackages.find(p => p.id === form.package)) {
+      setForm(prev => ({ ...prev, package: activePackages[0].id }));
     }
-  }, [form.package, packagePriceMap]);
+  }, [activePackages, form.package]);
+
+  // Sync amount saat paket berubah
+  useEffect(() => {
+    const pkg = activePackages.find(p => p.id === form.package);
+    if (pkg) {
+      setForm(prev => ({ ...prev, amount: pkg.price.toString() }));
+    }
+  }, [form.package, activePackages]);
 
   const copyToClipboard = () => {
     if (settings?.bankNumber) {
@@ -104,8 +104,8 @@ export default function ContactPage() {
       ...prev,
       method: 'Bank Transfer',
       ref: '',
-      package: '1 Bulan - Pro Solo',
-      amount: (settings?.proPrice || 0).toString(),
+      package: activePackages.length > 0 ? activePackages[0].id : '',
+      amount: activePackages.length > 0 ? activePackages[0].price.toString() : '0',
       note: ''
     }));
     setProofPreview(null);
@@ -129,7 +129,11 @@ export default function ContactPage() {
         userPhotoURL: user?.photoURL || null,
         method: form.method,
         ref: form.ref,
-        package: { id: form.package },
+        package: { 
+          id: form.package,
+          name: activePackages.find(p => p.id === form.package)?.name || 'Custom Package',
+          durationMonths: activePackages.find(p => p.id === form.package)?.durationMonths || 1
+        },
         amount: parseInt(form.amount.replace(/\D/g, '')) || 0,
         note: form.note,
         proofImageUrl: proofUrl || null,
@@ -214,8 +218,9 @@ export default function ContactPage() {
                   
                   <div className="space-y-6">
                     <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Harga Pro/Bulan</p>
-                      <p className="text-xl font-black text-slate-900 tracking-tight">IDR {(settings?.proPrice || 0).toLocaleString()}</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Pembayaran</p>
+                      <p className="text-3xl font-black text-indigo-600 tracking-tight">Rp {parseInt(form.amount.replace(/\D/g, '') || '0').toLocaleString('id-ID')}</p>
+                      <p className="text-[11px] font-bold text-slate-500 mt-1">{activePackages.find(p => p.id === form.package)?.name || 'Silakan pilih paket Anda'}</p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -333,11 +338,21 @@ export default function ContactPage() {
                       <select 
                         value={form.package}
                         onChange={e => setForm(p => ({ ...p, package: e.target.value }))}
-                        className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-4 px-6 text-sm font-bold text-slate-600 transition-all cursor-pointer"
+                        disabled={activePackages.length === 0}
+                        className={cn(
+                          "w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-indigo-100 rounded-xl py-4 px-6 text-sm font-bold text-slate-600 transition-all cursor-pointer",
+                          activePackages.length === 0 && "opacity-50 cursor-not-allowed"
+                        )}
                       >
-                        <option>1 Bulan - Pro Solo</option>
-                        <option>6 Bulan - Pro Saver</option>
-                        <option>12 Bulan - Pro Annual</option>
+                        {activePackages.length === 0 ? (
+                          <option value="">Belum ada paket tersedia</option>
+                        ) : (
+                          activePackages.map(pkg => (
+                            <option key={pkg.id} value={pkg.id}>
+                              {pkg.name} {pkg.isPopular ? '(⭐ Populer)' : ''}
+                            </option>
+                          ))
+                        )}
                       </select>
                       <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
                     </div>

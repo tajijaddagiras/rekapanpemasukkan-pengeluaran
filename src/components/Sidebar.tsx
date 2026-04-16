@@ -164,6 +164,17 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     }
   };
 
+  const getRemainingDays = () => {
+    if (!profile?.expiredAt) return null;
+    const now = new Date();
+    const exp = new Date(profile.expiredAt);
+    const diffTime = exp.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  };
+
+  const remainingDays = getRemainingDays();
+
   return (
     <>
       <aside className={cn(
@@ -297,8 +308,18 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           {/* Profile Card */}
           <div className="p-3 bg-white border border-slate-100 rounded-2xl shadow-sm group">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-xs font-black text-white shadow-lg shadow-indigo-100 transform group-hover:scale-110 transition-transform">
-                {profile ? getInitials(profile.name) : '??'}
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-xs font-black text-white shadow-lg shadow-indigo-100 transform group-hover:scale-110 transition-transform overflow-hidden relative">
+                {profile?.photoURL ? (
+                  <Image 
+                    src={profile.photoURL} 
+                    alt={profile.name} 
+                    fill 
+                    unoptimized
+                    className="object-cover" 
+                  />
+                ) : (
+                  profile ? getInitials(profile.name) : '??'
+                )}
               </div>
               <div className="flex flex-col min-w-0">
                 <span className="text-[13px] font-black text-slate-900 truncate pr-2">
@@ -312,17 +333,24 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           </div>
 
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 hidden md:block">
-            <div className="flex items-center justify-between mb-1">
-               <p className={cn(
-                 "text-[9px] font-black uppercase tracking-wider leading-none",
-                 profile?.plan === 'PRO' ? "text-emerald-600" : "text-slate-400"
-               )}>
-                 {profile?.plan === 'PRO' ? 'Pro Member' : 'Free Plan Active'}
-               </p>
-               <div className={cn(
-                 "w-1.5 h-1.5 rounded-full",
-                 profile?.plan === 'PRO' ? "bg-emerald-500 animate-pulse" : "bg-slate-300"
-               )} />
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                 <p className={cn(
+                   "text-[9px] font-black uppercase tracking-wider leading-none",
+                   profile?.plan === 'PRO' ? "text-emerald-600" : "text-slate-400"
+                 )}>
+                   {profile?.plan === 'PRO' ? 'Pro Member' : 'Free Plan Active'}
+                 </p>
+                 <div className={cn(
+                   "w-1.5 h-1.5 rounded-full shrink-0",
+                   profile?.plan === 'PRO' ? "bg-emerald-500 animate-pulse" : "bg-slate-300"
+                 )} />
+              </div>
+              {remainingDays !== null && (
+                 <p className="text-[10px] font-bold text-slate-400 italic">
+                   Sisa {remainingDays} hari
+                 </p>
+              )}
             </div>
           </div>
 

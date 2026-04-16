@@ -15,6 +15,14 @@ import {
 import { db } from '../firebase';
 
 // TYPES
+export interface ProPackage {
+  id: string;
+  name: string;
+  durationMonths: number;
+  price: number;
+  isPopular?: boolean;
+}
+
 export interface AppSettings {
   billingEmail?: string;
   whatsapp?: string;
@@ -24,6 +32,8 @@ export interface AppSettings {
   bankNumber?: string;
   qrisText?: string;
   qrisURL?: string;
+  freePlanDays?: number;
+  proPackages?: ProPackage[];
   maintenance?: {
     isActive: boolean;
     message?: string;

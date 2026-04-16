@@ -66,11 +66,15 @@ export default function AdminPembayaranPage() {
       
       // Perhitungan expiredAt berdasarkan paket yang dipilih
       const expiryDate = new Date();
-      let monthsToAdd = 1;
-      const pkgName = payment.package?.id || '';
+      let monthsToAdd = payment.package?.durationMonths;
       
-      if (pkgName.includes('6 Bulan')) monthsToAdd = 6;
-      else if (pkgName.includes('12 Bulan')) monthsToAdd = 12;
+      if (!monthsToAdd) {
+        // Fallback for legacy payments
+        const pkgName = payment.package?.id || '';
+        monthsToAdd = 1;
+        if (pkgName.includes('6 Bulan')) monthsToAdd = 6;
+        else if (pkgName.includes('12 Bulan')) monthsToAdd = 12;
+      }
       
       expiryDate.setMonth(expiryDate.getMonth() + monthsToAdd);
 
