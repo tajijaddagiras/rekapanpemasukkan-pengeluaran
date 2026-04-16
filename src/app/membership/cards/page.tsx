@@ -111,29 +111,39 @@ export default function MyCardsPage() {
   // === PER-ACCOUNT DETAIL ===
   const selectedAccount = useMemo(() => accounts.find(a => a.id === selectedAccountId), [accounts, selectedAccountId]);
 
-  const accountTransactions = useMemo(() => {
+  // Transactions specifically for the selected account (All-time for calculations)
+  const accountTransactionsAll = useMemo(() => {
     if (!selectedAccountId) return [];
-    return transactions
-      .filter(t => t.accountId === selectedAccountId)
-      .sort((a, b) => b.date.getTime() - a.date.getTime())
-      .slice(0, 20);
+    return transactions.filter(t => t.accountId === selectedAccountId);
   }, [transactions, selectedAccountId]);
 
+  // Recent transactions for display UI
+  const accountTransactionsRecent = useMemo(() => {
+    return [...accountTransactionsAll]
+      .sort((a, b) => b.date.getTime() - a.date.getTime())
+      .slice(0, 20);
+  }, [accountTransactionsAll]);
+
   const accountTotalIn = useMemo(() => 
-    accountTransactions.filter(t => t.type === 'pemasukan').reduce((s, t) => s + t.amount, 0),
-    [accountTransactions]
+    accountTransactionsAll.filter(t => t.type === 'pemasukan' || (t.type === 'debt' && t.category === 'Hutang')).reduce((s, t) => s + t.amount, 0),
+    [accountTransactionsAll]
   );
 
   const accountTotalOut = useMemo(() => 
-    accountTransactions.filter(t => t.type === 'pengeluaran').reduce((s, t) => s + t.amount, 0),
-    [accountTransactions]
+    accountTransactionsAll.filter(t => t.type === 'pengeluaran' || (t.type === 'debt' && t.category === 'Piutang')).reduce((s, t) => s + t.amount, 0),
+    [accountTransactionsAll]
   );
+
+  const accountSavingsOut = useMemo(() => {
+    if (!selectedAccountId) return 0;
+    return savings.filter(s => s.fromAccount === selectedAccountId).reduce((sum, s) => sum + s.amount, 0);
+  }, [savings, selectedAccountId]);
 
   const accountBalance = useMemo(() => {
     const acc = selectedAccount;
     if (!acc) return 0;
-    return (acc.initialBalance || 0) + accountTotalIn - accountTotalOut;
-  }, [selectedAccount, accountTotalIn, accountTotalOut]);
+    return (acc.initialBalance || 0) + accountTotalIn - accountTotalOut - accountSavingsOut;
+  }, [selectedAccount, accountTotalIn, accountTotalOut, accountSavingsOut]);
 
   // Outstanding debt (belum lunas) for selected account
   const accountDebt = useMemo(() => {
@@ -146,10 +156,10 @@ export default function MyCardsPage() {
   }, [transactions, selectedAccountId, totalGlobalDebt]);
 
   const barData = useMemo(() => {
-    const last8 = accountTransactions.slice(0, 8).reverse();
+    const last8 = accountTransactionsRecent.slice(0, 8).reverse();
     const max = Math.max(...last8.map(t => t.amount), 1);
     return last8.map(t => Math.round((t.amount / max) * 100));
-  }, [accountTransactions]);
+  }, [accountTransactionsRecent]);
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
   const formatDate = (d: Date) => new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
@@ -251,7 +261,7 @@ export default function MyCardsPage() {
                 {selectedAccount ? `Transaksi ${selectedAccount.name}` : 'Arus Kas (Cash Flow)'}
               </h3>
               <div className="px-4 py-1.5 bg-slate-50 border border-slate-100 rounded-full text-[9px] font-black text-slate-400 tracking-widest uppercase">
-                {accountTransactions.length} transaksi
+                {accountTransactionsRecent.length} transaksi
               </div>
             </div>
 
@@ -287,10 +297,10 @@ export default function MyCardsPage() {
             </div>
 
             {/* Recent Transactions for this account */}
-            {accountTransactions.length > 0 && (
+            {accountTransactionsRecent.length > 0 && (
               <div className="space-y-3">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Transaksi Terkini</p>
-                {accountTransactions.slice(0, 8).map(trx => (
+                {accountTransactionsRecent.slice(0, 8).map(trx => (
                   <div key={trx.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 hover:bg-slate-50 transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs", trx.type === 'pemasukan' ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500')}>
@@ -343,11 +353,6 @@ export default function MyCardsPage() {
                     </div>
                   </div>
                   <div className="text-right shrink-0 flex items-center gap-2">
-                    <div>
-                      <p className={`text-[12px] md:text-sm font-black ${acc.type === 'Credit Card' ? 'text-rose-500' : 'text-slate-900'}`}>
-                        {acc.type === 'Credit Card' ? '-' : ''}{formatRp(acc.balance)}
-                      </p>
-                    </div>
                     <button onClick={async (e) => {
                       e.stopPropagation();
                       if (acc.id) {
@@ -377,13 +382,6 @@ export default function MyCardsPage() {
               </div>
 
               <div className="space-y-4">
-                <div className="bg-slate-50/50 rounded-2xl p-5 border border-slate-50 transition-all hover:bg-slate-50">
-                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Saldo Awal (Initial)</p>
-                   <p className="text-xl font-black text-slate-900 leading-tight">
-                     {formatRp(selectedAccount ? (selectedAccount.initialBalance || 0) : combinedInitial)}
-                   </p>
-                </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-emerald-50/30 rounded-2xl p-4 border border-emerald-50 transition-all hover:bg-emerald-50">
                     <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">Total Masuk</p>

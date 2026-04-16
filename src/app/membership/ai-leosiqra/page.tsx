@@ -22,13 +22,10 @@ import { transactionService } from '@/lib/services/transactionService';
 import { investmentService } from '@/lib/services/investmentService';
 import { savingsService } from '@/lib/services/savingsService';
 import { budgetService } from '@/lib/services/budgetService';
+import { aiChatService, ChatMessage as Message } from '@/lib/services/aiChatService';
 import { formatCurrency } from '@/lib/utils';
 
-interface Message {
-  role: 'user' | 'model';
-  text: string;
-  timestamp: Date;
-}
+
 
 const SYSTEM_CONTEXT_BASE = `Kamu adalah Leosiqra, asisten keuangan AI yang cerdas dan ramah untuk aplikasi Finlytics. Kamu membantu pengguna dengan:
 - Analisis keuangan pribadi (pemasukan, pengeluaran, tabungan)
@@ -77,26 +74,61 @@ export default function AILeosiqraPage() {
     return () => unsub();
   }, []);
 
+  // Load Chat History
+  useEffect(() => {
+    if (!userId) return;
+    const loadChatHistory = async () => {
+      try {
+        const history = await aiChatService.getUserChat(userId);
+        if (history && history.length > 0) {
+          setMessages(history);
+        }
+      } catch (error) {
+        console.error("Error loading chat history:", error);
+      }
+    };
+    loadChatHistory();
+  }, [userId]);
+
   useEffect(() => {
     if (!userId) return;
 
     const loadFinancialData = async () => {
       try {
-        const [accounts, transactions, investments, savings, budgets] = await Promise.all([
+        const [accounts, transactions, investments, savings, budgets, userProfileModule] = await Promise.all([
           accountService.getUserAccounts(userId),
           transactionService.getUserTransactions(userId),
           investmentService.getUserInvestments(userId),
           savingsService.getUserSavings(userId),
-          budgetService.getUserBudgets(userId)
+          budgetService.getUserBudgets(userId),
+          import('@/lib/services/userService')
         ]);
 
-        const totalBalance = accounts.reduce((acc, curr) => acc + curr.balance, 0);
+        // Calculate actual balances using transactions
+        const savingsData = await savingsService.getUserSavings(userId); // Used for total out globally if needed, though for per-account we just use transactions 
+        
+        let realTotalBalance = 0;
+        const processedAccounts = accounts.map(acc => {
+          const accTrx = transactions.filter(t => t.accountId === acc.id);
+          const inTotal = accTrx.filter(t => t.type === 'pemasukan' || (t.type === 'debt' && t.category === 'Hutang')).reduce((s, t) => s + t.amount, 0);
+          const outTotal = accTrx.filter(t => t.type === 'pengeluaran' || (t.type === 'debt' && t.category === 'Piutang')).reduce((s, t) => s + t.amount, 0);
+          const savingsOut = savingsData.filter(s => s.fromAccount === acc.id).reduce((sum, s) => sum + s.amount, 0);
+          
+          const currentBalance = (acc.balance || 0) + inTotal - outTotal - savingsOut;
+          if (acc.type !== 'Credit Card') {
+            realTotalBalance += currentBalance;
+          }
+          return {
+            ...acc,
+            currentBalance
+          };
+        });
         
         const context = `
 DATA KEUANGAN REAL-TIME PENGGUNA:
-1. Rekening:
-${accounts.map(a => `- ${a.name}: ${formatCurrency(a.balance)} (${a.type})`).join('\n')}
-Total Saldo: ${formatCurrency(totalBalance)}
+1. Rekening (Saldo Berjalan Real-Time):
+${processedAccounts.map(a => `- ${a.name}: ${formatCurrency(a.currentBalance)} (${a.type})`).join('\n')}
+Total Seluruh Saldo Tunai/Bank: ${formatCurrency(realTotalBalance)}
 
 2. Transaksi Terakhir (10 Terakhir):
 ${transactions.slice(0, 10).map(t => `- [${t.type}] ${t.category}: ${formatCurrency(t.amount)} (${t.note || '-'})`).join('\n')}
@@ -143,7 +175,8 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
     }
 
     const userMsg: Message = { role: 'user', text: text.trim(), timestamp: new Date() };
-    setMessages(prev => [...prev, userMsg]);
+    const tempMessages = [...messages, userMsg];
+    setMessages(tempMessages);
     setInput('');
     setLoading(true);
 
@@ -170,28 +203,42 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
       const result = await chat.sendMessage(text.trim());
       const response = result.response.text();
       
-      setMessages(prev => [...prev, {
-        role: 'model',
+      const newMessages = [...tempMessages, {
+        role: 'model' as const,
         text: response,
         timestamp: new Date()
-      }]);
+      }];
+      setMessages(newMessages);
+      if (userId) aiChatService.saveUserChat(userId, newMessages);
     } catch (e: any) {
-      console.error(e);
-      setMessages(prev => [...prev, {
-        role: 'model',
-        text: 'Maaf, terjadi kesalahan. Pastikan API key Gemini Anda valid. Error: ' + (e?.message || 'Unknown error'),
+      console.error("AI Error:", e);
+      const errorMsg = e?.message || '';
+      
+      let friendlyMessage = 'Maaf ya, Leosiqra sedang mengalami sedikit kendala teknis saat berpikir. Silakan coba kirim ulang pertanyaan Anda. 🙏';
+      
+      if (errorMsg.includes('503') || errorMsg.includes('overloaded') || errorMsg.includes('demand')) {
+        friendlyMessage = 'Waduh, server pikiran Leosiqra sedang sangat sibuk melayani banyak antrean nih. Mohon beri waktu sekitar 1-2 menit untuk istirahat, lalu coba tanya lagi ya! ⏳✨';
+      } else if (errorMsg.includes('API key not valid')) {
+        friendlyMessage = 'Ups, API Key Gemini Bapak sepertinya belum valid atau belum diatur dengan benar di sistem pengaturannya.';
+      }
+
+      const errorMessages = [...tempMessages, {
+        role: 'model' as const,
+        text: friendlyMessage,
         timestamp: new Date()
-      }]);
+      }];
+      setMessages(errorMessages);
+      if (userId) aiChatService.saveUserChat(userId, errorMessages);
     } finally {
       setLoading(false);
     }
   };
 
-  // Update initial message after data is loaded
+  // Update initial message after data is loaded (Only if there is no history!)
   useEffect(() => {
     if (!dataLoading && financeContext) {
       setMessages(prev => {
-        if (prev.length === 1 && prev[0].role === 'model') {
+        if (prev.length === 1 && prev[0].role === 'model' && prev[0].text.includes('menganalisis data')) {
           return [{
             ...prev[0],
             text: 'Halo! Saya **Leosiqra**, asisten keuangan AI Anda 👋\n\nSaya sudah selesai menganalisis data keuangan Anda. Anda bisa bertanya tentang saldo rekening, performa investasi, atau pengeluaran bulan ini. Apa yang ingin Anda ketahui?'
@@ -208,12 +255,16 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const clearChat = () => {
-    setMessages([{
+  const clearChat = async () => {
+    const defaultMsg: Message = {
       role: 'model',
       text: 'Chat direset. Halo lagi! Ada yang bisa saya bantu? 😊',
       timestamp: new Date()
-    }]);
+    };
+    setMessages([defaultMsg]);
+    if (userId) {
+      await aiChatService.clearUserChat(userId);
+    }
   };
 
   // Simple markdown-like formatter
@@ -320,7 +371,7 @@ ${budgets.map(b => `- ${b.category}: Limit ${formatCurrency(b.amount)} (${b.type
               <h2 className="text-sm font-black text-slate-900">Leosiqra</h2>
               <div className="flex items-center gap-1.5">
                 <span className={`w-1.5 h-1.5 rounded-full ${apiKeyMissing ? 'bg-amber-400' : 'bg-emerald-500 animate-pulse'}`} />
-                <span className="text-[10px] font-bold text-slate-400">{apiKeyMissing ? 'API key belum diatur' : 'Online • Gemini Flash'}</span>
+                <span className="text-[10px] font-bold text-slate-400">{apiKeyMissing ? 'API key belum diatur' : 'Online'}</span>
               </div>
             </div>
           </div>
