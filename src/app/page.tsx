@@ -39,10 +39,10 @@ export default function LandingPage() {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] mb-8">
               Layanan Keuangan Terintegrasi
             </div>
-            <h1 className="text-5xl md:text-7xl font-serif font-black tracking-tight mb-8 text-slate-900 leading-[1.1]">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-serif font-black tracking-tight mb-6 sm:mb-8 text-slate-900 leading-[1.1] sm:leading-[1.1]">
               Member Site <br /> Premium <span className="text-slate-400 font-light">|</span> SPT <br /> Tahunan Otomatis
             </h1>
-            <p className="max-w-xl text-slate-500 text-lg mb-12 font-medium leading-relaxed">
+            <p className="max-w-xl text-slate-500 text-base sm:text-lg mb-8 sm:mb-12 font-medium leading-relaxed">
               Manajemen finansial personal dengan fitur terlengkap mulai dari rekap bulanan, kalkulasi pajak, hingga portfolio investasi dalam satu dashboard bersih.
             </p>
             <div className="flex flex-col sm:flex-row items-center gap-5">
@@ -66,13 +66,13 @@ export default function LandingPage() {
 
           {/* Right Content - Dashboard Mockup */}
           <motion.div 
-            className="flex-1 w-full relative"
+            className="flex-1 w-full relative mt-12 lg:mt-0"
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <div className="relative rounded-[48px] bg-slate-100 p-3 shadow-2xl shadow-slate-200 border border-white">
-              <div className="bg-white rounded-[40px] overflow-hidden shadow-inner border border-slate-100 p-8 space-y-8">
+            <div className="relative rounded-[32px] sm:rounded-[48px] bg-slate-100 p-2 sm:p-3 shadow-2xl shadow-slate-200 border border-white">
+              <div className="bg-white rounded-[28px] sm:rounded-[40px] overflow-hidden shadow-inner border border-slate-100 p-4 sm:p-8 space-y-6 sm:space-y-8">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Balance</p>
@@ -303,9 +303,9 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA Full */}
-      <section className="py-40 px-6 relative overflow-hidden">
+      <section className="py-20 sm:py-40 px-6 relative overflow-hidden">
         <motion.div 
-          className="max-w-4xl mx-auto rounded-[80px] bg-gradient-to-b from-white to-slate-50 border border-slate-100 p-16 md:p-24 text-center space-y-8 relative z-10 shadow-2xl shadow-slate-200/50"
+          className="max-w-4xl mx-auto rounded-[48px] sm:rounded-[80px] bg-gradient-to-b from-white to-slate-50 border border-slate-100 p-8 sm:p-16 md:p-24 text-center space-y-6 sm:space-y-8 relative z-10 shadow-2xl shadow-slate-200/50"
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}

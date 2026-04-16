@@ -18,7 +18,7 @@ const staggerContainer = {
 };
 
 export const LandingFeatures = () => (
-  <section className="py-24 px-6 space-y-32">
+  <section className="py-12 sm:py-24 px-4 sm:px-6 space-y-20 sm:space-y-32">
     <div className="max-w-7xl mx-auto">
       {/* Visual Intro Section */}
       <div id="produk" className="flex flex-col lg:flex-row items-center gap-16 mb-40 scroll-mt-32">
@@ -32,10 +32,10 @@ export const LandingFeatures = () => (
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-50 border border-orange-100 text-orange-600 text-[10px] font-black uppercase tracking-widest">
             Module Preview
           </div>
-          <h2 className="text-4xl md:text-5xl font-serif font-black text-slate-900 leading-tight">
-            Semua sinyal finansial <br /> penting tampil dalam <br /> layout yang bersih.
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-black text-slate-900 leading-tight">
+            Semua sinyal finansial <br className="hidden sm:block" /> penting tampil dalam <br className="hidden sm:block" /> layout yang bersih.
           </h2>
-          <p className="text-slate-500 font-medium leading-relaxed max-w-md">
+          <p className="text-slate-500 text-sm sm:text-base font-medium leading-relaxed max-w-md">
             Lupakan tabel yang membingungkan. Kami mendesain antarmuka yang memprioritaskan kejelasan data agar Anda bisa membuat keputusan lebih cepat.
           </p>
         </motion.div>
@@ -78,8 +78,8 @@ export const LandingFeatures = () => (
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
           Fitur Utama
         </div>
-        <h2 className="text-4xl md:text-5xl font-serif font-black text-slate-900">Fitur utama bagi member modern.</h2>
-        <p className="text-slate-500 font-medium max-w-2xl mx-auto">Tersedia beragam fitur untuk memaksimalkan performa finansial harian hingga tahunan Anda.</p>
+        <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-black text-slate-900">Fitur utama bagi member modern.</h2>
+        <p className="text-slate-500 text-sm sm:text-base font-medium max-w-2xl mx-auto">Tersedia beragam fitur untuk memaksimalkan performa finansial harian hingga tahunan Anda.</p>
       </motion.div>
 
       <motion.div 
@@ -127,10 +127,10 @@ export const LandingFeatures = () => (
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-50 text-orange-600 text-[10px] font-black uppercase tracking-widest">
           Laporan Pajak
         </div>
-        <h2 className="text-4xl md:text-5xl font-serif font-black text-slate-900">
-          Laporan Pajak SPT <br /> Otomatis
+        <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-black text-slate-900">
+          Laporan Pajak SPT <br className="hidden sm:block" /> Otomatis
         </h2>
-        <p className="text-slate-500 font-medium leading-relaxed max-w-lg">
+        <p className="text-slate-500 text-sm sm:text-base font-medium leading-relaxed max-w-lg">
           Tidak perlu lagi menghitung manual. Sistem kami merangkum seluruh transaksi dalam format yang kompatibel dengan pelaporan pajak tahunan Anda.
         </p>
       </div>
@@ -169,10 +169,10 @@ export const LandingFeatures = () => (
         <div className="absolute top-0 right-0 p-8">
           <div className="px-3 py-1 rounded-full bg-white/10 text-[10px] font-black uppercase tracking-widest">Growth Mindset</div>
         </div>
-        <h3 className="text-4xl font-serif font-black mb-10 leading-tight">
-          Lebih sedikit <br /> kebingungan. Lebih <br /> banyak keputusan <br /> yang sabar.
+        <h3 className="text-3xl sm:text-4xl font-serif font-black mb-10 leading-tight">
+          Lebih sedikit <br className="hidden sm:block" /> kebingungan. Lebih <br className="hidden sm:block" /> banyak keputusan <br className="hidden sm:block" /> yang sabar.
         </h3>
-        <p className="text-indigo-200 font-medium mb-12 max-w-sm">
+        <p className="text-indigo-200 text-sm sm:text-base font-medium mb-12 max-w-sm">
           Fokus pada apa yang penting, biarkan sistem kami yang mengolah data teknis Anda menjadi informasi yang berharga.
         </p>
         <button className="flex items-center gap-2 font-black group-hover:gap-4 transition-all">
