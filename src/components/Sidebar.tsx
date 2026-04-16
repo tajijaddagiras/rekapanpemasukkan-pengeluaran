@@ -48,6 +48,7 @@ const menuGroups = [
     items: [
       { icon: LayoutDashboard, label: 'Bulanan', href: '/membership/dashboard' },
       { icon: Calendar, label: 'Tahunan', href: '/membership/annual' },
+      { icon: ShieldCheck, label: 'Pajak Center', href: '/membership/pajak-center' },
     ]
   },
   {
