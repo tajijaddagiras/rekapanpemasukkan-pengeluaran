@@ -10,6 +10,7 @@ import { auth, db } from '@/lib/firebase';
 import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
 import { ShieldCheck, Lock, Smartphone, Eye, EyeOff, LayoutGrid, ArrowLeft } from 'lucide-react';
+import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -23,6 +24,7 @@ export default function RegisterPage() {
   const [strength, setStrength] = useState({ label: 'Lemah', color: 'bg-red-500', width: 'w-1/3' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [show2FA, setShow2FA] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -44,13 +46,18 @@ export default function RegisterPage() {
     }
   }, [password]);
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
       setError('Konfirmasi password tidak cocok.');
       return;
     }
     
+    // Tampilkan modal 2FA Setup
+    setShow2FA(true);
+  };
+
+  const handleCompleteRegistration = async (twoFactorSecret: string) => {
     setLoading(true);
     setError('');
 
@@ -75,12 +82,14 @@ export default function RegisterPage() {
         totalSavings: 0,
         totalInvestment: 0,
         creditCardBills: 0,
-        otherDebts: 0
+        otherDebts: 0,
+        twoFactorSecret: twoFactorSecret // Simpan secret 2FA
       });
 
       router.push('/membership/dashboard');
     } catch (err: any) {
       setError('Gagal mendaftar. Silakan periksa kembali data Anda.');
+      setShow2FA(false);
     } finally {
       setLoading(false);
     }
@@ -248,6 +257,14 @@ export default function RegisterPage() {
         {/* Subtle background graphics */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/5 via-transparent to-transparent pointer-events-none" />
       </div>
+
+      <TwoFactorModal
+        isOpen={show2FA}
+        onClose={() => setShow2FA(false)}
+        mode="setup"
+        email={email}
+        onVerify={handleCompleteRegistration}
+      />
     </div>
   );
 }

@@ -9,6 +9,8 @@ import { auth } from '@/lib/firebase';
 import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
 import { ShieldCheck, Lock, Smartphone, Eye, EyeOff, LayoutGrid } from 'lucide-react';
+import { TwoFactorModal } from '@/components/auth/TwoFactorModal';
+import { twoFactorService } from '@/lib/services/twoFactorService';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -16,6 +18,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [show2FA, setShow2FA] = useState(false);
+  const [tempSecret, setTempSecret] = useState('');
+  const [pendingRedirect, setPendingRedirect] = useState('');
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -26,20 +31,38 @@ export default function LoginPage() {
     try {
       const { user } = await signInWithEmailAndPassword(auth, email, password);
       
-      // Fetch user role
+      // Fetch user role & 2FA status
       const { doc, getDoc } = await import('firebase/firestore');
       const { db } = await import('@/lib/firebase');
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       
-      if (userDoc.exists() && userDoc.data().role === 'admin') {
-        router.push('/admin');
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const secret = userData.twoFactorSecret;
+        const targetPath = userData.role === 'admin' ? '/admin' : '/membership/dashboard';
+
+        if (secret) {
+          setTempSecret(secret);
+          setPendingRedirect(targetPath);
+          setShow2FA(true);
+        } else {
+          router.push(targetPath);
+        }
       } else {
-        router.push('/membership/dashboard');
+        setError('Data pengguna tidak ditemukan.');
       }
     } catch (err: any) {
       setError('Gagal login. Periksa kembali email dan password Anda.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerify2FA = (enteredToken: string) => {
+    if (twoFactorService.verifyToken(enteredToken, tempSecret)) {
+      router.push(pendingRedirect);
+    } else {
+      return false; // This will trigger error in modal if I add such logic
     }
   };
 
@@ -187,6 +210,15 @@ export default function LoginPage() {
         {/* Subtle background graphics */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/5 via-transparent to-transparent pointer-events-none" />
       </div>
+
+      <TwoFactorModal
+        isOpen={show2FA}
+        onClose={() => setShow2FA(false)}
+        mode="verify"
+        email={email}
+        secret={tempSecret}
+        onVerify={() => router.push(pendingRedirect)}
+      />
     </div>
   );
 }
