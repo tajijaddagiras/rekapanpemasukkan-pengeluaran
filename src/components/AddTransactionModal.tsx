@@ -89,6 +89,13 @@ export const AddTransactionModal = ({ userId, isOpen, onClose }: AddTransactionM
       });
       
       await updateMemberTotals(userId, type, amountNum);
+      
+      // Update Account Balance
+      if (formData.accountId) {
+        const balanceChange = type === 'pemasukan' ? amountNum : -amountNum;
+        await accountService.updateAccountBalance(formData.accountId, balanceChange);
+      }
+
       onClose();
       
       // Reset form

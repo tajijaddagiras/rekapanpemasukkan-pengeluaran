@@ -232,12 +232,7 @@ export default function SahamPage() {
                               const isSell = inv.transactionType === 'Jual';
                               const invested = inv.amountInvested || 0;
                               
-                              // REVERT IMPACT
-                              const financeType = isSell ? 'pemasukan' : 'pengeluaran';
-                              await updateMemberTotals(user.uid, financeType, -invested);
-                              await updateMemberTotals(user.uid, 'investasi', isSell ? invested : -invested);
-
-                              await investmentService.deleteInvestment(inv.id); 
+                              await investmentService.hardDeleteInvestment(inv.id, user.uid);
                             }
                           } 
                         }}

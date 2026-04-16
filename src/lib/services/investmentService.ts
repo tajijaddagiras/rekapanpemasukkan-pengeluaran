@@ -110,8 +110,51 @@ export const investmentService = {
     await updateDoc(docRef, updates);
   },
 
-  async deleteInvestment(id: string) {
+  async hardDeleteInvestment(id: string, userId: string) {
+    // 1. Get Investment data first to know what to revert
     const docRef = doc(db, COLLECTION_NAME, id);
+    const snap = await getDocs(query(collection(db, COLLECTION_NAME), where('userId', '==', userId)));
+    const investment = snap.docs.find(d => d.id === id)?.data() as Investment;
+    
+    if (!investment) return;
+
+    // 2. Find and delete related transactions
+    const qTrx = query(
+      collection(db, 'transactions'),
+      where('userId', '==', userId),
+      where('relatedId', '==', id)
+    );
+    const trxSnap = await getDocs(qTrx);
+    
+    for (const trxDoc of trxSnap.docs) {
+      const trxData = trxDoc.data();
+      const amount = Number(trxData.amount) || 0;
+      const type = trxData.type; // 'pemasukan' or 'pengeluaran'
+      const accountId = trxData.accountId;
+
+      // a. Revert member totals impact of this transaction
+      // Import these dynamically or pass as params to avoid circular dep if any
+      const { updateMemberTotals } = await import('./userService');
+      const financeType = type; // e.g. 'pemasukan'
+      await updateMemberTotals(userId, financeType, -amount);
+      
+      // b. Revert investment total in memberTotals
+      // For purchases (pengeluaran), it added to investasi. For sales (pemasukan), it subtracted.
+      await updateMemberTotals(userId, 'investasi', type === 'pemasukan' ? amount : -amount);
+
+      // c. Revert account balance
+      if (accountId) {
+        const { accountService } = await import('./accountService');
+        // If it was pengeluaran, add back. If it was pemasukan, subtract.
+        const balanceRevert = type === 'pemasukan' ? -amount : amount;
+        await accountService.updateAccountBalance(accountId, balanceRevert);
+      }
+
+      // d. Delete Transaction
+      await deleteDoc(trxDoc.ref);
+    }
+
+    // 3. Delete the investment document
     await deleteDoc(docRef);
   }
 };

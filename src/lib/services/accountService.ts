@@ -7,7 +7,8 @@ import {
   getDocs, 
   query, 
   where, 
-  Timestamp 
+  Timestamp,
+  increment 
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -64,5 +65,12 @@ export const accountService = {
   async deleteAccount(id: string) {
     const docRef = doc(db, COLLECTION_NAME, id);
     await deleteDoc(docRef);
+  },
+
+  async updateAccountBalance(id: string, amountChange: number) {
+    const docRef = doc(db, COLLECTION_NAME, id);
+    await updateDoc(docRef, {
+      balance: increment(amountChange)
+    });
   }
 };

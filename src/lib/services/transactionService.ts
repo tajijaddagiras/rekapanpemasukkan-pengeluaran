@@ -35,6 +35,8 @@ export interface Transaction {
   note?: string;
   status: 'PENDING' | 'VERIFIED' | 'FAILED';
   paymentStatus?: 'lunas' | 'belum';
+  relatedId?: string; // ID of the related entity (e.g., investmentId)
+  relatedType?: 'investasi' | 'tabungan' | 'debt';
   createdAt: Date;
 }
 

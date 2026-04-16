@@ -105,6 +105,14 @@ export const TopUpModal = ({ userId, isOpen, onClose }: TopUpModalProps) => {
         await updateMemberTotals(userId, 'pemasukan', convertedAmount || amount);
       }
 
+      // 4. Update Account Balances
+      if (formData.accountId) {
+        await accountService.updateAccountBalance(formData.accountId, -(convertedAmount || amount));
+      }
+      if (formData.targetAccountId && formData.targetAccountId !== 'Wallet') {
+        await accountService.updateAccountBalance(formData.targetAccountId, (convertedAmount || amount));
+      }
+
       onClose();
       setFormData({ 
         type: 'topup', amount: '', currency: 'IDR', accountId: '', targetAccountId: '', note: '', 

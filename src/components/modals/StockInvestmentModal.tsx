@@ -172,25 +172,35 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
       await updateMemberTotals(userId, financeType, invested);
       await updateMemberTotals(userId, 'investasi', isSell ? -invested : invested);
 
-      // 3. Create Update-Tracking Transaction
-      await addTransaction({
-        userId, type: financeType, amount: invested,
-        amountIDR: convertedAmount || invested,
-        category: 'Investasi', subCategory: isSell ? `[Update] Jual Saham ${formData.stockCode}` : `[Update] Beli Saham ${formData.stockCode}`,
-        accountId: formData.accountId || 'General',
-        date: new Date(formData.dateInvested),
-        note: `${editData ? '[Update]' : '[Baru]'} ${isSell ? 'Penjualan' : 'Pembelian'} ${formData.sharesCount} lembar saham ${formData.stockCode} @ ${formData.pricePerShare}`,
-        status: 'VERIFIED'
-      });
+      // Update Account Balance
+      if (formData.accountId) {
+        const balanceChange = isSell ? invested : -invested;
+        await accountService.updateAccountBalance(formData.accountId, balanceChange);
+      }
 
+      let finalInvestmentId = editData?.id || initialData?.id || '';
+      
       if (editData?.id) {
         await investmentService.updateInvestment(editData.id, investmentPayload);
       } else if (initialData?.id) {
         // Mode JUAL: Update record yang ada alih-alih buat baru
         await investmentService.updateInvestment(initialData.id, investmentPayload);
       } else {
-        await investmentService.createInvestment(investmentPayload);
+        finalInvestmentId = await investmentService.createInvestment(investmentPayload);
       }
+
+      // 3. Create Update-Tracking Transaction
+      await addTransaction({
+        userId, type: financeType, amount: invested,
+        amountIDR: convertedAmount || invested,
+        category: 'Investasi', subCategory: isSell ? `Jual Saham ${formData.stockCode}` : `Beli Saham ${formData.stockCode}`,
+        accountId: formData.accountId || 'General',
+        date: new Date(formData.dateInvested),
+        note: `${editData ? '[Update]' : '[Baru]'} ${isSell ? 'Penjualan' : 'Pembelian'} ${formData.sharesCount} lembar saham ${formData.stockCode} @ ${formData.pricePerShare}`,
+        status: 'VERIFIED',
+        relatedId: finalInvestmentId,
+        relatedType: 'investasi'
+      });
       
       onClose();
       // Reset form

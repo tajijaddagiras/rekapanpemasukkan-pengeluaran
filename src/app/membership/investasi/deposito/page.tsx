@@ -229,7 +229,7 @@ export default function DepositoPage() {
                             className="p-2 rounded-lg bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all">
                             <Pencil size={14} />
                           </button>
-                          <button onClick={async () => { if (inv.id) { await investmentService.deleteInvestment(inv.id); } }}
+                          <button onClick={async () => { if (user && inv.id) { await investmentService.hardDeleteInvestment(inv.id, user.uid); } }}
                             className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
                             <Trash2 size={14} />
                           </button>

@@ -176,6 +176,23 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
       if (currentType === 'Pembelian') await updateMemberTotals(userId, 'investasi', currentInvested);
       if (currentType === 'Penjualan') await updateMemberTotals(userId, 'investasi', -currentInvested);
 
+      // Update Account Balance
+      if (formData.accountId) {
+        const balanceChange = currentType === 'Penjualan' ? currentInvested : -currentInvested;
+        await accountService.updateAccountBalance(formData.accountId, balanceChange);
+      }
+
+      let finalInvestmentId = editData?.id || initialData?.id || '';
+      
+      if (editData?.id) {
+        await investmentService.updateInvestment(editData.id, investmentPayload);
+      } else if (initialData?.id) {
+        // Mode JUAL: Update record yang ada alih-alih buat baru
+        await investmentService.updateInvestment(initialData.id, investmentPayload);
+      } else {
+        finalInvestmentId = await investmentService.createInvestment(investmentPayload);
+      }
+
       // 3. Create Update-Tracking Transaction
       await addTransaction({
         userId, type: financeType, amount: currentInvested,
@@ -184,17 +201,11 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initia
         accountId: formData.accountId || 'General',
         date: new Date(formData.dateInvested),
         note: `${editData ? '[Update]' : '[Baru]'} ${currentType} ${formData.name}`,
-        status: 'VERIFIED'
+        status: 'VERIFIED',
+        relatedId: finalInvestmentId,
+        relatedType: 'investasi'
       });
-
-      if (editData?.id) {
-        await investmentService.updateInvestment(editData.id, investmentPayload);
-      } else if (initialData?.id) {
-        // Mode JUAL: Update record yang ada alih-alih buat baru
-        await investmentService.updateInvestment(initialData.id, investmentPayload);
-      } else {
-        await investmentService.createInvestment(investmentPayload);
-      }
+      
       onClose();
       setFormData({ name: '', logoUrl: '', currency: 'IDR', quantity: '', unit: '', pricePerUnit: '', currentValue: '', transactionType: 'Pembelian', category: '', accountId: '', platform: '', assetType: 'Emas', dateInvested: new Date().toISOString().split('T')[0] });
     } catch (e) {

@@ -128,10 +128,12 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
         status: isPenarikan ? 'Closed' : 'Active'
       };
 
+      let finalInvestmentId = editData?.id || '';
+      
       if (editData?.id) {
         await investmentService.updateInvestment(editData.id, investmentPayload);
       } else {
-        await investmentService.createInvestment(investmentPayload);
+        finalInvestmentId = await investmentService.createInvestment(investmentPayload);
         
         // 2. If Penempatan New, create the "Hasil Akhir" entry
         if (isPenempatan) {
@@ -145,6 +147,8 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
           });
         }
       }
+
+      // Financial Sync Logic (Handle both New and Edit)
 
       // Financial Sync Logic (Handle both New and Edit)
       if (editData) {
@@ -193,7 +197,9 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
           accountId: formData.accountId || 'General',
           date: new Date(formData.dateInvested),
           note: `${editData ? '[Update]' : '[Baru]'} ${formData.transactionType} ${formData.name} ${isBunga ? '(Hanya Bunga)' : ''}`,
-          status: 'VERIFIED'
+          status: 'VERIFIED',
+          relatedId: finalInvestmentId,
+          relatedType: 'investasi'
         });
       }
 
