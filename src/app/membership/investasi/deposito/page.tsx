@@ -93,7 +93,13 @@ export default function DepositoPage() {
     });
   }, [investments, selectedMonth, selectedYear]);
 
-  const totalDeposited = useMemo(() => filteredInvestments.reduce((s, i) => s + i.amountInvested, 0), [filteredInvestments]);
+  const totalDeposited = useMemo(() => {
+    return filteredInvestments.reduce((s, i) => {
+      if (i.transactionType === 'Penarikan') return s - i.amountInvested;
+      if (i.transactionType === 'Bunga') return s;
+      return s + i.amountInvested;
+    }, 0);
+  }, [filteredInvestments]);
   const avgRate = filteredInvestments.length > 0 ? filteredInvestments.reduce((s, i) => s + i.returnPercentage, 0) / filteredInvestments.length : 0;
 
   const formatRp = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n).replace('Rp', '').trim();

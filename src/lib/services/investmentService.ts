@@ -22,6 +22,7 @@ export interface Investment {
   currentValue: number;
   currentValueIDR?: number;
   returnPercentage: number;
+  taxPercentage?: number;
   currency: string;
   durationMonths?: number;
   transactionType?: string;
@@ -54,6 +55,7 @@ export const investmentService = {
       durationMonths: Number(data.durationMonths) || 0,
       quantity: Number(data.quantity) || 0,
       pricePerUnit: Number(data.pricePerUnit) || 0,
+      taxPercentage: Number(data.taxPercentage) || 0,
       sharesCount: Number(data.sharesCount) || 0,
       pricePerShare: Number(data.pricePerShare) || 0,
       dateInvested: Timestamp.fromDate(data.dateInvested),

@@ -32,6 +32,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
     amountInvested: '',
     durationMonths: '',
     returnPercentage: '',
+    taxPercentage: '',
     transactionType: 'Penempatan',
     category: '',
     accountId: '',
@@ -52,6 +53,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
           amountInvested: editData.amountInvested.toString(),
           durationMonths: '', // irrelevant now
           returnPercentage: editData.returnPercentage.toString(),
+          taxPercentage: editData.taxPercentage?.toString() || '',
           transactionType: editData.transactionType || 'Penempatan',
           category: editData.category || '',
           accountId: editData.accountId || '',
@@ -61,7 +63,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
       } else {
         // Reset to initial
         setFormData({ 
-          name: '', platform: '', currency: 'IDR', amountInvested: '', durationMonths: '', returnPercentage: '', transactionType: 'Penempatan', category: '', accountId: '', dateInvested: new Date().toISOString().split('T')[0],
+          name: '', platform: '', currency: 'IDR', amountInvested: '', durationMonths: '', returnPercentage: '', taxPercentage: '', transactionType: 'Penempatan', category: '', accountId: '', dateInvested: new Date().toISOString().split('T')[0],
           targetDate: new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         });
       }
@@ -95,6 +97,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
     
     const invested = parseFloat(formData.amountInvested);
     const rate = parseFloat(formData.returnPercentage) || 0;
+    const taxRate = parseFloat(formData.taxPercentage) || 0;
     
     try {
       const isPenempatan = formData.transactionType === 'Penempatan';
@@ -102,7 +105,9 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
       const isBunga = formData.transactionType === 'Bunga';
 
       const diffDays = calculateDays(formData.dateInvested, formData.targetDate);
-      const interestOnly = invested * (rate / 100) * (diffDays / 365);
+      const grossInterest = invested * (rate / 100) * (diffDays / 365);
+      const taxAmount = grossInterest * (taxRate / 100);
+      const interestOnly = grossInterest - taxAmount;
       const totalResult = invested + interestOnly;
 
       // 1. Create or Update Investment Record
@@ -112,6 +117,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
         amountInvested: invested,
         currentValue: totalResult,
         returnPercentage: rate,
+        taxPercentage: taxRate,
         currency: formData.currency, 
         durationDays: diffDays,
         transactionType: formData.transactionType,
@@ -145,8 +151,11 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
         // 1. REVERT OLD IMPACT
         const oldInvested = Number(editData.amountInvested) || 0;
         const oldRate = Number(editData.returnPercentage) || 0;
+        const oldTaxRate = Number(editData.taxPercentage) || 0;
         const oldDays = Number(editData.durationDays) || 0;
-        const oldInterest = oldInvested * (oldRate / 100) * (oldDays / 365);
+        const oldGross = oldInvested * (oldRate / 100) * (oldDays / 365);
+        const oldTaxAmount = oldGross * (oldTaxRate / 100);
+        const oldInterest = oldGross - oldTaxAmount;
         const oldTotal = oldInvested + oldInterest;
         const oldType = editData.transactionType || 'Penempatan';
 
@@ -157,21 +166,23 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
         const oldFinanceType = isOldPenempatan ? 'pengeluaran' : (isOldPenarikan || isOldBunga ? 'pemasukan' : null);
         if (oldFinanceType) {
           let oldAmountToSync = oldInvested;
-          if (isOldPenempatan || isOldPenarikan) oldAmountToSync = oldTotal;
+          if (isOldPenarikan) oldAmountToSync = oldTotal;
           if (isOldBunga) oldAmountToSync = oldInterest;
+          if (isOldPenempatan) oldAmountToSync = oldInvested;
           await updateMemberTotals(userId, oldFinanceType, -oldAmountToSync);
         }
 
-        if (isOldPenempatan) await updateMemberTotals(userId, 'investasi', -oldTotal);
-        else if (isOldPenarikan) await updateMemberTotals(userId, 'investasi', oldTotal);
+        if (isOldPenempatan) await updateMemberTotals(userId, 'investasi', -oldInvested); // Revert only nominal
+        else if (isOldPenarikan) await updateMemberTotals(userId, 'investasi', oldInvested); // Revert only nominal
       }
 
       // 2. APPLY NEW IMPACT
       const financeType = isPenempatan ? 'pengeluaran' : (isPenarikan || isBunga ? 'pemasukan' : null);
       if (financeType) {
         let amountToSync = invested;
-        if (isPenempatan || isPenarikan) amountToSync = totalResult;
+        if (isPenarikan) amountToSync = totalResult;
         if (isBunga) amountToSync = interestOnly;
+        if (isPenempatan) amountToSync = invested; // Only principal is moving from wallet
 
         await updateMemberTotals(userId, financeType, amountToSync);
         
@@ -187,15 +198,15 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
       }
 
       if (isPenempatan) {
-        await updateMemberTotals(userId, 'investasi', totalResult);
+        await updateMemberTotals(userId, 'investasi', invested); // Investment increases by nominal
       } else if (isPenarikan) {
-        await updateMemberTotals(userId, 'investasi', -totalResult);
+        await updateMemberTotals(userId, 'investasi', -invested); // Investment decreases by nominal
       }
 
       onClose();
         const initialTargetDate = new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
         setFormData({ 
-          name: '', platform: '', currency: 'IDR', amountInvested: '', durationMonths: '', returnPercentage: '', transactionType: 'Penempatan', category: '', accountId: '', dateInvested: new Date().toISOString().split('T')[0],
+          name: '', platform: '', currency: 'IDR', amountInvested: '', durationMonths: '', returnPercentage: '', taxPercentage: '', transactionType: 'Penempatan', category: '', accountId: '', dateInvested: new Date().toISOString().split('T')[0],
           targetDate: initialTargetDate
         });
     } catch (e) { console.error(e); } finally { setLoading(false); }
@@ -251,7 +262,7 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Durasi</label>
             <div className="relative">
@@ -264,6 +275,11 @@ export const DepositModal = ({ userId, isOpen, onClose, editData }: DepositModal
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Bunga %</label>
             <input type="number" step="0.01" value={formData.returnPercentage} onChange={e => setFormData(p => ({...p, returnPercentage: e.target.value}))}
               placeholder="5.5" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Pajak %</label>
+            <input type="number" step="0.01" value={formData.taxPercentage} onChange={e => setFormData(p => ({...p, taxPercentage: e.target.value}))}
+              placeholder="20" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
           </div>
         </div>
 
