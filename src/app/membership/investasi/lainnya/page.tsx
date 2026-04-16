@@ -35,6 +35,7 @@ export default function OtherInvestmentsPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showModal, setShowModal] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<Investment | undefined>(undefined);
+  const [sellingInvestment, setSellingInvestment] = useState<Investment | undefined>(undefined);
 
   const unsubRef = useRef<(() => void) | null>(null);
 
@@ -129,7 +130,7 @@ export default function OtherInvestmentsPage() {
             }}
           />
           <button 
-            onClick={() => { setEditingInvestment(undefined); setShowModal(true); }}
+            onClick={() => { setEditingInvestment(undefined); setSellingInvestment(undefined); setShowModal(true); }}
             className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
           >
             <PlusCircle size={18} />
@@ -225,9 +226,15 @@ export default function OtherInvestmentsPage() {
                     <td className="px-4 md:px-6 py-5 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <button 
-                          onClick={() => { setEditingInvestment(inv); setShowModal(true); }}
+                          onClick={() => { setEditingInvestment(inv); setSellingInvestment(undefined); setShowModal(true); }}
                           className="p-2 rounded-lg bg-blue-50 text-blue-400 hover:bg-blue-500 hover:text-white transition-all">
                           <Pencil size={14} />
+                        </button>
+                        <button 
+                          onClick={() => { setSellingInvestment(inv); setEditingInvestment(undefined); setShowModal(true); }}
+                          className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all group/sell relative">
+                          <TrendingUp size={14} className="rotate-180" />
+                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] px-2 py-1 rounded opacity-0 group-hover/sell:opacity-100 transition-opacity whitespace-nowrap">Jual Aset</span>
                         </button>
                         <button onClick={async () => { if (inv.id) { await investmentService.deleteInvestment(inv.id); } }}
                           className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
@@ -246,8 +253,9 @@ export default function OtherInvestmentsPage() {
       <OtherInvestmentModal 
         userId={user?.uid || ''} 
         isOpen={showModal} 
-        onClose={() => { setShowModal(false); setEditingInvestment(undefined); }} 
+        onClose={() => { setShowModal(false); setEditingInvestment(undefined); setSellingInvestment(undefined); }} 
         editData={editingInvestment}
+        initialData={sellingInvestment}
       />
     </div>
   );

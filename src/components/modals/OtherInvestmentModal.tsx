@@ -18,9 +18,10 @@ interface OtherInvestmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   editData?: Investment;
+  initialData?: any; // For selling mode
 }
 
-export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: OtherInvestmentModalProps) => {
+export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData, initialData }: OtherInvestmentModalProps) => {
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [rates, setRates] = useState<ExchangeRates | null>(null);
@@ -81,11 +82,27 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: Othe
           assetType: 'Emas', // default or custom
           dateInvested: editData.dateInvested.toISOString().split('T')[0]
         });
+      } else if (initialData) {
+        setFormData({
+          name: initialData.name,
+          logoUrl: initialData.logoUrl || '',
+          currency: initialData.currency || 'IDR',
+          quantity: initialData.quantity?.toString() || '',
+          unit: initialData.unit || '',
+          pricePerUnit: initialData.pricePerUnit?.toString() || '', // Tampil harga beli awal, bisa diedit
+          currentValue: '',
+          transactionType: 'Penjualan',
+          category: initialData.category || '',
+          accountId: initialData.accountId || '',
+          platform: initialData.platform || '',
+          assetType: 'Emas', // default or custom
+          dateInvested: new Date().toISOString().split('T')[0]
+        });
       } else {
         setFormData({ name: '', logoUrl: '', currency: 'IDR', quantity: '', unit: '', pricePerUnit: '', currentValue: '', transactionType: 'Pembelian', category: '', accountId: '', platform: '', assetType: 'Emas', dateInvested: new Date().toISOString().split('T')[0] });
       }
     }
-  }, [isOpen, userId, editData]);
+  }, [isOpen, userId, editData, initialData]);
 
   useEffect(() => {
     const qty = parseFloat(formData.quantity) || 0;
@@ -185,17 +202,18 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: Othe
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editData ? "Edit Aset Investasi" : "Tambah Aset Investasi"} maxWidth="max-w-lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={editData ? "Edit Aset Investasi" : (initialData ? "Jual Aset Investasi" : "Tambah Aset Investasi")} maxWidth="max-w-lg">
       <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1 custom-scrollbar">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Judul / Produk Investasi</label>
             <input type="text" value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))}
-              placeholder="Emas Antam 50gr, BTC..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+              disabled={!!initialData}
+              placeholder="Emas Antam 50gr, BTC..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all disabled:opacity-60" />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Logo Produk (Opsional)</label>
-            <div className="flex items-center gap-3">
+            <div className={`flex items-center gap-3 ${initialData ? 'opacity-60 grayscale' : ''}`}>
               <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
                 {formData.logoUrl ? (
                   <img src={formData.logoUrl} alt="Logo Preview" className="w-full h-full object-contain" />
@@ -203,12 +221,12 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: Othe
                   <ImageIcon className="text-slate-300" size={16} />
                 )}
               </div>
-              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} disabled={!!initialData} />
               <button 
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="flex-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl py-3 px-4 text-[10px] font-black text-slate-600 transition-all flex items-center justify-center gap-2"
+                disabled={uploading || !!initialData}
+                className="flex-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl py-3 px-4 text-[10px] font-black text-slate-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {uploading ? <Loader2 className="animate-spin" size={12} /> : <ImageIcon size={12} />}
                 {uploading ? '...' : (formData.logoUrl ? 'Ganti' : 'Upload Logo')}
@@ -226,21 +244,24 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: Othe
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Satuan</label>
             <input type="text" value={formData.unit} onChange={e => setFormData(p => ({...p, unit: e.target.value}))}
-              placeholder="Gram, Lot, Koin..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+              disabled={!!initialData}
+              placeholder="Gram, Lot, Koin..." className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all disabled:opacity-60" />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Harga Beli / Satuan</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">{initialData ? "Harga Jual / Satuan" : "Harga Beli / Satuan"}</label>
             <input type="number" value={formData.pricePerUnit} onChange={e => setFormData(p => ({...p, pricePerUnit: e.target.value}))}
               placeholder="Rp" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
           </div>
-          <CurrencySelect 
-            value={formData.currency}
-            onChange={(val) => setFormData({...formData, currency: val})}
-            label="Mata Uang"
-          />
+          <div>
+            <CurrencySelect 
+              value={formData.currency}
+              onChange={(val) => setFormData({...formData, currency: val})}
+              label="Mata Uang"
+            />
+          </div>
         </div>
 
         {/* Conversion Display */}
@@ -268,7 +289,8 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: Othe
               <select 
                 value={formData.accountId}
                 onChange={e => setFormData(p => ({...p, accountId: e.target.value}))}
-                className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
+                disabled={!!initialData}
+                className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer disabled:opacity-60"
               >
                 <option value="">Pilih Rekening</option>
                 {accounts.map(acc => (
@@ -281,7 +303,8 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: Othe
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Platform</label>
             <input type="text" value={formData.platform} onChange={e => setFormData(p => ({...p, platform: e.target.value}))}
-              placeholder="Pegadaian, Indodax, dll" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+              disabled={!!initialData}
+              placeholder="Pegadaian, Indodax, dll" className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all disabled:opacity-60" />
           </div>
         </div>
 
@@ -294,7 +317,8 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: Othe
            <div className="space-y-2">
              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tanggal</label>
              <input type="date" value={formData.dateInvested} onChange={e => setFormData(p => ({...p, dateInvested: e.target.value}))}
-               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all" />
+               disabled={!!initialData}
+               className="w-full bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all disabled:opacity-60" />
            </div>
         </div>
 
@@ -306,15 +330,16 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: Othe
               <select 
                 value={formData.transactionType}
                 onChange={e => setFormData(p => ({...p, transactionType: e.target.value}))}
-                className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer"
+                disabled={!!initialData}
+                className="w-full appearance-none bg-slate-50 border-none focus:ring-2 focus:ring-blue-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-700 transition-all cursor-pointer disabled:opacity-60"
               >
-                <option value="Pembelian">Pembelian</option>
-                <option value="Penjualan">Penjualan</option>
+                <option value="Pembelian">Pembelian (Pengeluaran)</option>
+                <option value="Penjualan">Penjualan (Pemasukan)</option>
               </select>
               <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
           </div>
-          <div className="space-y-2">
+          <div className={`space-y-2 ${initialData ? 'opacity-60 pointer-events-none' : ''}`}>
             <CategorySelect 
               label="Kategori Investasi"
               value={formData.category}
@@ -330,7 +355,7 @@ export const OtherInvestmentModal = ({ userId, isOpen, onClose, editData }: Othe
           {loading ? 'Menyimpan...' : (
             <>
               <Save size={18} />
-              Simpan Aset Investasi
+              Simpan Transaksi
             </>
           )}
         </button>
