@@ -402,9 +402,9 @@ export default function InvestmentDashboard() {
                         <span className="font-black text-slate-900">{s.name}</span>
                       </div>
                     </td>
-                    <td className="px-5 md:px-6 py-4 md:py-5 font-bold text-slate-500">-</td>
-                    <td className="px-5 md:px-6 py-4 md:py-5 font-bold text-slate-500">Rp {new Intl.NumberFormat('id-ID').format(s.amountInvested)}</td>
-                    <td className="px-5 md:px-6 py-4 md:py-5 font-black text-slate-900">Rp {new Intl.NumberFormat('id-ID').format(s.currentValue)}</td>
+                    <td className="px-5 md:px-6 py-4 md:py-5 font-bold text-slate-500">{s.sharesCount || 0}</td>
+                    <td className="px-5 md:px-6 py-4 md:py-5 font-bold text-slate-500">Rp {new Intl.NumberFormat('id-ID').format(s.pricePerShare || 0)}</td>
+                    <td className="px-5 md:px-6 py-4 md:py-5 font-black text-slate-900">Rp {new Intl.NumberFormat('id-ID').format(s.sharesCount ? Math.round(s.currentValue / s.sharesCount) : 0)}</td>
                     <td className="px-5 md:px-6 py-4 md:py-5 font-black text-slate-900">Rp {new Intl.NumberFormat('id-ID').format(s.currentValue)}</td>
                     <td className={cn("px-5 md:px-8 py-4 md:py-5 text-right font-black", (s.returnPercentage??0) >= 0 ? 'text-emerald-500' : 'text-rose-500')}>{(s.returnPercentage??0) >= 0 ? '+' : ''}{(s.returnPercentage??0).toFixed(2)}%</td>
                   </tr>
