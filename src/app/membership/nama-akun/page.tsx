@@ -83,17 +83,11 @@ export default function NamaAkunPage() {
     };
   }, []);
 
-  // Separate Effect for Initialization to avoid race conditions
   useEffect(() => {
-    if (user && currencies.length === 0 && profile && !profile.currencyInitialized && !loading) {
-      currencyService.initializeDefaults(user.uid).then(() => {
-        updateUserProfile(user.uid, { currencyInitialized: true });
-      });
-    }
     if (user && profile && loading) {
         setLoading(false);
     }
-  }, [currencies, profile, user, loading]);
+  }, [profile, user, loading]);
 
   // handleAddCurrency moved to CurrencyModal.tsx
 

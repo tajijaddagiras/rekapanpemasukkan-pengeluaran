@@ -185,6 +185,9 @@ export const StockInvestmentModal = ({ userId, isOpen, onClose, editData, initia
 
       if (editData?.id) {
         await investmentService.updateInvestment(editData.id, investmentPayload);
+      } else if (initialData?.id) {
+        // Mode JUAL: Update record yang ada alih-alih buat baru
+        await investmentService.updateInvestment(initialData.id, investmentPayload);
       } else {
         await investmentService.createInvestment(investmentPayload);
       }

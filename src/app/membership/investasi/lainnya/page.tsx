@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LogoImage } from '@/components/ui/LogoImage';
 import { investmentService, Investment } from '@/lib/services/investmentService';
 import { accountService, Account } from '@/lib/services/accountService';
+import { updateMemberTotals } from '@/lib/services/userService';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -236,7 +237,21 @@ export default function OtherInvestmentsPage() {
                           <TrendingUp size={14} className="rotate-180" />
                           <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] px-2 py-1 rounded opacity-0 group-hover/sell:opacity-100 transition-opacity whitespace-nowrap">Jual Aset</span>
                         </button>
-                        <button onClick={async () => { if (inv.id) { await investmentService.deleteInvestment(inv.id); } }}
+                        <button onClick={async () => { 
+                          if (inv.id && user?.uid) { 
+                            if (confirm(`Hapus investasi ${inv.name}? Semua total saldo akan dikembalikan.`)) {
+                              const isSell = inv.transactionType === 'Penjualan' || inv.transactionType === 'Jual';
+                              const invested = inv.amountInvested || 0;
+                              
+                              // REVERT IMPACT
+                              const financeType = isSell ? 'pemasukan' : 'pengeluaran';
+                              await updateMemberTotals(user.uid, financeType, -invested);
+                              await updateMemberTotals(user.uid, 'investasi', isSell ? invested : -invested);
+
+                              await investmentService.deleteInvestment(inv.id); 
+                            }
+                          } 
+                        }}
                           className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-all">
                           <Trash2 size={14} />
                         </button>
